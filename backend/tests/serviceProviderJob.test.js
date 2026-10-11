@@ -14,7 +14,7 @@ import { Job } from '../src/modules/service-provider/job.model.js';
 import { Review } from '../src/modules/reviews/review.model.js';
 import { EarningsTally } from '../src/modules/service-provider/earningsTally.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
-import { RateCard } from '../src/modules/brand-admin/rateCard.model.js';
+import { BrandRate } from '../src/modules/brand-crm/brandRate.model.js';
 import { PlatformSettings } from '../src/modules/super-admin/platformSettings.model.js';
 import { AppSetting } from '../src/modules/super-admin/appSetting.model.js';
 import { Payout } from '../src/modules/service-provider/payout.model.js';
@@ -123,7 +123,7 @@ beforeEach(async () => {
     Job.deleteMany({}),
     EarningsTally.deleteMany({}),
     Brand.deleteMany({}),
-    RateCard.deleteMany({}),
+    BrandRate.deleteMany({}),
     PlatformSettings.deleteMany({}),
     AppSetting.deleteMany({}),
     Payout.deleteMany({}),
@@ -951,9 +951,10 @@ describe('earnings breakdown', () => {
 });
 
 describe('covered-visit earnings come from the brand rate card', () => {
-  it('uses the brand\'s laborRate for the appliance category', async () => {
-    const brand = await Brand.create({ name: 'RateCard Brand', category: 'Appliances', status: 'Active' });
-    await RateCard.create({ brand: brand._id, category: 'AC', serviceType: 'Repair', laborRate: 640 });
+  it('uses the separate partner payout for the appliance category', async () => {
+    const brand = await Brand.create({ name: 'BrandRate Brand', category: 'Appliances', status: 'Active' });
+    const rateCategory=await Category.findOneAndUpdate({key:'AC'},{$set:{name:'AC'}},{upsert:true,new:true});
+    await BrandRate.create({ brand: brand._id, category: rateCategory._id, serviceType: 'repair', brandRate: 900, partnerPayout: 640 });
 
     const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider({ phone: '9390000101' });
     const customer = await User.create({
@@ -976,7 +977,7 @@ describe('covered-visit earnings come from the brand rate card', () => {
     expect(String(res.body.data.serviceProvider)).toBe(String(serviceProvider._id));
   });
 
-  it('falls back to the default when the brand has no card for that category', async () => {
+  it('flags a zero payout when the brand has no rate for that category', async () => {
     const brand = await Brand.create({ name: 'Cardless Brand', category: 'Appliances', status: 'Active' });
     const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider({ phone: '9390000102' });
     const customer = await User.create({
@@ -992,7 +993,8 @@ describe('covered-visit earnings come from the brand rate card', () => {
       .set('Authorization', `Bearer ${serviceProviderToken}`)
       .send({})
       .expect(200);
-    expect(res.body.data.estEarnings).toBe(150);
+    expect(res.body.data.estEarnings).toBe(0);
+    expect(res.body.data.payout.flags).toContain('PAYOUT_MISSING');
   });
 });
 

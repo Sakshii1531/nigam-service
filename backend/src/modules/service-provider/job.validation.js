@@ -22,7 +22,8 @@ export const submitDiagnosisSchema = z.object({
 
 const lineItemSchema = z.object({ name: z.string().min(1), price: z.number().min(0), checked: z.boolean().optional() });
 const sparePartSchema = lineItemSchema.extend({
-  sku: z.string().optional(),
+  sku: z.string().max(100).optional(),
+  qty: z.number().int().min(1).max(100).optional(),
   source: z.enum(['recommended_ai', 'manual']).optional(),
 });
 
@@ -64,3 +65,5 @@ export const verifyJobPaymentSchema = z.object({
   razorpayPaymentId: z.string().min(1),
   razorpaySignature: z.string().min(1),
 });
+
+export const completionReportSchema = z.object({ notes: z.string().trim().max(2000).optional(), workDone: z.string().trim().max(2000).optional(), photos: z.array(z.string().max(1000)).max(10).optional() }).strict();

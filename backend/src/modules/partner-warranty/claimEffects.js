@@ -26,7 +26,11 @@ const PROGRESS = {
 
 /** Timeline event → CRM event type (client #18). */
 function eventTypeFor(e) {
+  if (/^PART_/.test(e.action)) return 'PART_STATUS_CHANGED';
+  if (['ESCALATION_RAISED', 'ESCALATION_RESOLVED'].includes(e.action)) return e.action;
   switch (e.action) {
+    case 'JOB_STAGE_CHANGED':
+      return 'JOB_STAGE_CHANGED';
     case 'CLAIM_SUBMITTED':
       return 'CLAIM_CREATED';
     case 'CLAIM_APPROVED':
@@ -52,7 +56,7 @@ async function notifyProgress(claim, events) {
   for (const e of events) {
     const progress = PROGRESS[e.toStatus];
     if (!progress) continue;
-    const common = { humanId: claim.humanId, title: progress.title, detail: e.note || null };
+    const common = { brand: claim.brand, warrantyClaim: claim._id, humanId: claim.humanId, title: progress.title, detail: e.note || null };
     const tasks = [
       emitToBrand('warranty.progress_brand', claim.brand, { ...common, cta: { label: 'View Claim', route: claimLinks.brand(claim.id) } }),
     ];
@@ -78,7 +82,7 @@ async function buildPayload(claim, type, e, id) {
   const [customer, sr] = await Promise.all([
     User.findById(claim.customer).select('name phone').lean(),
     claim.serviceRequest
-      ? ServiceRequest.findById(claim.serviceRequest).select('humanId status serviceProvider').populate('serviceProvider', 'name').lean()
+      ? ServiceRequest.findById(claim.serviceRequest).select('humanId status serviceProvider isAccepted').populate('serviceProvider', 'name').lean()
       : null,
   ]);
   return {
@@ -100,8 +104,10 @@ async function buildPayload(claim, type, e, id) {
       customer: customer ? { name: customer.name, phone: customer.phone || null } : null,
       address: { city: claim.address?.city || null, state: claim.address?.state || null, pincode: claim.address?.pincode || null },
     },
-    serviceJob: sr ? { id: sr.humanId, status: sr.status } : null,
-    partner: sr?.serviceProvider?.name ? { name: sr.serviceProvider.name } : null,
+    serviceJob: sr ? { id: sr.humanId, status: sr.status, jobStage: claim.jobStage || null, jobStageAt: claim.jobStageAt || null } : null,
+    ...(type === 'PART_STATUS_CHANGED' ? { part: e.meta } : {}),
+    ...(type === 'JOB_STAGE_CHANGED' ? { stage: e.meta?.stage, previousStage: e.meta?.previous, attempt: e.meta?.attempt } : {}),
+    partner: sr?.isAccepted && sr?.serviceProvider?.name ? { name: sr.serviceProvider.name } : null,
     // Reasons and messages the brand can already see (rejection reason, info request).
     note: e.visibility === 'internal' ? null : e.note || null,
   };

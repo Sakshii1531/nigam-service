@@ -1,3 +1,4 @@
+import WarrantyParts from './job-flows/WarrantyParts';
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import JobSummaryCard from "../../components/service-provider/JobSummaryCard";
 import { useNavigate } from "react-router-dom";
@@ -218,14 +219,20 @@ const ActiveJob = () => {
     inventory,
     selectJobForDetails,
     resumableJobs,
-    stepBusy,
+    stepBusy: jobStepBusy,
     stepError,
     setStepError,
     advanceStepsTo,
     requestSparePart,
     setDiagnosisNotes,
+    completionReport,
+    setCompletionReport,
+    completionUploadBusy,
+    setCompletionUploadBusy,
     jobsLoading,
   } = useTech();
+
+  const stepBusy = jobStepBusy || completionUploadBusy;
 
   // ── Click-to-call relay ────────────────────────────────────────────────────
   // POST /api/v1/calls/initiate tells the backend to ring the customer via our
@@ -467,7 +474,8 @@ const ActiveJob = () => {
   const [jobContext, setJobContext] = useState(null);
   // Partner-warranty (B2B2C) job: the job context adds the customer's
   // documents once the job is this partner's (docs/partner-warranty Phase 15).
-  const partnerWarranty = jobContext?.warranty || activeJob?.warranty || null;
+  const partnerWarranty = activeJob?.warranty || jobContext?.warranty
+    ? { ...jobContext?.warranty, ...activeJob?.warranty } : null;
   useEffect(() => {
     setJobContext(null);
     if (!activeJob?.id) return;
@@ -1374,6 +1382,7 @@ const ActiveJob = () => {
             ? "bg-[#F5F8FC] pb-0"
             : "bg-[#F5F8FC] pb-20"
       }`}>
+      {partnerWarranty && <WarrantyParts jobId={activeJob.id} activeStep={activeStep}/>}
       {/* A step that failed to save server-side must say so. The flow used to
           advance on local state alone, so a rejected write looked like success
           and the job silently fell out of sync with the server. */}
@@ -3789,6 +3798,7 @@ const ActiveJob = () => {
                   </div>
                 )}
 
+                {activeJob?.warranty && ["spareapproval", "revisit_arrived"].includes(activeStep) && <section className="bg-white border rounded-2xl p-4 space-y-3"><h3 className="font-bold text-sm">Service completion report</h3><label className="block text-xs">Work done<textarea className="w-full border rounded-lg p-2 mt-1" maxLength={2000} value={completionReport.workDone} onChange={e => setCompletionReport(r => ({...r, workDone:e.target.value}))}/></label><label className="block text-xs">Completion notes<textarea className="w-full border rounded-lg p-2 mt-1" maxLength={2000} value={completionReport.notes} onChange={e => setCompletionReport(r => ({...r, notes:e.target.value}))}/></label><label className="block text-xs">Completion photos<input type="file" accept="image/*" multiple className="block mt-1" disabled={completionUploadBusy} onChange={async e => { setCompletionUploadBusy(true); try { const files=Array.from(e.target.files || []).slice(0,10); const urls=[]; for(const file of files) { const form=new FormData();form.append('file',file);const result=await apiRequest('/uploads',{method:'POST',auth:true,body:form});urls.push(result.url); } setCompletionReport(r => ({...r, photos:urls})); } catch(e) { setStepError(e.message); } finally { setCompletionUploadBusy(false); } }}/></label><p className="text-xs text-slate-500">{completionReport.photos.length} photo(s) ready. Saved when you mark repair complete.</p></section>}
                 {/* Step: SPARE APPROVAL (Step 4) */}
                 {activeStep === "spareapproval" &&
                   (() => {

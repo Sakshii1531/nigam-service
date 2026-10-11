@@ -1,3 +1,4 @@
+import {fulfillWarrantyParts} from './helpers/warrantyParts.js';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import http from 'node:http';
 import mongoose from 'mongoose';
@@ -9,7 +10,7 @@ import { DomainEvent } from '../src/modules/partner-warranty/domainEvent.model.j
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Job } from '../src/modules/service-provider/job.model.js';
-import { RateCard } from '../src/modules/brand-admin/rateCard.model.js';
+import { BrandRate } from '../src/modules/brand-crm/brandRate.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { sweepExpiredAssignments } from '../src/modules/service-requests/serviceRequest.service.js';
@@ -72,7 +73,7 @@ describe('Phase 16 — the client\'s Partner Warranty flow, end to end', () => {
   it('runs customer → admin → brand → job → network → partner → completion → payout, with all three views in sync', async () => {
     // ── Setup: two brands with staff, NCC, a customer, three Indore AC partners ──
     const w = await kit.world();
-    await RateCard.create({ brand: w.lg._id, category: 'AC', serviceType: 'Repair', laborRate: 450 });
+    await BrandRate.create({ brand: w.lg._id, category: w.ac._id, serviceType: 'repair', brandRate: 600, partnerPayout: 450 });
     const [lg, samsung, admin, cust] = await Promise.all([kit.brandAdmin(w.lg), kit.brandAdmin(w.samsung), kit.superAdmin(), kit.customer()]);
     // Three LG-authorized AC partners serving pincode 452001, and one nearer AC
     // partner who isn't LG-authorized — LG has authorized partners, so the job
@@ -203,6 +204,7 @@ describe('Phase 16 — the client\'s Partner Warranty flow, end to end', () => {
     await expectInSync(claim.id, 'Service In Progress');
     await api().post(`/api/v1/service-provider/jobs/${job.id}/diagnosis`).set(auth).send({ notes: 'Gas leak at flare nut' }).expect(200);
     await api().post(`/api/v1/service-provider/jobs/${job.id}/spare-parts`).set(auth).send({ parts: [{ name: 'Flare Nut', price: 120, checked: true }] }).expect(200);
+    await fulfillWarrantyParts(kit,{jobId:job.id,claimId:claim.id,partner:partners.Chetan,brand:lg,admin,customer:cust});
     await api().post(`/api/v1/service-provider/jobs/${job.id}/repair-complete`).set(auth).expect(200);
     const billing = (await api().post(`/api/v1/service-provider/jobs/${job.id}/billing`).set(auth).expect(200)).body.data.billingEstimate;
     expect(billing).toMatchObject({ total: 0, amountToCollect: 0, serviceProviderEarnings: 450 });
@@ -259,7 +261,7 @@ describe('Phase 16 — the client\'s Partner Warranty flow, end to end', () => {
 
     // ── 10. Events to the brand's CRM, signed, in order; Samsung gets nothing ──
     const events = await DomainEvent.find({ claim: saved._id }).sort({ createdAt: 1, _id: 1 }).lean();
-    expect(events.map((e) => e.type)).toEqual([
+    expect(events.filter(e => !['JOB_STAGE_CHANGED','PART_STATUS_CHANGED'].includes(e.type)).map((e) => e.type)).toEqual([
       'CLAIM_CREATED',
       'CLAIM_INFO_REQUESTED',
       'CLAIM_APPROVED',
@@ -269,6 +271,8 @@ describe('Phase 16 — the client\'s Partner Warranty flow, end to end', () => {
       'JOB_COMPLETED',
       'CLAIM_CLOSED',
     ]);
+    expect(events.filter(e => e.type === 'JOB_STAGE_CHANGED').length).toBeGreaterThan(0);
+    expect(events.filter(e => e.type === 'PART_STATUS_CHANGED').length).toBeGreaterThanOrEqual(6);
     while ((await runWebhookSweep()).attempted > 0);
     const hits = crm.received.filter((h) => JSON.parse(h.body).claim?.ticket === claim.humanId);
     expect(hits.map((h) => h.headers['x-ncc-event'])).toEqual(events.map((e) => e.type));

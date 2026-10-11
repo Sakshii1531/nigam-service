@@ -1,3 +1,5 @@
+import { runInTransaction } from '../../utils/transaction.js';
+import { flushAudit } from '../partner-warranty/claimTimeline.js';
 import { ServiceRequest } from './serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { rankServiceProviders } from '../shared/assignmentEngine.js';
@@ -18,6 +20,7 @@ import {
   markAllocationFailedFor,
   warrantyJobInfo,
   syncClaimFromJob,
+  allocationUrgency,
 } from '../partner-warranty/claimDispatch.js';
 
 /** Partner-warranty dispatch rules apply to a Service Job created from a claim (docs/partner-warranty Phase 6). */
@@ -111,6 +114,16 @@ export async function transitionStatus(id, toStatus, { description, session, ski
     ? await ServiceRequest.findById(id).session(session)
     : await findOr404(id);
   if (!serviceRequest) throw new ApiError(404, 'Service request not found');
+  if (serviceRequest.warrantyClaim && !session && !skipWarrantySync && ['Repair Completed', 'Customer NA'].includes(toStatus)) {
+    let savedClaim;
+    const updated = await runInTransaction(async activeSession => {
+      const sr = await transitionStatus(id, toStatus, { description, session: activeSession, skipWarrantySync: true });
+      await syncClaimFromJob(sr, { session: activeSession, persistOnly: true, onPersist: c => { savedClaim = c; } });
+      return sr;
+    });
+    if (savedClaim) await flushAudit(savedClaim);
+    return updated;
+  }
   const allowed = SERVICE_REQUEST_TRANSITIONS[serviceRequest.status] || [];
 
   if (!allowed.includes(toStatus)) {
@@ -135,11 +148,12 @@ export async function transitionStatus(id, toStatus, { description, session, ski
 }
 
 
-export async function listServiceRequests({ user, serviceProvider, brand, status, zone, page, limit, sort } = {}) {
+export async function listServiceRequests({ user, serviceProvider, brand, status, zone, page, limit, sort,ticketOnly } = {}) {
   const query = {};
   if (user) query.user = user;
   if (serviceProvider) query.serviceProvider = serviceProvider;
   if (brand) query.brand = brand;
+  if(ticketOnly)query.warrantyClaim={$ne:null};
   if (status) query.status = status;
   // zone is free-text (ServiceRequest.zone: String, not a City ref) — an
   // ASM's own zone name, resolved server-side in the route handler, never
@@ -193,6 +207,7 @@ export async function suggestServiceProviders(id) {
     // A warranty job's shortlist applies the warranty rules (skill, brand
     // authorization, service area) — the operator still sees Busy/Offline ones.
     warranty: warrantyContext(serviceRequest),
+    urgency: await allocationUrgency(serviceRequest),
     // The operator is overriding auto-assignment, so they get every Active
     // service provider — including the Busy/Offline ones auto-assign skips. The
     // shortlist used to be filtered to Available only, which meant that with
@@ -314,7 +329,10 @@ export async function assignServiceProvider(id, serviceProviderId) {
     if (warranty) {
       // A held or finished claim is never auto-dispatched (Super Admin, Phase 8);
       // naming a partner explicitly is still allowed.
-      const claim = await WarrantyClaim.findById(serviceRequest.warrantyClaim).select('status').lean();
+      const claim = await WarrantyClaim.findOne({
+        _id: serviceRequest.warrantyClaim,
+        brand: serviceRequest.brand,
+      }).select('status').lean();
       if (['On Hold', 'Cancelled', 'Closed', 'Rejected'].includes(claim?.status)) {
         throw new ApiError(409, `Warranty claim is ${claim.status} — not dispatching`);
       }
@@ -327,6 +345,7 @@ export async function assignServiceProvider(id, serviceProviderId) {
       longitude: serviceRequest.customerLocation?.longitude || booking?.address?.longitude,
       exclude: serviceRequest.declinedBy || [],
       warranty,
+      urgency: await allocationUrgency(serviceRequest),
     });
     serviceProvider = best?.serviceProvider;
     authorized = best?.authorized ?? null;

@@ -194,7 +194,7 @@ export default function AdminWarrantyClaimDetail() {
   const cfg = dialog && DIALOGS?.[dialog];
 
   return (
-    <AdminShell title="Warranty Claim" subtitle={c ? `${c.humanId} · ${c.brand?.name} · ${c.productName} — ${c.issueName}` : 'Loading…'}>
+    <AdminShell title="Brand Ticket" subtitle={c ? `${c.humanId} · ${c.brand?.name} · ${c.productName} — ${c.issueName}` : 'Loading…'}>
       <Link to="/super-admin/partner-warranty/claims" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0D47A1]">
         <ArrowLeft size={14} /> All claims
       </Link>
@@ -286,6 +286,8 @@ export default function AdminWarrantyClaimDetail() {
                 {c.sla?.pausedAt && <p className="text-[11px] text-amber-700 mt-2">Clock paused since {formatDateTime(c.sla.pausedAt)}.</p>}
               </Panel>
 
+              <Panel title="Live job stage"><p className="text-xs font-bold">{c.jobStage?.replaceAll('_',' ') || 'No job yet'}</p><p className="text-xs text-slate-500">{formatDateTime(c.jobStageAt)}</p></Panel>
+              <Panel title="Allocation attempts"><ol className="text-xs space-y-2">{c.allocation?.attempts?.map(a => <li key={a._id}>{a.partnerName || a.partner} · {a.outcome || 'offered'} · {formatDateTime(a.offeredAt)}{a.reason && <p>{a.reason}</p>}</li>)}</ol>{!c.allocation?.attempts?.length && <p className="text-xs">No offers yet.</p>}</Panel>
               <Panel title={`Service jobs (${c.serviceJobs.length})`}>
                 {c.serviceJobs.length === 0 ? (
                   <p className="text-xs text-[#64748B]">Created when the claim is approved.</p>
@@ -317,7 +319,7 @@ export default function AdminWarrantyClaimDetail() {
                             {j.partner?.phone && <p className="text-[10px]">{j.partner.phone}</p>}
                           </td>
                           <td>{j.declinedBy.length ? j.declinedBy.join(', ') : '—'}</td>
-                          <td>{j.payout != null ? `₹${j.payout}` : '—'}</td>
+                          <td>{j.payout != null ? `₹${j.payout}` : '—'}{j.payoutFlags?.includes('PAYOUT_MISSING')&&<span className="block text-amber-700 text-xs">PAYOUT_MISSING</span>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -387,7 +389,8 @@ export default function AdminWarrantyClaimDetail() {
                 <KV label="Model" value={c.modelNumber} />
                 <KV label="Serial" value={c.serialNumber} />
                 <KV label="Purchased" value={c.purchaseDate ? new Date(c.purchaseDate).toLocaleDateString('en-IN') : null} />
-                <KV label="Warranty check" value={c.warrantyCheck?.status} />
+                <KV label="Source" value={c.source}/><KV label="Brand ticket" value={c.brandTicketNo}/><KV label="Registered by" value={c.registeredBy?`${c.registeredBy.name} (${c.registeredBy.employeeId||'No employee ID'})`:null}/><KV label="Priority" value={c.priority}/><KV label="Coverage decision" value={c.coverageDecision}/><KV label="Policy" value={c.warranty?.policy?`${c.warranty.policy.name} · v${c.warranty.policy.version}`:null}/><KV label="Warranty reasons" value={c.warranty?.reasons?.join(', ')}/><KV label="Warranty check" value={c.warranty?.status} />
+                {c.preferredVisit?.date && <KV label="Preferred visit" value={`${c.preferredVisit.date} · ${c.preferredVisit.slot}${c.preferredVisit.notes ? ` · ${c.preferredVisit.notes}` : ''}`} />}
                 {c.visit && <KV label="Visit" value={formatVisit(c.visit)} />}
                 {c.remarks && <p className="mt-2 text-xs bg-[#F8FAFC] rounded-xl p-2">“{c.remarks}”</p>}
                 {c.rejectionReason && <p className="mt-2 text-xs text-red-700 font-semibold">Rejected: {c.rejectionReason}</p>}

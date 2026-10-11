@@ -111,7 +111,7 @@ export function inWarrantyServiceArea(provider, { pincode, city, state, latitude
  * `authorized`), the service area replaces the plain city match, and tier
  * adds a small bonus. Without it, ranking is exactly as before.
  */
-export async function rankServiceProviders({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [], warranty = null } = {}) {
+export async function rankServiceProviders({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [], warranty = null, urgency = null } = {}) {
   // Auto-assignment only ever considers service providers who have marked themselves
   // Available. The super-admin console passes includeUnavailable so an operator
   // can still hand-pick an Active service provider who is Busy or Offline.
@@ -143,6 +143,7 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
     if (candidates.length === 0) return [];
   }
 
+  const urgent = Boolean(warranty && (urgency?.priority === 'Critical' || (Number.isFinite(urgency?.remainingMs) && urgency?.windowMs > 0 && urgency.remainingMs < urgency.windowMs * 0.25)));
   const pending = await pendingAssignmentCounts();
 
   const weighting = (await AssignmentWeighting.findOne()) || {
@@ -176,7 +177,8 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
     const workload = clamp0to100(100 - load * 20);
 
     const tier = warranty ? TIER_BONUS[provider.tier] || 0 : 0;
-    const score =
+    const availability = provider.availability === 'Available' ? 100 : provider.availability === 'Busy' ? 30 : 0;
+    const score = urgent ? proximity * 0.65 + availability * 0.20 + rating * 0.10 + workload * 0.05 + tier * 0.2 :
       (proximity * weighting.proximityPercent +
         skill * weighting.skillPercent +
         rating * weighting.ratingPercent +
@@ -184,7 +186,7 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
         100 +
       tier;
 
-    const result = { proximity, distanceKm, skill, rating, workload, tier, score };
+    const result = { proximity, distanceKm, skill, rating, workload, tier, score, availability, urgent };
     if (warranty) {
       result.authorized = (provider.authorizedBrands || []).some((b) => String(b) === String(warranty.brand));
       result.brandRequiresAuthorization = brandRequiresAuthorization;
@@ -196,15 +198,15 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
   return candidates
     .map((serviceProvider) => ({ serviceProvider, ...breakdown(serviceProvider) }))
     .sort((a, b) => {
-      if (a.distanceKm != null && b.distanceKm != null && a.distanceKm !== b.distanceKm) {
+      if (!warranty && a.distanceKm != null && b.distanceKm != null && a.distanceKm !== b.distanceKm) {
         return a.distanceKm - b.distanceKm;
       }
       return b.score - a.score;
     });
 }
 
-export async function findAvailableServiceProvider({ category, city, state, latitude, longitude, exclude = [], warranty = null } = {}) {
-  const [best] = await rankServiceProviders({ category, city, state, latitude, longitude, exclude, warranty });
+export async function findAvailableServiceProvider({ category, city, state, latitude, longitude, exclude = [], warranty = null, urgency = null } = {}) {
+  const [best] = await rankServiceProviders({ category, city, state, latitude, longitude, exclude, warranty, urgency });
   return best ? best.serviceProvider : null;
 }
 

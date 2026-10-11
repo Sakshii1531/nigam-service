@@ -1,3 +1,4 @@
+import {fulfillWarrantyParts} from './helpers/warrantyParts.js';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import mongoose from 'mongoose';
 import { createApp } from '../src/app.js';
@@ -12,7 +13,7 @@ import { WarrantyClaim } from '../src/modules/partner-warranty/warrantyClaim.mod
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
 import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
 import { Job } from '../src/modules/service-provider/job.model.js';
-import { RateCard } from '../src/modules/brand-admin/rateCard.model.js';
+import { BrandRate } from '../src/modules/brand-crm/brandRate.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { createServiceJobForClaim, dispatchServiceJob } from '../src/modules/partner-warranty/claimJob.service.js';
@@ -43,7 +44,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all(
-    [Category, Brand, WarrantyGroup, WarrantyIssue, WarrantyClaim, ServiceRequest, ServiceProvider, Job, RateCard, User, AuditLog, Notification].map(
+    [Category, Brand, WarrantyGroup, WarrantyIssue, WarrantyClaim, ServiceRequest, ServiceProvider, Job, BrandRate, User, AuditLog, Notification].map(
       (m) => m.deleteMany({}),
     ),
   );
@@ -98,14 +99,17 @@ describe('Phase 5 — approval creates the Service Job', () => {
     expect(sr.description).toBe('Warranty: Air Conditioner — Cooling Issue. Blows warm air');
     expect(sr.attachments).toHaveLength(1);
 
-    expect(saved.timeline.map((e) => [e.action, e.toStatus])).toEqual([
+    expect(saved.timeline.filter(e => e.action === 'JOB_STAGE_CHANGED').map(e => e.meta.stage)).toEqual(['PARTNER_FINDING','JOB_OFFERED']);
+    expect(saved.timeline.filter(e=>e.action!=='CUSTOMER_NOTIFIED').map((e) => [e.action, e.toStatus])).toEqual([
       ['CLAIM_SUBMITTED', null],
       ['CLAIM_APPROVED', 'Approved'],
+      ['JOB_STAGE_CHANGED', null],
       ['JOB_CREATED', 'Job Created'],
+      ['JOB_STAGE_CHANGED', null],
       ['PARTNER_OFFERED', null], // Phase 6: internal dispatch history
     ]);
     const audit = await AuditLog.find({ entityId: saved._id }).sort({ createdAt: 1, _id: 1 });
-    expect(audit.map((a) => a.toStatus)).toEqual([null, 'Approved', 'Job Created', null]);
+    expect(audit.filter(a=>a.meta?.timelineAction !== 'CUSTOMER_NOTIFIED').map((a) => a.toStatus)).toEqual([null, 'Approved', null, 'Job Created', null, null]);
 
     // The brand isn't told about a "new brand warranty claim" for its own approval.
     expect(await Notification.countDocuments({ recipient: lg.user._id, title: 'Brand Warranty Claim' })).toBe(0);
@@ -130,7 +134,7 @@ describe('Phase 5 — approval creates the Service Job', () => {
     const saved = await WarrantyClaim.findById(claim.id);
     expect((await ServiceRequest.findById(saved.serviceRequest)).status).toBe('New');
     expect(saved.flags.allocationFailed).toBe(true);
-    expect(saved.timeline.at(-1)).toMatchObject({ action: 'ALLOCATION_FAILED', visibility: 'internal' });
+    expect(saved.timeline.findLast(e=>e.action==='ALLOCATION_FAILED')).toMatchObject({ action: 'ALLOCATION_FAILED', visibility: 'internal' });
 
     const alerts = await Notification.find({ recipient: admin.user._id, title: 'Warranty Job Needs Manual Assignment' });
     expect(alerts).toHaveLength(1);
@@ -175,16 +179,16 @@ describe('Phase 5 — approval creates the Service Job', () => {
 
   it('a rejected claim never gets a job', async () => {
     const { lg, claim } = await scenario();
-    await api().post(`/api/v1/brand/warranty-claims/${claim.id}/reject`).set(bearer(lg.token)).send({ reason: 'Not covered' }).expect(200);
+    await api().post(`/api/v1/brand/warranty-claims/${claim.id}/reject`).set(bearer(lg.token)).send({ rejectionCode:'NOT_COVERED',reason: 'Not covered' }).expect(200);
     await approve(lg, claim).expect(409);
     expect(await ServiceRequest.countDocuments({ warrantyClaim: claim.id })).toBe(0);
   });
 });
 
 describe('Phase 5 — the partner works the warranty job', () => {
-  it('runs as a Brand Warranty job paid from the brand RateCard, free to the customer', async () => {
-    const { w, lg, cust, claim } = await scenario();
-    await RateCard.create({ brand: w.lg._id, category: 'AC', serviceType: 'Repair', laborRate: 450 });
+  it('runs as a Brand Warranty job paid from the brand BrandRate, free to the customer', async () => {
+    const { w, lg, cust, admin, claim } = await scenario();
+    await BrandRate.create({ brand: w.lg._id, category: w.ac._id, serviceType: 'repair', brandRate: 600, partnerPayout: 450 });
     const sp = await indorePartner();
     await approve(lg, claim).expect(200);
     const srId = String((await WarrantyClaim.findById(claim.id)).serviceRequest);
@@ -208,6 +212,7 @@ describe('Phase 5 — the partner works the warranty job', () => {
       .set(auth)
       .send({ parts: [{ name: 'Flare Nut', price: 120, checked: true }] })
       .expect(200);
+    await fulfillWarrantyParts(kit,{jobId:job.id,claimId:claim.id,partner:sp,brand:lg,admin,customer:cust});
     await api().post(`/api/v1/service-provider/jobs/${job.id}/repair-complete`).set(auth).expect(200);
     const billing = (await api().post(`/api/v1/service-provider/jobs/${job.id}/billing`).set(auth).expect(200)).body.data.billingEstimate;
     expect(billing).toMatchObject({ serviceCharge: 0, sparePartsTotal: 0, total: 0, amountToCollect: 0, serviceProviderEarnings: 450 });

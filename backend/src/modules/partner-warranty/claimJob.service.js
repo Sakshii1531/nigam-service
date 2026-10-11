@@ -92,7 +92,7 @@ export async function approveAndCreateJob(filter, decide) {
     await persistClaim(claim, { session });
   });
   await flushAudit(claim);
-  await dispatchServiceJob(claim._id);
+  await dispatchServiceJob(claim._id, claim.brand?._id || claim.brand);
   return claim._id;
 }
 
@@ -103,8 +103,8 @@ export async function approveAndCreateJob(filter, decide) {
  * Super Admin, who assigns manually (Phase 8) or waits for the automatic
  * retry when a partner comes online.
  */
-export async function dispatchServiceJob(claimId) {
-  const claim = await WarrantyClaim.findById(claimId);
+export async function dispatchServiceJob(claimId, brandId = null) {
+  const claim = await WarrantyClaim.findOne({ _id: claimId, ...(brandId ? { brand: brandId } : {}) });
   if (!claim?.serviceRequest) return { assigned: false, reason: 'No service job' };
   try {
     const sr = await assignServiceProvider(String(claim.serviceRequest), null);

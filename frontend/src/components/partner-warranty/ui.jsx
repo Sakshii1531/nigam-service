@@ -97,7 +97,7 @@ export function StageTimeline({ stages }) {
  * picked and reports `{ url, name, isPdf }` through onChange; shows progress,
  * a thumbnail or PDF chip, remove, and the error inline.
  */
-export function DocumentTile({ label, icon: Icon = FileText, value, onChange, required = false, invalid = false }) {
+export function DocumentTile({ label, icon: Icon = FileText, value, onChange, required = false, invalid = false, onBusyChange }) {
   const inputId = useId();
   const errorId = useId();
   const inputRef = useRef(null);
@@ -110,19 +110,21 @@ export function DocumentTile({ label, icon: Icon = FileText, value, onChange, re
     if (!file) return;
     setError('');
     setBusy(true);
+    onBusyChange?.(true);
     try {
       onChange(await uploadClaimDocument(file));
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
       setBusy(false);
+      onBusyChange?.(false);
     }
   };
 
   const showError = error || (invalid && !value ? 'Required' : '');
   return (
     <div className="flex-1 min-w-0">
-      <input ref={inputRef} id={inputId} type="file" accept={DOCUMENT_ACCEPT} className="sr-only" onChange={pick} aria-describedby={showError ? errorId : undefined} />
+      <input ref={inputRef} id={inputId} type="file" accept={DOCUMENT_ACCEPT} disabled={busy} className="sr-only" onChange={pick} aria-describedby={showError ? errorId : undefined} />
       {value ? (
         <div className="relative flex flex-col items-center gap-1.5 py-3 px-2 bg-white border-2 border-emerald-300 rounded-2xl">
           {value.isPdf ? (
@@ -167,7 +169,7 @@ export function DocumentTile({ label, icon: Icon = FileText, value, onChange, re
 }
 
 /** "Add photo" button for any number of extra documents. */
-export function AddDocumentButton({ onAdded, label = 'Add Photo' }) {
+export function AddDocumentButton({ onAdded, label = 'Add Photo',onBusyChange }) {
   const inputId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -175,18 +177,18 @@ export function AddDocumentButton({ onAdded, label = 'Add Photo' }) {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
     setError('');
-    setBusy(true);
+    setBusy(true);onBusyChange?.(true);
     try {
       for (const file of files) onAdded(await uploadClaimDocument(file));
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
-      setBusy(false);
+      setBusy(false);onBusyChange?.(false);
     }
   };
   return (
     <div>
-      <input id={inputId} type="file" accept={DOCUMENT_ACCEPT} multiple className="sr-only" onChange={pick} />
+      <input id={inputId} type="file" disabled={busy} accept={DOCUMENT_ACCEPT} multiple className="sr-only" onChange={pick} />
       <label
         htmlFor={inputId}
         className="w-20 h-20 flex flex-col items-center justify-center bg-white border border-slate-200/80 rounded-2xl cursor-pointer gap-1 focus-within:ring-2 focus-within:ring-brand-blue"

@@ -65,6 +65,7 @@ const proofsSchema = new mongoose.Schema(
 const revisitSchema = new mongoose.Schema(
   {
     expectedDate: Date,
+    partReceivedAt: Date,
     scheduledDate: Date,
     timeSlot: String,
     status: {
@@ -106,6 +107,7 @@ const billingEstimateSchema = new mongoose.Schema(
 // add-ons. Never a share of the customer price.
 const payoutSchema = new mongoose.Schema(
   {
+    flags: { type: [String], default: undefined },
     base: { type: Number, default: 0 },
     expressIncentive: { type: Number, default: 0 },
     addOns: { type: Number, default: 0 },
@@ -175,6 +177,9 @@ const jobSchema = new mongoose.Schema(
       reference: String,
     },
 
+    providerRescheduleStatus: { type:String, enum:['PENDING','ACCEPTED','REJECTED'] },
+    reschedule: { date:String, slot:String, reason:String },
+    completion: { uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, notes: String, workDone: String, photos: [String], at: Date, otpVerifiedAt: Date },
     diagnosis: diagnosisSchema,
     additionalServices: [addOnSchema],
     spareParts: [{ ...lineItemSchema.obj, sku: String, source: { type: String, enum: ['recommended_ai', 'manual'] } }],
@@ -186,6 +191,12 @@ const jobSchema = new mongoose.Schema(
 );
 
 jobSchema.index({ serviceProvider: 1, activeStep: 1 });
+
+jobSchema.post('save', async function syncWarrantyStage(job) {
+  if (!job.warrantyClaim || job.$session()) return;
+  const { syncJobStage } = await import('../partner-warranty/claimDispatch.js');
+  await syncJobStage(job.serviceRequest?._id || job.serviceRequest);
+});
 
 applyStandardPlugins(jobSchema, { prefix: ID_PREFIXES.JOB });
 

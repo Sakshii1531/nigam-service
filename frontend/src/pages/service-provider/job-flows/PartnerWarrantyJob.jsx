@@ -136,10 +136,11 @@ export function PartnerWarrantyDetails({ warranty: w, payout }) {
 
 /** Pick the visit date and slot; the customer and brand see it on the claim. */
 export function WarrantyVisitScheduler({ jobId, warranty: w, onScheduled }) {
-  const [visit, setVisit] = useState(w?.visit || null);
+  const [savedVisit, setVisit] = useState(null);
+  const visit = savedVisit || w?.visit || null;
   const [date, setDate] = useState(w?.visit?.date || '');
   const [slot, setSlot] = useState(w?.visit?.slot || '');
-  const [editing, setEditing] = useState(!w?.visit);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -173,7 +174,7 @@ export function WarrantyVisitScheduler({ jobId, warranty: w, onScheduled }) {
           <p role="status" className="text-sm text-[#052355]">
             <strong>{fmtDate(visit.date)}</strong>, {visit.slot}
           </p>
-          <button type="button" onClick={() => setEditing(true)} className="text-xs font-semibold text-[#1E6BDB] hover:underline min-h-10 px-2">
+          <button type="button" onClick={() => { setDate(visit.date); setSlot(visit.slot); setEditing(true); }} className="text-xs font-semibold text-[#1E6BDB] hover:underline min-h-10 px-2">
             Change
           </button>
         </div>

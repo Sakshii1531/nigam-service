@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
 } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
@@ -331,9 +332,9 @@ export const ServiceProviderProvider = ({ children }) => {
             job.providerRescheduleStatus ||
             null,
           rescheduledAt: sr?.booking?.rescheduledAt || null,
-          rescheduleReason: sr?.booking?.rescheduleReason || null,
-          scheduledDate: sr?.booking?.scheduledDate || null,
-          timeSlot: sr?.booking?.timeSlot || null,
+          rescheduleReason: sr?.booking?.rescheduleReason || job.reschedule?.reason || null,
+          scheduledDate: sr?.booking?.scheduledDate || job.reschedule?.date || null,
+          timeSlot: sr?.booking?.timeSlot || job.reschedule?.slot || null,
           completionOtp: resolvedOtp,
           serviceRequest: sr ? { ...sr, completionOtp: resolvedOtp } : null,
           booking: sr?.booking
@@ -792,6 +793,13 @@ export const ServiceProviderProvider = ({ children }) => {
   const [selectedParts, setSelectedParts] = useState([]);
   // Notes typed during inspection, submitted with the diagnosis when the
   // service provider completes that step.
+  const [completionUploadBusy, setCompletionUploadBusy] = useState(false);
+  const [completionReportState, setCompletionReportState] = useState(null);
+  const completionReport = useMemo(() => completionReportState?.jobId === activeJobId ? completionReportState.report : { notes: "", workDone: "", photos: [] }, [completionReportState, activeJobId]);
+  const setCompletionReport = useCallback(value => setCompletionReportState(previous => {
+    const current = previous?.jobId === activeJobId ? previous.report : { notes: "", workDone: "", photos: [] };
+    return { jobId: activeJobId, report: typeof value === 'function' ? value(current) : value };
+  }), [activeJobId]);
   const [diagnosisNotes, setDiagnosisNotes] = useState(""); // Parts selected during diagnosis
 
   // Signature, photos uploads state
@@ -1072,6 +1080,7 @@ export const ServiceProviderProvider = ({ children }) => {
   // rather than from React state that may not have flushed yet.
   const advanceStep = useCallback(
     async (fromStep) => {
+      if (completionUploadBusy) return {ok:false,error:"Wait for completion photos to finish uploading."};
       if (stepBusyRef.current)
         return { ok: false, error: "Step update already in progress." };
       const current = typeof fromStep === "string" ? fromStep : activeStep;
@@ -1097,7 +1106,7 @@ export const ServiceProviderProvider = ({ children }) => {
               })),
               additionalServices: [],
             }
-          : undefined;
+          : move.path === "repair-complete" ? completionReport : undefined;
 
         // Finishing the inspection is the diagnosis being submitted. The server
         // moves the request Engineer Reached -> Diagnosis Done on that call, and
@@ -1164,6 +1173,8 @@ export const ServiceProviderProvider = ({ children }) => {
       activeJobId,
       selectedParts,
       diagnosisNotes,
+      completionReport,
+      completionUploadBusy,
       activeJob?.diagnosis?.photos,
       fetchRealJobs,
     ],
@@ -1173,6 +1184,7 @@ export const ServiceProviderProvider = ({ children }) => {
     setActiveJobId(null);
     setActiveStep("idle");
     setSelectedParts([]);
+    setCompletionReport({ notes: "", workDone: "", photos: [] });
     setProofs({
       photos: 2,
       videos: 0,
@@ -1631,6 +1643,10 @@ export const ServiceProviderProvider = ({ children }) => {
         setSelectedParts,
         diagnosisNotes,
         setDiagnosisNotes,
+        completionReport,
+        setCompletionReport,
+        completionUploadBusy,
+        setCompletionUploadBusy,
         proofs,
         setProofs,
         inventory,

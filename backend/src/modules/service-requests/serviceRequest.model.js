@@ -77,6 +77,7 @@ const serviceRequestSchema = new mongoose.Schema(
 
 serviceRequestSchema.index({ brand: 1, status: 1, createdAt: -1 });
 serviceRequestSchema.index({ serviceProvider: 1, status: 1 });
+serviceRequestSchema.index({brand:1,appliance:1});
 
 applyStandardPlugins(serviceRequestSchema, { prefix: ID_PREFIXES.SERVICE_REQUEST });
 

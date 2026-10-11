@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import { WarrantyClaim } from './warrantyClaim.model.js';
+import { actorFromUser } from '../brand-crm/actor.js';
 import { appendEvent, saveClaim } from './claimTimeline.js';
 import { CLAIM_STATUS, visitLabel } from './claimStatus.js';
 import { Job } from '../service-provider/job.model.js';
@@ -83,6 +85,7 @@ export async function confirmService(customerId, claim) {
   if (sr?.status !== 'Customer Confirmation') {
     throw new ApiError(409, 'The technician has not finished closing the job yet');
   }
+  claim.closure.customerConfirmedAt = new Date(); claim.closure.confirmationMethod = 'app';
   const user = await User.findById(customerId).select('name').lean();
   return closeClaimAndJob(claim, {
     action: 'CUSTOMER_CONFIRMED',
@@ -109,6 +112,7 @@ export async function autoCloseCompletedClaims({ olderThanHours = AUTO_CLOSE_AFT
     const claim = await WarrantyClaim.findById(sr.warrantyClaim);
     if (claim?.status !== CLAIM_STATUS.SERVICE_COMPLETED) continue;
     try {
+      claim.closure.confirmationMethod = 'auto';
       await closeClaimAndJob(claim, {
         action: 'CLAIM_CLOSED',
         actor: SYSTEM,
@@ -120,4 +124,18 @@ export async function autoCloseCompletedClaims({ olderThanHours = AUTO_CLOSE_AFT
     }
   }
   return { checked: waiting.length, closed };
+}
+
+/** CCE confirmation requires evidence of a customer call/note after completion. */
+export async function confirmOnBehalf(user, id, { remarks }) {
+  const claim = await WarrantyClaim.findOne({ brand: user.brand, ...(mongoose.isValidObjectId(id) ? { _id: id } : { humanId: id.toUpperCase() }) });
+  if (!claim) throw new ApiError(404, 'Ticket not found');
+  const completed = [...claim.timeline].reverse().find(e => e.toStatus === CLAIM_STATUS.SERVICE_COMPLETED);
+  const evidence = claim.timeline.some(e => e.visibility !== 'internal' && ['NOTE_ADDED', 'CUSTOMER_CONTACTED'].includes(e.action) && e.actor.kind === 'brand' && e.note?.trim().length >= 5 && completed && e.at >= completed.at);
+  if (!evidence) throw new ApiError(409, 'Log a customer confirmation call or note after service completion first');
+  const sr = await ServiceRequest.findById(claim.serviceRequest).select('status');
+  if (claim.status !== CLAIM_STATUS.SERVICE_COMPLETED || sr?.status !== 'Customer Confirmation') throw new ApiError(409, 'The job is not awaiting customer confirmation');
+  claim.closure.customerConfirmedAt = new Date(); claim.closure.confirmationMethod = 'cce';
+  await closeClaimAndJob(claim, { action: 'CUSTOMER_CONFIRMED', actor: await actorFromUser(user.id, 'brand'), note: remarks });
+  return { id: claim.id, status: claim.status };
 }

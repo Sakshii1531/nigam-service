@@ -202,7 +202,7 @@ describe('Phase 7 — Track Ticket', () => {
     const [lg, cust] = await Promise.all([kit.brandAdmin(w.lg), kit.customer()]);
     const claim = await kit.submitClaim(w, cust);
     await api().get(`/api/v1/brand/warranty-claims/${claim.id}`).set(bearer(lg.token)).expect(200);
-    await api().post(`/api/v1/brand/warranty-claims/${claim.id}/reject`).set(bearer(lg.token)).send({ reason: 'Burn marks on PCB' }).expect(200);
+    await api().post(`/api/v1/brand/warranty-claims/${claim.id}/reject`).set(bearer(lg.token)).send({ rejectionCode: 'PHYSICAL_DAMAGE', reason: 'Burn marks on PCB' }).expect(200);
 
     const t = (await api().get(`/api/v1/partner-warranty/claims/${claim.id}/track`).set(bearer(cust.token)).expect(200)).body.data;
     expect(t.stages.map((st) => [st.label, st.state])).toEqual([
@@ -245,7 +245,7 @@ describe('Phase 7 — confirming and closing', () => {
 
     const saved = await WarrantyClaim.findById(s.claim.id);
     expect(saved.status).toBe('Closed');
-    expect(saved.timeline.at(-1)).toMatchObject({ action: 'CLAIM_CLOSED', note: 'Closed automatically — not confirmed within 72 hours of completion' });
+    expect(saved.timeline.findLast(e=>e.action==='CLAIM_CLOSED')).toMatchObject({ action: 'CLAIM_CLOSED', note: 'Closed automatically — not confirmed within 72 hours of completion' });
     expect((await ServiceRequest.findById(s.srId)).status).toBe('Closed');
   });
 });

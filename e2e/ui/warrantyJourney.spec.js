@@ -85,7 +85,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   // ── Four apps, four browsers ──
   const adminPage = await appPage(browser, adminSession, 'super_admin', DESKTOP);
   await adminPage.goto('/super-admin/partner-warranty/claims');
-  await expect(adminPage.getByRole('heading', { name: 'Partner Warranty Claims' })).toBeVisible({ timeout: 15_000 });
+  await expect(adminPage.getByRole('heading', { name: 'Brand Tickets' })).toBeVisible({ timeout: 15_000 });
 
   const partnerPage = await appPage(browser, partnerSession, '', PHONE);
   await partnerPage.goto('/service-provider/dashboard');
@@ -109,6 +109,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   await customer.getByLabel(/Pincode/).fill('302001');
   await customer.locator('input[type=file]').first().setInputFiles({ name: 'invoice.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(customer.getByRole('button', { name: 'Remove Bill / Invoice' })).toBeVisible();
+  await customer.getByLabel("I confirm this is the location for the technician's visit.",{exact:true}).check();
   await customer.getByRole('button', { name: 'Raise Ticket' }).click();
   await expect(customer.getByRole('heading', { name: 'Ticket Raised Successfully!' })).toBeVisible({ timeout: 15_000 });
   const ticket = (await customer.getByText(/^NCCW-\d{4}-\d{6}$/).textContent()).trim();
@@ -135,7 +136,8 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   await brandPage.getByRole('dialog').getByLabel(/Remarks/).fill('Within warranty — approved');
   await shot(brandPage, '03-brand-approve');
   await brandPage.getByRole('dialog').getByRole('button', { name: 'Approve claim' }).click();
-  await expect(brandPage.getByText('Claim approved — a Service Job has been created.')).toBeVisible({ timeout: 15_000 });
+  await expect(brandPage.getByText('Job Created',{exact:true}).first()).toBeVisible({ timeout: 15_000 });
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Job Offered');
   const jobNumber = (await brandPage.getByText(/^NCCJ-\d{4}-\d{6}$/).first().textContent()).trim();
 
   // ── 4. Network → partner: the offer pops up on the partner's phone ──
@@ -148,6 +150,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   await shot(partnerPage, '04-partner-offer');
   await offer.getByRole('button', { name: /Accept job/i }).click();
   await expect(offer).toBeHidden({ timeout: 15_000 });
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Partner Assigned');
 
   // The customer sees the technician without reloading.
   await expect(customer.getByText('Your technician')).toBeVisible({ timeout: 15_000 });
@@ -164,25 +167,50 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   await partnerPage.getByText('9 AM – 12 PM').click();
   await partnerPage.getByRole('button', { name: 'Schedule visit' }).click();
   await expect(partnerPage.getByRole('status').filter({ hasText: '9 AM – 12 PM' })).toBeVisible({ timeout: 15_000 });
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Visit Scheduled');
   await shot(partnerPage, '05-partner-visit');
   await expect(customer.getByRole('listitem').filter({ hasText: /Visit Scheduled.*current step/ })).toBeVisible({ timeout: 15_000 });
   await expect(customer.getByText(/9 AM – 12 PM/).first()).toBeVisible();
   await shot(customer, '06-customer-tracking', true);
 
+  // Brand proposes a new slot; the existing partner dashboard confirms it.
+  await brandPage.getByRole('button', { name: 'Reschedule', exact: true }).click();
+  const rescheduleDialog=brandPage.getByRole('dialog', {name:'Reschedule visit',exact:true});
+  await rescheduleDialog.getByLabel('New visit date',{exact:true}).fill(tomorrowIso());
+  await rescheduleDialog.getByLabel('New visit slot',{exact:true}).selectOption('afternoon');
+  await rescheduleDialog.getByLabel('Reschedule reason',{exact:true}).fill('Customer requested an afternoon appointment');
+  await rescheduleDialog.getByRole('button',{name:'Request reschedule',exact:true}).click();
+  await expect(rescheduleDialog).toBeHidden();
+  const activeJobUrl=partnerPage.url();
+  await partnerPage.goto('/service-provider/dashboard');
+  await partnerPage.getByRole('button',{name:'Accept Reschedule',exact:true}).click();
+  await expect(brandPage.getByRole('status').filter({hasText:'Reschedule accepted:'})).toBeVisible();
+  await partnerPage.goto(activeJobUrl);
+
   // ── 6. Execution (partner's on-site steps), then the customer closes the claim ──
   const job = (await call(request, 'get', '/service-provider/jobs/active', partnerSession.accessToken)).find((j) => j.warranty?.claimId === ticket);
-  for (const step of ['start-travel', 'arrive']) await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partnerSession.accessToken);
+  for (const [step, stage] of [['start-travel','En Route'], ['arrive','Reached']]) { await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partnerSession.accessToken); await expect(brandPage.getByTestId('job-stage')).toHaveText(stage); }
   await expect(customer.getByText('The technician is working on your product.')).toBeVisible({ timeout: 15_000 });
   await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerSession.accessToken, { notes: 'Capacitor replaced' });
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Diagnosis');
   await call(request, 'post', `/service-provider/jobs/${job.id}/spare-parts`, partnerSession.accessToken, { parts: [] });
-  await call(request, 'post', `/service-provider/jobs/${job.id}/repair-complete`, partnerSession.accessToken);
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Repair');
+  await partnerPage.reload();
+  await expect(partnerPage.getByRole('heading', { name: 'Service completion report' })).toBeVisible();
+  await partnerPage.getByLabel('Work done').fill('Capacitor replaced and cooling tested');
+  await partnerPage.getByLabel('Completion notes').fill('Service completed and tested');
+  await partnerPage.getByRole('button', { name: 'No Parts Required — Continue', exact: true }).click();
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Completed');
   await call(request, 'post', `/service-provider/jobs/${job.id}/billing`, partnerSession.accessToken);
   const otp = (await customer.getByLabel(/^Completion code/).textContent({ timeout: 15_000 })).trim();
   await call(request, 'post', `/service-provider/jobs/${job.id}/collect-payment`, partnerSession.accessToken, { paymentMethod: 'Cash', otp });
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Customer Confirmation');
   const done = customer.getByRole('button', { name: 'Service done — close my claim' });
   await expect(done).toBeVisible({ timeout: 15_000 });
   await done.click();
   await expect(customer.getByText('This claim is closed. Thank you!')).toBeVisible({ timeout: 15_000 });
+  await expect(brandPage.getByTestId('job-stage')).toHaveText('Closed');
+  await expect(brandPage.getByText('Capacitor replaced and cooling tested',{exact:true})).toBeVisible();
   await shot(customer, '07-customer-closed', true);
 
   // "Rate your service" rates this claim's job — no made-up score when unrated.
@@ -195,12 +223,14 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   await customer.getByRole('button', { name: 'Submit Rating' }).click();
   await expect(customer.getByText('Thanks for your feedback!')).toBeVisible({ timeout: 15_000 });
 
+  await expect(brandPage.getByTestId('closure-rating')).toContainText('★');
+
   // ── 7. Three-way sync: brand and NCC see the same end state ──
   await expect(brandPage.getByText('Closed').first()).toBeVisible({ timeout: 15_000 });
   await shot(brandPage, '08-brand-closed', true);
   await adminRow.click();
-  await expect(adminPage.getByRole('heading', { name: 'Warranty Claim', exact: true })).toBeVisible({ timeout: 15_000 });
-  await expect(adminPage.getByRole('heading', { name: 'Audit trail (11)' })).toBeVisible();
+  await expect(adminPage.getByRole('heading', { name: 'Brand Ticket', exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(adminPage.getByRole('heading', { name: /Audit trail \(\d+\)/ })).toBeVisible();
   await expect(adminPage.getByText('Closed').first()).toBeVisible();
   await expect(adminPage.getByText(jobNumber).first()).toBeVisible();
   await shot(adminPage, '09-admin-closed', true);

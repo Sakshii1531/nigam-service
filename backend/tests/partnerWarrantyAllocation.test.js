@@ -120,8 +120,8 @@ describe('Phase 6 — who is eligible for a warranty job', () => {
     expect(String(sr.serviceProvider)).toBe(near1.id);
     const saved = await WarrantyClaim.findById(s.claim.id);
     expect(saved.flags.unauthorizedFallback).toBe(true);
-    expect(saved.timeline.at(-1)).toMatchObject({ action: 'PARTNER_OFFERED', visibility: 'internal' });
-    expect(saved.timeline.at(-1).note).toMatch(/no authorized partners/);
+    expect(saved.timeline.findLast(e=>e.action==='PARTNER_OFFERED')).toMatchObject({ action: 'PARTNER_OFFERED', visibility: 'internal' });
+    expect(saved.timeline.findLast(e=>e.action==='PARTNER_OFFERED').note).toMatch(/no authorized partners/);
   });
 
   it('respects service pincodes, radius, and city', async () => {

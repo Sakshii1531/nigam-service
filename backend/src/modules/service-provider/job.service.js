@@ -1,3 +1,6 @@
+import { runInTransaction } from '../../utils/transaction.js';
+import { flushAudit } from '../partner-warranty/claimTimeline.js';
+import { isOwnUploadUrl } from '../shared/fileUpload.js';
 import mongoose from 'mongoose';
 import { Job } from './job.model.js';
 import { ServiceProvider } from './serviceProvider.model.js';
@@ -116,6 +119,7 @@ async function findOwnedJob(serviceProviderId, jobId) {
  */
 async function simpleTransition(serviceProviderId, jobId, toStep, srStatus) {
   const job = await findOwnedJob(serviceProviderId, jobId);
+  if(job.warrantyClaim&&job.providerRescheduleStatus==='PENDING')throw new ApiError(409,'Respond to the reschedule request before starting the visit');
 
   let targetStep = toStep;
   if (job.activeStep === 'revisit_scheduled' && toStep === 'ontheway') targetStep = 'revisit_ontheway';
@@ -124,16 +128,28 @@ async function simpleTransition(serviceProviderId, jobId, toStep, srStatus) {
 
   ensureTransition(job, targetStep);
   job.activeStep = targetStep;
-  await job.save();
   let updatedSr = null;
-  if (srStatus) {
+  if (job.warrantyClaim && ['repaircomplete', 'revisit_complete'].includes(targetStep)) {
+    let savedClaim;
+    await runInTransaction(async session => {
+      await job.save(session ? { session } : undefined);
+      const sr = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest).session(session);
+      updatedSr = SERVICE_REQUEST_TRANSITIONS[sr?.status]?.includes(srStatus)
+        ? await transitionStatus(sr._id, srStatus, { description: `Job step -> ${targetStep}`, session, skipWarrantySync: true }) : sr;
+      await syncClaimFromJob(updatedSr, { session, persistOnly: true, onPersist: c => { savedClaim = c; } });
+    });
+    if (savedClaim) await flushAudit(savedClaim);
+  } else {
+    await job.save();
+  }
+  if (!updatedSr && srStatus) {
     const serviceRequest = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest);
     if (SERVICE_REQUEST_TRANSITIONS[serviceRequest?.status]?.includes(srStatus)) {
       updatedSr = await transitionStatus(job.serviceRequest, srStatus, { description: `Job step -> ${targetStep}` });
     } else {
       updatedSr = serviceRequest;
     }
-  } else {
+  } else if (!updatedSr) {
     updatedSr = await ServiceRequest.findById(job.serviceRequest._id || job.serviceRequest);
   }
 
@@ -689,7 +705,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   const price = booking ? booking.totalPrice : 0;
 
   // Frozen now: later catalogue price or payout changes never reach this job.
-  const payout = await initialJobPayout(serviceRequest, booking);
+  const payout = await initialJobPayout({ ...serviceRequest.toObject(), amcSubscription: resolvedAmcSubId, extendedWarrantyOrder: resolvedEwOrderId }, booking);
 
   const jobData = {
     serviceRequest: serviceRequest._id,
@@ -746,11 +762,12 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   // A service provider can only be assigned (and therefore accept) once the SR itself
   // is 'Assigned' — booking.service.js's auto-assign flow already puts it there
   // for D2C jobs; non-D2C fixtures must do the same before calling acceptJob.
-  await transitionStatus(serviceRequest._id, 'Engineer Accepted', { description: 'ServiceProvider accepted the job' });
 
   serviceRequest.isAccepted = true;
   serviceRequest.acceptedAt = new Date();
   await serviceRequest.save();
+  await transitionStatus(serviceRequest._id, 'Engineer Accepted', { description: 'ServiceProvider accepted the job' });
+
 
   if (booking) {
     booking.isAccepted = true;
@@ -808,8 +825,16 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
 
 export const startTravel = (serviceProviderId, jobId) => simpleTransition(serviceProviderId, jobId, 'ontheway', 'Visit Scheduled');
 export const arrive = (serviceProviderId, jobId) => simpleTransition(serviceProviderId, jobId, 'inspection', 'Engineer Reached');
-export const confirmRepairComplete = (serviceProviderId, jobId) =>
-  simpleTransition(serviceProviderId, jobId, 'repaircomplete', 'Repair Completed');
+export async function confirmRepairComplete(serviceProviderId, jobId, report = {}) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  if (job.warrantyClaim && await PartOrder.exists({job:job._id,status:{$nin:['Installed','Rejected']}})) throw new ApiError(409,'Install all requested parts before completing the repair');
+  ensureTransition(job, job.activeStep.startsWith('revisit_') ? 'revisit_complete' : 'repaircomplete');
+  if (report.photos?.length) for (const url of report.photos) if (!isOwnUploadUrl(url)) throw new ApiError(400, 'Completion photos must come from uploads');
+  const provider = await ServiceProvider.findById(serviceProviderId).select('user').lean();
+  job.completion = { ...report, uploadedBy: provider?.user || null, at: new Date() };
+  await job.save();
+  return simpleTransition(serviceProviderId, jobId, 'repaircomplete', 'Repair Completed');
+}
 
 /** Diagnosis is content submitted *during* the inspection step (Screens 5/6 in
  * the frontend), not itself a Job.activeStep transition — arrive() already
@@ -990,6 +1015,7 @@ export async function submitSpareParts(serviceProviderId, jobId, { parts = [] })
   job.spareParts = parts;
 
   const checkedParts = parts.filter((p) => p.checked);
+  if (job.serviceRequest?.warrantyClaim && checkedParts.length) return (await (await import('../brand-crm/ticketParts.service.js')).requestWarrantyParts(serviceProviderId, jobId, { parts: checkedParts })).job;
 
   if (!job.isD2C) {
     // A Brand Warranty parts claim is billed to the manufacturer, and the brand
@@ -1081,6 +1107,8 @@ export async function requestSparePart(
   } = {},
 ) {
   const job = await findOwnedJob(serviceProviderId, jobId);
+
+  if (job.serviceRequest?.warrantyClaim) return (await import('../brand-crm/ticketParts.service.js')).requestWarrantyParts(serviceProviderId, jobId, { partName, sku, price, qty, orderSource, fulfillmentType, parts, notes });
 
   const items = parts.length > 0
     ? parts
@@ -1388,6 +1416,8 @@ export async function collectPayment(serviceProviderId, jobId, { paymentMethod =
     }
   }
 
+  if (expectedOtp) { job.completion ||= {}; job.completion.otpVerifiedAt = new Date(); }
+
   // Bill if it wasn't generated yet — same rules as generateBilling.
   if (!job.billingEstimate || job.billingEstimate.total == null) {
     job.billingEstimate = computeJobBilling(job, serviceRequest?.booking);
@@ -1542,6 +1572,13 @@ export async function respondToReschedule(serviceProviderId, jobIdOrBookingId, {
   if (!booking && !job) {
     throw new ApiError(404, 'Job or booking not found for this service provider');
   }
+
+  if (job?.warrantyClaim && job.providerRescheduleStatus === 'PENDING') {
+    if (!['accept','reject'].includes(action)) throw new ApiError(400, 'Choose accept or reject');
+    const { respondToTicketReschedule } = await import('../brand-crm/ticketComm.service.js');
+    return respondToTicketReschedule(serviceProviderId, job, action, reason);
+  }
+  if (job?.warrantyClaim) throw new ApiError(409, 'No pending reschedule for this job');
 
   if (action === 'accept') {
     if (booking) {

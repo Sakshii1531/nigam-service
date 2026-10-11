@@ -1,5 +1,7 @@
+import { jobStageFor, mayMoveJobStage } from './jobStage.js';
+export { jobStageFor } from './jobStage.js';
 import { WarrantyClaim } from './warrantyClaim.model.js';
-import { appendEvent, saveClaim, emitClaimUpdated } from './claimTimeline.js';
+import { appendEvent, saveClaim, persistClaim, emitClaimUpdated, setJobStage } from './claimTimeline.js';
 import { CLAIM_STATUS, SERVICE_STAGES, visitLabel } from './claimStatus.js';
 import { Job } from '../service-provider/job.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
@@ -18,9 +20,12 @@ import { emit as emitNotification, emitToAdmins } from '../notifications/notific
 
 const SYSTEM = { kind: 'system', name: 'NCC' };
 
-async function claimFor(sr) {
+async function claimFor(sr, session = null) {
   if (!sr?.warrantyClaim) return null;
-  return WarrantyClaim.findById(sr.warrantyClaim._id || sr.warrantyClaim);
+  return WarrantyClaim.findOne({
+    _id: sr.warrantyClaim._id || sr.warrantyClaim,
+    ...(sr.brand ? { brand: sr.brand._id || sr.brand } : {}),
+  }).session(session);
 }
 
 /**
@@ -37,6 +42,10 @@ export async function onWarrantyJobOffered(sr, provider, { authorized = null, ma
   claim.flags.allocationFailed = false;
   if (authorized === false && !manual) claim.flags.unauthorizedFallback = true;
 
+  const pending = claim.allocation.attempts.find(a => !a.outcome);
+  if (pending) { pending.outcome = 'withdrawn'; pending.resolvedAt = new Date(); pending.reason = 'Replaced by another offer'; }
+  claim.allocation.attempts.push({ serviceRequest: sr._id, partner: provider._id, partnerName: provider.name, offeredAt: new Date() });
+  applyDetailedStage(claim, sr, null);
   appendEvent(claim, {
     action: 'PARTNER_OFFERED',
     actor: SYSTEM,
@@ -82,6 +91,9 @@ export async function notifyPartner(provider, template, claim, sr, extra = {}) {
 export async function onWarrantyJobDeclined(sr, providerName, reason) {
   const claim = await claimFor(sr);
   if (!claim) return;
+  const attempt = [...claim.allocation.attempts].reverse().find(a => !a.outcome && String(a.serviceRequest) === String(sr._id));
+  if (attempt) { attempt.outcome = reason === 'timeout' ? 'timeout' : 'declined'; attempt.reason = reason || 'Declined'; attempt.resolvedAt = new Date(); }
+  applyDetailedStage(claim, sr, null);
   appendEvent(claim, {
     action: 'PARTNER_DECLINED',
     actor: SYSTEM,
@@ -95,6 +107,7 @@ export async function onWarrantyJobDeclined(sr, providerName, reason) {
 export async function markAllocationFailed(claim, reason) {
   if (!claim || claim.flags.allocationFailed) return;
   claim.flags.allocationFailed = true;
+  applyDetailedStage(claim, { status: 'New', isAccepted: false }, null);
   appendEvent(claim, { action: 'ALLOCATION_FAILED', actor: SYSTEM, note: reason, visibility: 'internal' });
   await saveClaim(claim);
 
@@ -137,6 +150,7 @@ export function warrantyJobInfo(claim, sr, { forAssignedPartner = false } = {}) 
     serialNumber: claim.serialNumber || null,
     area: claim.address?.city || null,
     pincode: claim.address?.pincode || null,
+    preferredVisit: claim.preferredVisit?.date ? claim.preferredVisit : null,
     visit: claim.visit?.date ? { date: claim.visit.date, slot: claim.visit.slot || null } : null,
     // No money is collected from the customer for the covered issue; NCC pays
     // the partner (manual B2B2C settlement, Phase 11).
@@ -183,6 +197,61 @@ export async function warrantyInfoBySr(srs, { forAssignedPartner = false } = {})
   );
 }
 
+/** Update stage and frozen completion data in the same claim write as coarse progress. */
+function applyDetailedStage(claim, sr, job) {
+  let changed = false;
+  const attempt = [...claim.allocation.attempts].reverse().find(a => !a.outcome && String(a.serviceRequest) === String(sr._id));
+  if (sr.isAccepted && attempt && String(attempt.partner) === String(sr.serviceProvider?._id || sr.serviceProvider)) {
+    attempt.outcome = 'accepted'; attempt.resolvedAt = sr.acceptedAt || new Date(); changed = true;
+  }
+  const stage = jobStageFor(sr, job, claim);
+  if (stage !== claim.jobStage && mayMoveJobStage(claim.jobStage, stage, sr, job)) {
+    setJobStage(claim, stage, { attempt: stage === 'JOB_OFFERED' ? claim.allocation.attempts.length : undefined });
+    changed = true;
+  }
+  if (job && ['COMPLETED', 'CUSTOMER_CONFIRMATION', 'CLOSED'].includes(stage)) {
+    const completion = job.completion || {};
+    const report = { summary: completion.notes || job.diagnosis?.notes || 'Service completed',
+      workDone: completion.workDone || '',
+      partsUsed: (job.spareParts || []).filter(p => p.checked).map(p => ({ name: p.name, partNumber: p.sku || '', qty: 1 })),
+      photos: completion.photos || [] };
+    if (JSON.stringify(claim.closure.serviceReport?.toObject?.() || claim.closure.serviceReport || {}) !== JSON.stringify(report)) {
+      claim.closure.serviceReport = report; changed = true;
+    }
+    for (const url of report.photos) if (!claim.documents.some(d => d.kind === 'service_report' && d.url === url)) {
+      claim.documents.push({ kind: 'service_report', url, uploadedBy: completion.uploadedBy || null, uploadedAt: completion.at || new Date() }); changed = true;
+    }
+    if (completion.otpVerifiedAt && !claim.closure.customerConfirmedAt) {
+      claim.closure.customerConfirmedAt = completion.otpVerifiedAt; claim.closure.confirmationMethod = 'otp'; changed = true;
+    }
+  }
+  if (stage === 'CLOSED' && !claim.closure.closedAt) { claim.closure.closedAt = claim.closedAt || new Date(); changed = true; }
+  return changed;
+}
+export async function syncJobStage(srOrId) {
+  const sr = srOrId?.status ? srOrId : await ServiceRequest.findById(srOrId);
+  if (!sr?.warrantyClaim) return null;
+  for (let retry = 0; retry < 3; retry++) {
+    const claim = await claimFor(sr);
+    if (!claim || String(claim.serviceRequest) !== String(sr._id) || claim.status === 'Rejected') return null;
+    const job = await Job.findOne({ serviceRequest: sr._id }).lean();
+    if (!applyDetailedStage(claim, sr, job)) return claim.jobStage;
+    try { await saveClaim(claim); return claim.jobStage; }
+    catch (e) { if (e.statusCode !== 409 || retry === 2) throw e; }
+  }
+}
+export async function allocationUrgency(sr) {
+  if (!sr?.warrantyClaim) return null;
+  const c = await WarrantyClaim.findOne({
+    _id: sr.warrantyClaim._id || sr.warrantyClaim,
+    ...(sr.brand ? { brand: sr.brand._id || sr.brand } : {}),
+  }).select('priority sla').lean();
+  if (!c) return null;
+  const due = !c.sla?.met?.assignment ? c.sla?.assignmentDueAt : c.sla?.visitDueAt;
+  const hours = !c.sla?.met?.assignment ? c.sla?.hours?.assignment : c.sla?.hours?.visit;
+  return { priority: c.priority, remainingMs: due ? new Date(due) - (c.sla?.pausedAt ? new Date(c.sla.pausedAt) : Date.now()) : null, windowMs: hours ? hours * 3600000 : null };
+}
+
 // ── Status sync: Service Job → claim (Phase 7, ARCHITECTURE §9) ─────────────
 
 const JOB_STEPS_ON_THE_WAY = new Set(['ontheway', 'revisit_ontheway']);
@@ -220,10 +289,11 @@ const firstName = (name) => String(name || '').trim().split(/\s+/)[0] || 'Your t
  * rejected or not yet at the service stages is left alone; so is anything the
  * sync can't map. Returns the new status, or null when nothing changed.
  */
-export async function syncClaimFromJob(srOrId) {
-  const sr = srOrId?.status ? srOrId : await ServiceRequest.findById(srOrId);
+export async function syncClaimFromJob(srOrId, { session = null, persistOnly = false, onPersist } = {}) {
+  const save = async claim => { if (persistOnly) { await persistClaim(claim, { session }); onPersist?.(claim); } else await saveClaim(claim); };
+  const sr = srOrId?.status ? srOrId : await ServiceRequest.findById(srOrId).session(session);
   if (!sr?.warrantyClaim) return null;
-  const claim = await claimFor(sr);
+  const claim = await claimFor(sr, session);
   if (!claim) return null;
   // Held or finished claims don't follow the job; an admin decides.
   if ([CLAIM_STATUS.ON_HOLD, CLAIM_STATUS.CANCELLED, CLAIM_STATUS.CLOSED, CLAIM_STATUS.REJECTED].includes(claim.status)) return null;
@@ -235,7 +305,9 @@ export async function syncClaimFromJob(srOrId) {
     return null;
   }
 
-  const job = await Job.findOne({ serviceRequest: sr._id }).select('activeStep').lean();
+  const job = await Job.findOne({ serviceRequest: sr._id }).session(session).lean();
+  claim.$locals.customerNA = sr.status === 'Customer NA';
+  const detailedChanged = applyDetailedStage(claim, sr, job);
   const target = claimStageForJob(sr.status, job?.activeStep);
   const from = SERVICE_STAGES.indexOf(claim.status);
   const to = SERVICE_STAGES.indexOf(target);
@@ -243,12 +315,13 @@ export async function syncClaimFromJob(srOrId) {
     // The job moved but the claim stays (e.g. the partner collected and the
     // job now waits on the customer's confirmation): still tell the open
     // screens to refetch — the customer's "confirm" button depends on it.
-    if (from !== -1) emitClaimUpdated(claim, [{ visibility: 'customer' }]);
+    if (detailedChanged || claim.$locals.customerNA) await save(claim);
+    if (from !== -1 && !persistOnly) emitClaimUpdated(claim, [{ visibility: 'customer' }]);
     return null;
   }
 
   const provider = sr.serviceProvider
-    ? await ServiceProvider.findById(sr.serviceProvider._id || sr.serviceProvider).select('name').lean()
+    ? await ServiceProvider.findById(sr.serviceProvider._id || sr.serviceProvider).select('name').session(session).lean()
     : null;
   const note = {
     [CLAIM_STATUS.PARTNER_ASSIGNED]: `${firstName(provider?.name)} will handle your service`,
@@ -263,6 +336,6 @@ export async function syncClaimFromJob(srOrId) {
     note,
     visibility: 'customer',
   });
-  await saveClaim(claim);
+  await save(claim);
   return target;
 }

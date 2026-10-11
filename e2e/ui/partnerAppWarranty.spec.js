@@ -58,6 +58,7 @@ test('a service partner takes a warranty job from offer to NCC settlement', asyn
   const ac = (await call(request, 'get', '/super-admin/catalogue/categories', admin)).find((c) => c.key === 'AC');
   const brand = await call(request, 'post', '/super-admin/brands', admin, { name: `E2E PA ${tag}`, status: 'Active' });
   await call(request, 'put', `/super-admin/warranty-catalog/brands/${brand.id}`, admin, { warrantyEnabled: true, coverage: [ac.id] });
+  await call(request, 'post', `/super-admin/brand-rates?brand=${brand.id}`, admin, {category:ac.id,serviceType:'repair',brandRate:450,partnerPayout:150});
   const group = await call(request, 'post', '/super-admin/warranty-catalog/groups', admin, { name: `E2E PA ${tag}`, slug: `pa-${tag}`, categories: [ac.id] });
   cleanups.push(() => call(request, 'put', `/super-admin/warranty-catalog/groups/${group.id}`, admin, { isActive: false }));
   const issue = await call(request, 'post', '/super-admin/warranty-catalog/issues', admin, { category: ac.id, name: `Not cooling ${tag}` });
@@ -136,6 +137,8 @@ test('a service partner takes a warranty job from offer to NCC settlement', asyn
   const tracked = await call(request, 'get', `/partner-warranty/claims/${claim.id}`, customer);
   expect(tracked.status).toBe('Visit Scheduled');
   expect(tracked.visit).toMatchObject({ date: tomorrowIso(), slot: '3 PM – 6 PM' });
+  await page.reload();
+  await expect(page.getByRole('status').filter({ hasText: '3 PM – 6 PM' })).toBeVisible({ timeout: 15000 });
   await page.screenshot({ path: `${SHOTS}phase-15-assigned.png`, fullPage: true });
 
   // The partner finishes the job (API), the customer hands over the OTP.

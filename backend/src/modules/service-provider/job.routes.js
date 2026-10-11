@@ -1,3 +1,7 @@
+import { z } from 'zod';
+import { providerParts, changePart } from '../brand-crm/ticketParts.service.js';
+import { actorFromUser } from '../brand-crm/actor.js';
+import { completionReportSchema } from './job.validation.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
@@ -97,6 +101,9 @@ jobRouter.get('/:id', validate(jobIdParamSchema, 'params'), async (req, res, nex
 // services and spare-part catalog, and this appliance's real repair history —
 // everything the job-details screen's Overview/Parts/History tabs need that
 // used to be hardcoded mock content in the frontend.
+jobRouter.get('/:id/parts', validate(jobIdParamSchema,'params'), async(req,res,next)=>{try{ok(res,await providerParts(req.serviceProvider.id,req.params.id));}catch(e){next(e);}});
+for(const action of ['received','installed'])jobRouter.post(`/:id/parts/:partOrderId/${action}`,validate(z.object({id:z.string().min(1),partOrderId:z.string().regex(/^[a-f\d]{24}$/i)}),'params'),validate(z.object({photoUrl:z.string().max(2048).optional()}).strict()),async(req,res,next)=>{try{ok(res,await changePart({id:req.params.partOrderId,jobId:req.params.id,providerId:req.serviceProvider.id,actor:await actorFromUser(req.user.id,'partner'),status:action==='received'?'Received':'Installed',photoUrl:req.body.photoUrl}));}catch(e){next(e);}});
+
 jobRouter.get('/:id/context', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
   try {
     ok(res, await jobService.getJobDetailContext(req.serviceProvider.id, req.params.id));
@@ -195,9 +202,9 @@ jobRouter.post(
   },
 );
 
-jobRouter.post('/:id/repair-complete', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
+jobRouter.post('/:id/repair-complete', validate(jobIdParamSchema, 'params'), validate(completionReportSchema), async (req, res, next) => {
   try {
-    ok(res, await jobService.confirmRepairComplete(req.serviceProvider.id, req.params.id));
+    ok(res, await jobService.confirmRepairComplete(req.serviceProvider.id, req.params.id, req.body));
   } catch (err) {
     next(err);
   }
