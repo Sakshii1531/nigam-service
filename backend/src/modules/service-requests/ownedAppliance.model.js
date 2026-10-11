@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { applianceIdentity } from '../shared/applianceIdentity.js';
 import { applyStandardPlugins } from '../shared/plugins.js';
 
 // A customer's registered appliance instance — referenced by Bookings and
@@ -8,6 +9,8 @@ const ownedApplianceSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     category: { type: String, required: true },
     brand: String,
+    brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
+    identityKey: String,
     model: String,
     modelNumber: String,
     serialNumber: String,
@@ -26,7 +29,12 @@ const ownedApplianceSchema = new mongoose.Schema(
 );
 
 ownedApplianceSchema.index({ user: 1, category: 1 });
+ownedApplianceSchema.index({ user: 1, brandRef: 1 });
 
+ownedApplianceSchema.index({ user: 1, brandRef: 1, identityKey: 1 }, {
+  unique: true, partialFilterExpression: { identityKey: { $type: 'string' } },
+});
+ownedApplianceSchema.pre('validate', function setIdentity() { this.identityKey = applianceIdentity(this); });
 applyStandardPlugins(ownedApplianceSchema);
 
 export const OwnedAppliance = mongoose.models.OwnedAppliance || mongoose.model('OwnedAppliance', ownedApplianceSchema);
