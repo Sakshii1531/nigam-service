@@ -1,3 +1,4 @@
+import {apiRequest} from '../../../lib/apiClient';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Download, AlertTriangle, Flame, UserX, Loader2 } from 'lucide-react';
@@ -33,7 +34,7 @@ function useDebounced(value, ms = 300) {
   return v;
 }
 
-const EMPTY = { brand: '', group: '', category: '', status: '', from: '', to: '', city: '', pincode: '' };
+const EMPTY = { brand: '', group: '', category: '', status: '', from: '', to: '', city: '', pincode: '',jobStage:'',source:'',priority:'',warrantyStatus:'' };
 
 export default function AdminWarrantyClaims() {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ export default function AdminWarrantyClaims() {
   const term = useDebounced(q);
   const city = useDebounced(filters.city);
 
+  const options=useApiData(()=>apiRequest('/super-admin/warranty-claims/queue-options',{auth:true}),[]);
   const brands = useApiData(() => adminWarrantyApi.brands(), [], { initial: [] });
   const categories = useApiData(() => adminWarrantyApi.categories(), [], { initial: [] });
   // Client #3 "Category": the warranty group the customer picked first.
@@ -53,7 +55,7 @@ export default function AdminWarrantyClaims() {
 
   const params = {
     ...(VIEWS.find((v) => v.key === view)?.filter || {}),
-    brand: filters.brand,
+    brand: filters.brand,jobStage:filters.jobStage,source:filters.source,priority:filters.priority,warrantyStatus:filters.warrantyStatus,
     group: filters.group,
     category: filters.category,
     status: filters.status,
@@ -99,10 +101,10 @@ export default function AdminWarrantyClaims() {
       }
       exportCsv(
         `warranty-claims-${new Date().toISOString().slice(0, 10)}.csv`,
-        ['Ticket', 'Brand', 'Customer', 'Phone', 'Category', 'Product', 'Issue', 'City', 'Pincode', 'Submitted', 'Status', 'Service Job', 'Assigned Partner', 'SLA', 'Escalated', 'Allocation Failed'],
+        ['Master ticket', 'Brand ticket', 'Source', 'Registrant', 'Priority', 'Warranty', 'Coverage decision', 'Brand', 'Customer', 'Phone', 'Category', 'Product', 'Issue', 'City', 'Pincode', 'Submitted', 'Status', 'Job stage', 'Service Job', 'Assigned Partner', 'SLA', 'Escalated', 'Allocation Failed'],
         all.map((c) => [
-          c.humanId, c.brand?.name, c.customer?.name, c.customer?.phone, c.category?.name, c.productName, c.issueName, c.location?.city, c.location?.pincode,
-          formatDateTime(c.createdAt), c.status, c.serviceJob?.humanId, c.assignedPartner?.name, c.slaState, c.flags.escalated ? 'Yes' : '', c.flags.allocationFailed ? 'Yes' : '',
+          c.humanId,c.brandTicketNo,c.source,c.registeredBy?.name,c.priority,c.warranty?.status,c.coverageDecision, c.brand?.name, c.customer?.name, c.customer?.phone, c.category?.name, c.productName, c.issueName, c.location?.city, c.location?.pincode,
+          formatDateTime(c.createdAt), c.status, c.jobStage, c.serviceJob?.humanId, c.assignedPartner?.name, c.slaState, c.flags.escalated ? 'Yes' : '', c.flags.allocationFailed ? 'Yes' : '',
         ]),
       );
     } finally {
@@ -111,7 +113,7 @@ export default function AdminWarrantyClaims() {
   };
 
   return (
-    <AdminShell title="Partner Warranty Claims" subtitle="Every brand's warranty claims — routing, decisions and service in one place">
+    <AdminShell title="Brand Tickets" subtitle="Every brand’s tickets — routing, decisions and service in one place">
       <div className="flex gap-3 flex-wrap" role="tablist" aria-label="Views">
         {VIEWS.map((v, i) => (
           <button
@@ -157,6 +159,10 @@ export default function AdminWarrantyClaims() {
             ['group', 'Category', (Array.isArray(groups.data) ? groups.data : []).map((g) => [g.id, g.name])],
             ['category', 'Product', categories.data.map((c) => [c.key, c.name])],
             ['status', 'Status', CLAIM_STATUSES.map((s) => [s, s])],
+            ['source','Source',(options.data?.sources||[]).map(v=>[v,v.replaceAll('_',' ')])],
+            ['jobStage','Job stage',(options.data?.jobStages||[]).map(v=>[v,v.replaceAll('_',' ')])],
+            ['priority','Priority',(options.data?.priorities||[]).map(v=>[v,v])],
+            ['warrantyStatus','Warranty status',(options.data?.warrantyStatuses||[]).map(v=>[v,v])],
           ].map(([k, label, options]) => (
             <label key={k} className="text-[10px] font-semibold text-[#64748B] flex flex-col gap-1">
               {label}
@@ -214,7 +220,7 @@ export default function AdminWarrantyClaims() {
           <table className="w-full text-xs text-left">
             <thead className="bg-[#F8FAFC] text-[#64748B] text-[10px] uppercase">
               <tr>
-                {['Ticket', 'Brand', 'Customer', 'Product · Issue', 'Location', 'Date', 'Status', 'Assigned partner', 'Flags'].map((h) => (
+                {['Ticket / Source / Priority', 'Brand', 'Customer', 'Product · Issue', 'Location', 'Date', 'Status', 'Job stage', 'Assigned partner', 'Flags'].map((h) => (
                   <th key={h} className="px-3 py-3 whitespace-nowrap">
                     {h}
                   </th>
@@ -225,7 +231,7 @@ export default function AdminWarrantyClaims() {
               {list.loading
                 ? [1, 2, 3, 4, 5].map((i) => (
                     <tr key={i}>
-                      <td colSpan={9} className="px-3 py-3">
+                      <td colSpan={10} className="px-3 py-3">
                         <div className="h-6 bg-slate-100 rounded-lg animate-pulse" />
                       </td>
                     </tr>
@@ -245,7 +251,7 @@ export default function AdminWarrantyClaims() {
                         </a>
                         {c.serviceJob && <p className="text-[10px] text-[#94A3B8] font-mono">{c.serviceJob.humanId}</p>}
                       </td>
-                      <td className="px-3 py-3 font-semibold">{c.brand?.name}</td>
+<td className="px-3 py-3 font-semibold">{c.brand?.name}<p className="text-[10px] font-normal">{c.brandTicketNo}</p><p className="text-[10px] font-normal">{c.source?.replaceAll('_',' ')} · {c.priority}</p></td>
                       <td className="px-3 py-3">
                         <p className="font-semibold text-[#1E293B]">{c.customer?.name}</p>
                         <p className="text-[10px] text-[#64748B]">{c.customer?.phone}</p>
@@ -262,6 +268,7 @@ export default function AdminWarrantyClaims() {
                       <td className="px-3 py-3">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#EEF4FF] text-[#0D47A1] whitespace-nowrap">{c.status}</span>
                       </td>
+                      <td className="px-3 py-3">{c.jobStage?.replaceAll('_',' ') || '—'}</td>
                       <td className="px-3 py-3">{c.assignedPartner?.name || <span className="text-[#94A3B8]">—</span>}</td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap gap-1">
@@ -275,7 +282,7 @@ export default function AdminWarrantyClaims() {
                   ))}
               {!list.loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-[#64748B] font-semibold">
+                  <td colSpan={10} className="text-center py-8 text-[#64748B] font-semibold">
                     No claims match.
                   </td>
                 </tr>

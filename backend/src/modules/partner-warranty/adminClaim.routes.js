@@ -1,3 +1,4 @@
+import {TICKET_SOURCES,TICKET_PRIORITIES,WARRANTY_STATUSES,JOB_STAGES} from './ticketConstants.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
@@ -36,6 +37,7 @@ const action = (path, schema, fn) =>
 adminWarrantyClaimRouter.get('/', validate(listAdminClaimsQuerySchema, 'query'), handle((req) => admin.listClaims(req.query)));
 // Static path before '/:id'.
 adminWarrantyClaimRouter.get('/sla-summary', validate(slaSummaryQuerySchema, 'query'), handle((req) => admin.slaSummary(req.query)));
+adminWarrantyClaimRouter.get('/queue-options',handle(()=>({sources:TICKET_SOURCES,priorities:TICKET_PRIORITIES,warrantyStatuses:WARRANTY_STATUSES,jobStages:JOB_STAGES})));
 adminWarrantyClaimRouter.get('/:id', byId, handle((req) => admin.getClaim(req.params.id)));
 adminWarrantyClaimRouter.get('/:id/partner-suggestions', byId, handle((req) => admin.partnerSuggestions(req.params.id)));
 

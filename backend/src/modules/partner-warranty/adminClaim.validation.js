@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {TICKET_SOURCES,TICKET_PRIORITIES,WARRANTY_STATUSES,JOB_STAGES} from './ticketConstants.js';
 import { CLAIM_STATUS } from './claimStatus.js';
 
 // Super Admin warranty-claim request shapes (docs/partner-warranty Phase 8).
@@ -12,7 +13,9 @@ const reason = text(1000).min(3, 'A reason is required');
 export const claimIdParamSchema = z.object({ id: z.string().trim().min(1).max(40) });
 
 export const listAdminClaimsQuerySchema = z.object({
+  jobStage:z.enum(JOB_STAGES).optional(),
   brand: objectId.optional(),
+  source:z.enum(TICKET_SOURCES).optional(),priority:z.enum(TICKET_PRIORITIES).optional(),warrantyStatus:z.enum(WARRANTY_STATUSES).optional(),
   // Client #3: Category = the warranty group the customer picked first
   // (e.g. ElectroCare); Product = the product category (e.g. AC).
   group: objectId.optional(),
