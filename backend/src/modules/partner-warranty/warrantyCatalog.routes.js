@@ -1,3 +1,4 @@
+import { mutationAudit } from '../brand-crm/auditMutations.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole, requireBrandScope } from '../../middleware/auth.js';
@@ -53,6 +54,7 @@ warrantyCatalogPublicRouter.get(
 // ── Super Admin: /api/v1/super-admin/warranty-catalog ────────────────────────
 export const warrantyCatalogAdminRouter = Router();
 warrantyCatalogAdminRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
+warrantyCatalogAdminRouter.use(mutationAudit({admin:true,prefix:'/warranty-catalog'}));
 const actor = (req) => req.user.id;
 
 warrantyCatalogAdminRouter.get('/groups', handle(() => catalog.adminListGroups()));

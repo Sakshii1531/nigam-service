@@ -1,0 +1,31 @@
+import { test, expect } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+const run=promisify(execFile);
+test('WhatsApp HTTP flow: catalog, upload, validate, create, replay and track; CLI simulator',async({request,baseURL})=>{
+  const tag=randomUUID().slice(0,8),email=`intake-${tag}@e2e.test`;
+  await request.post('/api/v1/_dev/test-user',{data:{role:'super_admin',email,password:'password123'}});
+  await request.post('/api/v1/auth/login',{data:{role:'super_admin',identifier:email,password:'password123'}});
+  const code=(await(await request.get(`/api/v1/_dev/last-otp/${email}`)).json()).data.code;
+  const token=(await(await request.post('/api/v1/auth/otp/verify',{data:{role:'super_admin',identifier:email,code}})).json()).data.accessToken;
+  async function call(method,path,data,headers={Authorization:`Bearer ${token}`}){const r=await request[method](`/api/v1${path}`,{headers,...(data?{data}:{})});expect(r.ok(),await r.text()).toBe(true);return (await r.json()).data;}
+  const ac=(await call('get','/super-admin/catalogue/categories')).find(c=>c.key==='AC');
+  const brand=await call('post','/super-admin/brands',{name:`Intake ${tag}`,status:'Active'});
+  await call('put',`/super-admin/warranty-catalog/brands/${brand.id}`,{warrantyEnabled:true,coverage:[ac.id]});
+  const key=await call('post','/super-admin/api-keys',{name:`Bot ${tag}`,scopes:['catalog:read','uploads:create','tickets:create','tickets:read'],allowedSources:['whatsapp']});
+  const headers={Authorization:`Bearer ${key.secret}`};
+  const brands=await call('get','/intake/brands',null,headers);expect(brands.map(b=>b.id)).toContain(brand.id);
+  const catalog=await call('get',`/intake/brands/${brand.id}/catalog`,null,headers);expect(catalog.categories[0].id).toBe(ac.id);
+  const uploaded=await request.post('/api/v1/intake/uploads',{headers,multipart:{file:{name:'invoice.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')}}});expect(uploaded.ok()).toBe(true);
+  const customer={name:'WhatsApp caller',phone:`9${String(Math.floor(Math.random()*1e9)).padStart(9,'0')}`};
+  await call('post','/intake/whatsapp/validate-step',{step:'customer',data:customer},headers);
+  const body={brandId:brand.id,categoryId:ac.id,issueName:'Not cooling',source:'whatsapp',customer,remarks:'Air conditioner is not cooling',address:{house:'12 Test Street',city:'Indore',state:'MP',pincode:'452001'},documents:[{kind:'invoice',url:(await uploaded.json()).data.url}]};
+  const idempotency={...headers,'Idempotency-Key':randomUUID()};
+  const ticket=await call('post','/intake/tickets',body,idempotency);expect(ticket.ticketNo).toMatch(/^NCCW-/);expect(ticket.status).toBe('Submitted');
+  const replay=await call('post','/intake/tickets',body,idempotency);expect(replay).toEqual(ticket);
+  const read=await call('get',`/intake/tickets/${ticket.ticketNo}`,null,headers);expect(read.customerStatusLabel).toBe('Claim Submitted');expect(read.address).toBeUndefined();
+  const cli=await run(process.execPath,[fileURLToPath(new URL('../../backend/scripts/intake-simulator.js',import.meta.url))],{env:{...process.env,INTAKE_BASE_URL:`${baseURL}/api/v1`,INTAKE_API_KEY:key.secret,INTAKE_BRAND_ID:brand.id,INTAKE_CUSTOMER_PHONE:customer.phone},timeout:30000});
+  expect(JSON.parse(cli.stdout).ticketNo).toMatch(/^NCCW-/);
+});

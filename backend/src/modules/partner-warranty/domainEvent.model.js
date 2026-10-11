@@ -8,11 +8,17 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 // webhook are kept as `skipped` — the event log is useful on its own.
 
 export const WARRANTY_EVENT_TYPES = Object.freeze([
+  'INVOICE_ISSUED',
+  'PAYMENT_RECORDED',
+  'ESCALATION_RAISED',
+  'ESCALATION_RESOLVED',
   'CLAIM_CREATED',
   'CLAIM_INFO_REQUESTED',
   'CLAIM_APPROVED',
   'CLAIM_REJECTED',
   'JOB_CREATED',
+  'JOB_STAGE_CHANGED',
+  'PART_STATUS_CHANGED',
   'PARTNER_ASSIGNED',
   'JOB_STARTED',
   'JOB_COMPLETED',

@@ -238,6 +238,6 @@ export async function retryEvent(id, actorId) {
   event.attempts = 0;
   event.nextAttemptAt = new Date();
   await event.save();
-  await logAudit({ user: actorId, type: 'Warranty', action: `Partner warranty: retried webhook event ${event.type} (${id})` });
+  await logAudit({ user: actorId, brand:event.brand, entityType:'webhook', entityId:event._id, type:'Warranty', action:'webhook.retried', meta:{eventType:event.type} });
   return eventRow(await deliverEvent(event));
 }
