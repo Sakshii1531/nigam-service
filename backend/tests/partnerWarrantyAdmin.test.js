@@ -120,10 +120,10 @@ describe('Phase 8 — all-brand list and detail', () => {
     expect(d.timeline.map((e) => e.visibility)).toContain('internal');
     expect(d.timeline.find((e) => e.note === 'First declined')).toBeTruthy();
     expect(d.audit.length).toBeGreaterThanOrEqual(4);
-    expect(d.audit[1]).toMatchObject({ toStatus: 'Approved', by: { role: 'brand_admin' } });
+    expect(d.audit.find(e=>e.toStatus==='Approved')).toMatchObject({ toStatus: 'Approved', by: { role: 'brand_admin' } });
     expect(d.serviceJobs).toHaveLength(1);
     expect(d.serviceJobs[0]).toMatchObject({ current: true, partner: { name: 'Second' }, declinedBy: ['First'], accepted: false });
-    expect(d.warrantyCheck.status).toBe('In Warranty');
+    expect(d.warranty.status).toBe('In Warranty');
   });
 });
 
@@ -298,7 +298,7 @@ describe('Phase 8 — status, escalation, hold, cancel, reopen, notes', () => {
 
   it('reopens: rejected → back to the brand; closed → a new Service Job', async () => {
     const s = await scenario();
-    await api().post(`/api/v1/brand/warranty-claims/${s.claim.id}/reject`).set(bearer(s.lg.token)).send({ reason: 'No invoice seal' }).expect(200);
+    await api().post(`/api/v1/brand/warranty-claims/${s.claim.id}/reject`).set(bearer(s.lg.token)).send({ reason: 'No invoice seal', rejectionCode: 'NOT_COVERED' }).expect(200);
     await api().post(adminUrl(s.claim, 'reopen')).set(A(s)).send({ reason: 'x', to: 'Job Created' }).expect(400);
     const back = (await api().post(adminUrl(s.claim, 'reopen')).set(A(s)).send({ reason: 'Customer sent sealed invoice' }).expect(200)).body.data;
     expect(back).toMatchObject({ status: 'Brand Review', rejectionReason: null });
@@ -311,6 +311,8 @@ describe('Phase 8 — status, escalation, hold, cancel, reopen, notes', () => {
     expect(again.status).toBe('Job Created');
     expect(again.serviceJobs).toHaveLength(2);
     expect(again.serviceJobs[1]).toMatchObject({ current: true, partner: { name: 'Revisit Tech' } });
+    const reopened = await WarrantyClaim.findById(s.claim.id);
+    expect(reopened.timeline.filter(e => e.action === 'JOB_STAGE_CHANGED' && e.meta?.job === String(reopened.serviceRequest)).map(e => e.meta.stage)).toEqual(['PARTNER_FINDING', 'JOB_OFFERED']);
   });
 
   it('keeps admin notes internal', async () => {

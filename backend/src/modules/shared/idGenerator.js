@@ -36,3 +36,20 @@ export async function generateHumanId(prefix) {
   const seq = String(counter.seq).padStart(scheme.digits, '0');
   return [prefix, segment, seq].filter(Boolean).join(scheme.separator);
 }
+
+/**
+ * The brand's own number for a ticket: `{Brand.ticketPrefix}-{YYYY}-######`
+ * (docs/brand-crm README D3), counted per brand per year — so LG and Samsung
+ * each start at 000001 every January, independently of the platform-wide
+ * NCCW series.
+ */
+export async function generateBrandTicketNo(brand, { session } = {}) {
+  if (!brand?.ticketPrefix) throw new Error('generateBrandTicketNo: brand has no ticketPrefix');
+  const year = String(new Date().getFullYear());
+  const counter = await Counter.findOneAndUpdate(
+    { _id: `brandTicket:${brand._id}:${year}` },
+    { $inc: { seq: 1 } },
+    { upsert: true, new: true, ...(session ? { session } : {}) },
+  );
+  return `${brand.ticketPrefix}-${year}-${String(counter.seq).padStart(6, '0')}`;
+}

@@ -64,7 +64,7 @@ describe('Phase 4 — brand queue', () => {
       productName: 'Air Conditioner',
       issueName: 'Cooling Issue',
       location: { city: 'Indore', pincode: '452001' },
-      warrantyCheck: 'In Warranty',
+      warrantyStatus: 'In Warranty',
     });
     expect(mine.body.meta.counts).toEqual({ Submitted: 1 });
 
@@ -106,15 +106,15 @@ describe('Phase 4 — brand opens a claim', () => {
       customerStatusLabel: 'Brand Verification',
       serialNumber: claim.serialNumber,
       remarks: 'Blows warm air',
-      warrantyCheck: { status: 'In Warranty', months: 24 },
+      warranty: { status: 'In Warranty', months: 24 },
       customer: { name: 'Test Customer' },
     });
     expect(res.body.data.documents).toHaveLength(1);
-    expect(res.body.data.timeline.map((e) => e.action)).toEqual(['CLAIM_SUBMITTED', 'BRAND_OPENED']);
+    expect(res.body.data.timeline.filter(e=>e.action!=='CUSTOMER_NOTIFIED').map((e) => e.action)).toEqual(['CLAIM_SUBMITTED', 'BRAND_OPENED']);
 
     // Opening again doesn't add another event.
     await api().get(claimUrl(claim.humanId)).set(bearer(lg.token)).expect(200);
-    expect((await WarrantyClaim.findById(claim.id)).timeline).toHaveLength(2);
+    expect((await WarrantyClaim.findById(claim.id)).timeline.filter(e=>e.action!=='CUSTOMER_NOTIFIED')).toHaveLength(2);
 
     // The customer sees "Brand Verification".
     const mine = await api().get(`/api/v1/partner-warranty/claims/${claim.id}`).set(bearer(cust.token)).expect(200);
@@ -149,19 +149,19 @@ describe('Phase 4 — decisions', () => {
     expect(String(audit.user)).toBe(String(lg.user._id));
 
     // Decided claims can't be decided again.
-    await api().post(claimUrl(claim.id, 'reject')).set(bearer(lg.token)).send({ reason: 'Changed my mind' }).expect(409);
+    await api().post(claimUrl(claim.id, 'reject')).set(bearer(lg.token)).send({ rejectionCode:'PHYSICAL_DAMAGE',reason: 'Changed my mind' }).expect(409);
   });
 
   it('rejects only with a reason, and the customer sees it', async () => {
     const { lg, cust, claim } = await scenario();
     await api().post(claimUrl(claim.id, 'reject')).set(bearer(lg.token)).send({}).expect(400);
-    await api().post(claimUrl(claim.id, 'reject')).set(bearer(lg.token)).send({ reason: 'no' }).expect(400);
+    await api().post(claimUrl(claim.id, 'reject')).set(bearer(lg.token)).send({ rejectionCode:'PHYSICAL_DAMAGE',reason: 'no' }).expect(400);
     expect((await WarrantyClaim.findById(claim.id)).status).toBe('Submitted');
 
     await api()
       .post(claimUrl(claim.id, 'reject'))
       .set(bearer(lg.token))
-      .send({ reason: 'Physical damage is not covered' })
+      .send({ rejectionCode:'PHYSICAL_DAMAGE',reason: 'Physical damage is not covered' })
       .expect(200);
 
     const mine = await api().get(`/api/v1/partner-warranty/claims/${claim.id}`).set(bearer(cust.token)).expect(200);
@@ -176,7 +176,7 @@ describe('Phase 4 — decisions', () => {
 
     const [a, b] = await Promise.all([
       api().post(claimUrl(claim.id, 'approve')).set(bearer(lg.token)).send({}),
-      api().post(claimUrl(claim.id, 'reject')).set(bearer(second.token)).send({ reason: 'Duplicate of an old ticket' }),
+      api().post(claimUrl(claim.id, 'reject')).set(bearer(second.token)).send({ rejectionCode:'PHYSICAL_DAMAGE',reason: 'Duplicate of an old ticket' }),
     ]);
     expect([a.status, b.status].sort()).toEqual([200, 409]);
 

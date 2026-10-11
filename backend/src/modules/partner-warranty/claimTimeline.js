@@ -1,8 +1,11 @@
+import { TICKET_AUDIT_ACTIONS, ticketAuditMeta } from '../brand-crm/ticketAuditActions.js';
+import { syncChargesForClaim } from '../brand-crm/charges.service.js';
+import { runInTransaction } from '../../utils/transaction.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { getIO } from '../../sockets/io.js';
 import { logAudit } from '../shared/auditLog.js';
 import { canTransition, CLAIM_STATUS, customerStatusLabel } from './claimStatus.js';
-import { applySlaTransition } from './claimSla.js';
+import { applySlaTransition, meetSla } from './claimSla.js';
 import { runClaimEffects } from './claimEffects.js';
 
 /**
@@ -20,14 +23,20 @@ import { runClaimEffects } from './claimEffects.js';
  * @param {object} e
  * @param {string} e.action      one of CLAIM_ACTIONS
  * @param {string} [e.toStatus]
- * @param {{kind:string,user?:any,name?:string}} e.actor
+ * @param {{kind:string,user?:any,name?:string,employeeId?:string,roles?:string[],department?:string}} e.actor
+ *        an actor snapshot (brand-crm/actor.js); kind/user/name alone still work
  * @param {string} [e.note]      reason / remarks
  * @param {'customer'|'brand'|'internal'} [e.visibility]
+ * @param {object} [e.meta]      structured detail (contact outcome, part status …)
  * @returns {object} the event that was pushed
  */
-export function appendEvent(claim, { action, toStatus = null, actor, note, visibility = 'customer' }) {
+export function appendEvent(claim, { action, toStatus = null, actor, note, visibility = 'customer', meta }) {
   if (!actor?.kind) throw new Error('appendEvent: actor.kind is required');
 
+  if (actor.kind === 'brand') {
+    claim.firstBrandActionAt ||= new Date();
+    meetSla(claim, 'response', claim.firstBrandActionAt);
+  }
   const fromStatus = claim.status;
   if (toStatus && toStatus !== fromStatus) {
     if (!canTransition(fromStatus, toStatus)) {
@@ -41,19 +50,44 @@ export function appendEvent(claim, { action, toStatus = null, actor, note, visib
     claim.status = toStatus;
   }
 
+  const stage = toStatus === 'Job Created' ? 'PARTNER_FINDING' : claim.serviceRequest ? { Closed: 'CLOSED', Cancelled: 'CANCELLED' }[toStatus] : null;
+  if (stage && stage !== claim.jobStage) {
+    if (stage === 'PARTNER_FINDING') { claim.flags.allocationFailed = false; claim.closure = {}; }
+    if (stage === 'CLOSED') claim.closure.closedAt = new Date();
+    setJobStage(claim, stage, { actor });
+  }
   const moved = Boolean(toStatus && toStatus !== fromStatus);
   const event = {
     at: new Date(),
     action,
     fromStatus: moved ? fromStatus : null,
     toStatus: moved ? toStatus : null,
-    actor: { kind: actor.kind, user: actor.user || null, name: actor.name },
+    actor: {
+      kind: actor.kind,
+      user: actor.user || null,
+      name: actor.name,
+      employeeId: actor.employeeId || null,
+      roles: actor.roles?.length ? [...actor.roles] : undefined,
+      department: actor.department || null,
+    },
     note,
     visibility,
+    meta: meta || undefined,
   };
   claim.timeline.push(event);
   claim.$locals.pendingAudit = [...(claim.$locals.pendingAudit || []), event];
   return event;
+}
+
+/** One writer for the detailed stage and its brand-visible history. */
+export function setJobStage(claim, stage, { actor = { kind: 'system', name: 'NCC' }, attempt, force = false } = {}) {
+  if (stage === claim.jobStage && !force) return false;
+  const previous = claim.jobStage || null;
+  claim.jobStage = stage; claim.jobStageAt = new Date();
+  if (stage === 'REACHED' && claim.sla?.visitDueAt) meetSla(claim, 'visit', claim.jobStageAt);
+  appendEvent(claim, { action: 'JOB_STAGE_CHANGED', actor, visibility: 'brand',
+    meta: { previous, stage, job: claim.serviceRequest ? String(claim.serviceRequest) : null, ...(attempt ? { attempt } : {}) }, note: `${stage.replaceAll('_', ' ')}${attempt ? ` (attempt ${attempt})` : ''}` });
+  return true;
 }
 
 /**
@@ -71,12 +105,15 @@ export async function flushAudit(claim) {
     await logAudit({
       user: event.actor.user,
       type: 'Warranty',
-      action: `${claim.humanId || claim.id}: ${event.action}${event.toStatus ? ` → ${event.toStatus}` : ''}`,
+      action: TICKET_AUDIT_ACTIONS[event.action] || `ticket.${event.action.toLowerCase()}`,
       entityType: 'WarrantyClaim',
       entityId: claim._id,
       fromStatus: event.fromStatus,
       toStatus: event.toStatus,
       reason: event.note,
+      brand: claim.brand?._id || claim.brand,
+      actor: event.actor,
+      meta: ticketAuditMeta(event),
     });
   }
   // Progress notifications + CRM domain events (Phase 10). After the audit
@@ -102,7 +139,11 @@ export async function saveClaim(claim, { session } = {}) {
  */
 export async function persistClaim(claim, { session } = {}) {
   try {
-    await claim.save(session ? { session } : undefined);
+    const write = async activeSession => {
+      await syncChargesForClaim(claim, { session: activeSession });
+      await claim.save(activeSession ? { session: activeSession } : undefined);
+    };
+    if (session) await write(session); else await runInTransaction(write);
   } catch (err) {
     if (err?.name === 'VersionError') {
       claim.$locals.pendingAudit = [];
@@ -141,4 +182,13 @@ export function emitClaimUpdated(claim, events = []) {
   if (visibilities.has('customer') && customerId) io.to(`user:${customerId}`).emit('warranty_claim:updated', payload);
   if ((visibilities.has('customer') || visibilities.has('brand')) && brandId) io.to(`brand:${brandId}`).emit('warranty_claim:updated', payload);
   io.to('admins').emit('warranty_claim:updated', payload);
+  if (brandId && (visibilities.has('customer') || visibilities.has('brand'))) {
+    if (events.some(e => ['CLAIM_APPROVED','CLAIM_REJECTED','CLAIM_SUBMITTED'].includes(e.action) || /^ESCALATION_/.test(e.action))) io.to(`brand:${brandId}`).emit('claim:updated', {...payload,jobStage:claim.jobStage,jobStageAt:claim.jobStageAt});
+    if(events.some(e=>/^ESCALATION_/.test(e.action))) io.to(`brand:${brandId}`).emit('brand:escalation_updated', {id:payload.id});
+  }
+  if (events.some(e => e.action === 'JOB_STAGE_CHANGED' || /^PART_/.test(e.action))) {
+    const stagePayload = { ...payload, jobStage: claim.jobStage, jobStageAt: claim.jobStageAt };
+    if (brandId) io.to(`brand:${brandId}`).emit('claim:updated', stagePayload);
+    io.to('admins').emit('claim:updated', stagePayload);
+  }
 }

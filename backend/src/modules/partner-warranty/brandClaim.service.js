@@ -1,10 +1,11 @@
+import {assertApprovalCoverage} from '../brand-crm/approvalRules.js';
 import mongoose from 'mongoose';
 import { WarrantyClaim } from './warrantyClaim.model.js';
 import { appendEvent, saveClaim } from './claimTimeline.js';
 import { CLAIM_STATUS, CLAIM_STATUSES, customerStatusLabel } from './claimStatus.js';
 import { claimLinks } from './claimLinks.js';
 import { approveAndCreateJob } from './claimJob.service.js';
-import { User } from '../auth/user.model.js';
+import { actorFromUser } from '../brand-crm/actor.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { escapeRegex } from '../shared/brandWarranty.js';
 import { emit as emitNotification, emitToAdmins } from '../notifications/notification.service.js';
@@ -41,7 +42,8 @@ function brandTimeline(claim) {
       action: e.action,
       fromStatus: e.fromStatus,
       toStatus: e.toStatus,
-      by: { kind: e.actor.kind, name: actorLabel(e.actor) },
+      // A brand user's employee ID travels with their decisions (brand-crm D10).
+      by: { kind: e.actor.kind, name: actorLabel(e.actor), employeeId: e.actor.kind === 'brand' ? e.actor.employeeId || null : null },
       note: e.note || null,
       brandOnly: e.visibility === 'brand',
     }));
@@ -52,10 +54,13 @@ function customerSummary(customer) {
   return { id: String(customer._id), name: customer.name, phone: customer.phone || null };
 }
 
-function toBrandSummary(claim) {
+export function toBrandSummary(claim) {
   return {
     id: String(claim._id),
     humanId: claim.humanId,
+    brandTicketNo: claim.brandTicketNo || null,
+    source: claim.source,
+    priority: claim.priority,
     status: claim.status,
     customer: customerSummary(claim.customer),
     productName: claim.productName,
@@ -64,7 +69,8 @@ function toBrandSummary(claim) {
     modelNumber: claim.modelNumber || null,
     serialNumber: claim.serialNumber || null,
     location: { city: claim.address?.city || null, pincode: claim.address?.pincode || null },
-    warrantyCheck: claim.warrantyCheck?.status || 'Unknown',
+    warrantyStatus: claim.warranty?.status || null,
+    warranty: claim.warranty,
     approvalDueAt: claim.sla?.brandApprovalDueAt || null,
     createdAt: claim.createdAt,
     updatedAt: claim.updatedAt,
@@ -78,7 +84,14 @@ function toBrandView(claim) {
     customerStatusLabel: customerStatusLabel(claim.status),
     purchaseDate: claim.purchaseDate || null,
     remarks: claim.remarks || null,
-    warrantyCheck: claim.warrantyCheck || { status: 'Unknown' },
+    warranty: {
+      status: claim.warranty?.status || null,
+      reasons: claim.warranty?.reasons || [],
+      months: claim.warranty?.months ?? null,
+      expiresOn: claim.warranty?.expiresOn || null,
+      policy:claim.warranty?.policy||null,verifiedBy:claim.warranty?.verifiedBy||null,overrideNote:claim.warranty?.overrideNote||null,
+    },
+    registeredBy: claim.registeredBy?.kind ? { name: claim.registeredBy.name, employeeId: claim.registeredBy.employeeId || null } : null,
     address: claim.address,
     documents: (claim.documents || []).map((d) => ({
       id: String(d._id),
@@ -92,9 +105,12 @@ function toBrandView(claim) {
       id: String(r._id),
       message: r.message,
       requestedAt: r.requestedAt,
+      documentKinds:r.documentKinds||[],
       response: r.response || null,
       respondedAt: r.respondedAt || null,
     })),
+    rejectionCode:claim.rejectionCode||null,
+    coverageDecision:claim.coverageDecision||null,holdReason:claim.holdReason||null,heldBy:claim.heldBy||null,contactRequests:claim.contactRequests,assignedCce:claim.assignedCce,
     rejectionReason: claim.rejectionReason || null,
     serviceJob: sr
       ? {
@@ -104,6 +120,7 @@ function toBrandView(claim) {
           partner: sr.serviceProvider?.name ? { name: sr.serviceProvider.name } : null,
         }
       : null,
+    preferredVisit: claim.preferredVisit?.date ? claim.preferredVisit : null,
     visit: claim.visit?.date ? { date: claim.visit.date, slot: claim.visit.slot || null } : null,
     timeline: brandTimeline(claim),
   };
@@ -120,10 +137,7 @@ async function findBrandClaim(brandId, idOrHumanId) {
   return claim;
 }
 
-async function brandActor(user) {
-  const u = await User.findById(user.id).select('name').lean();
-  return { kind: 'brand', user: user.id, name: u?.name || 'Brand' };
-}
+const brandActor = (user) => actorFromUser(user.id, 'brand');
 
 function assertDecidable(claim) {
   if (!DECIDABLE.includes(claim.status)) {
@@ -178,6 +192,7 @@ export async function listClaims(brandId, { status, q, from, to, category, pinco
 export async function getClaim(user, id) {
   const claim = await findBrandClaim(user.brand, id);
   if (claim.status === S.SUBMITTED) {
+    claim.firstBrandActionAt ||= new Date();
     appendEvent(claim, { action: 'BRAND_OPENED', toStatus: S.BRAND_REVIEW, actor: await brandActor(user), visibility: 'customer' });
     try {
       await saveClaim(claim);
@@ -201,13 +216,14 @@ function customerCta(claim) {
  * Approved → Job Created with an NCCJ job in the same transaction, then the
  * job is offered to the nearest eligible partner.
  */
-export async function approveClaim(user, id, { remarks } = {}) {
+export async function approveClaim(user, id, { remarks,coverageDecision='warranty' } = {}) {
   const found = await findBrandClaim(user.brand, id);
   assertDecidable(found);
+  assertApprovalCoverage(found,{coverageDecision,remarks},user.permissions?.includes('warranty:verify'));
   const actor = await brandActor(user);
-
-  await approveAndCreateJob({ _id: found._id, brand: found.brand, __v: found.__v }, (claim) => {
+  const approve = candidate => approveAndCreateJob({ _id: candidate._id, brand: candidate.brand, __v: candidate.__v }, (claim) => {
     assertDecidable(claim);
+    claim.coverageDecision=coverageDecision;
     appendEvent(claim, {
       action: 'CLAIM_APPROVED',
       toStatus: S.APPROVED,
@@ -215,16 +231,29 @@ export async function approveClaim(user, id, { remarks } = {}) {
       note: remarks?.trim() || undefined,
       visibility: 'customer',
     });
-  }).catch((err) => {
-    // The version in the filter moved: someone else decided it first.
-    if (err.statusCode === 404) throw new ApiError(409, 'This claim was just updated by someone else — reload and try again');
-    throw err;
   });
+  try {
+    await approve(found);
+  } catch (err) {
+    if (err.statusCode !== 404) throw err;
+    // A note, document response or SLA update may legitimately change the
+    // version between the initial read and the transaction. Retry once from
+    // the latest state; a competing decision is rejected by assertDecidable.
+    const latest = await findBrandClaim(user.brand, id);
+    assertDecidable(latest);
+    assertApprovalCoverage(latest,{coverageDecision,remarks},user.permissions?.includes('warranty:verify'));
+    try {
+      await approve(latest);
+    } catch (retryError) {
+      if (retryError.statusCode === 404) throw new ApiError(409, 'This claim was just updated by someone else — reload and try again');
+      throw retryError;
+    }
+  }
 
   const claim = await findBrandClaim(user.brand, found._id);
   const name = await brandName(user.brand);
   await Promise.all([
-    emitNotification('warranty.claim_approved', { user: claim.customer._id, humanId: claim.humanId, brandName: name, cta: customerCta(claim) }),
+    emitNotification('warranty.claim_approved', { brand: claim.brand, warrantyClaim: claim._id, user: claim.customer._id, humanId: claim.humanId, brandName: name, cta: customerCta(claim) }),
     emitToAdmins('warranty.claim_decided_admin', {
       humanId: claim.humanId,
       brandName: name,
@@ -235,19 +264,20 @@ export async function approveClaim(user, id, { remarks } = {}) {
   return toBrandView(claim);
 }
 
-export async function rejectClaim(user, id, { reason }) {
+export async function rejectClaim(user, id, { reason,rejectionCode }) {
   const text = reason?.trim();
   if (!text || text.length < 5) throw new ApiError(400, 'A rejection reason is required (at least 5 characters)');
 
   const claim = await findBrandClaim(user.brand, id);
   assertDecidable(claim);
   claim.rejectionReason = text;
+  claim.rejectionCode=rejectionCode;
   appendEvent(claim, { action: 'CLAIM_REJECTED', toStatus: S.REJECTED, actor: await brandActor(user), note: text, visibility: 'customer' });
   await saveClaim(claim);
 
   const name = await brandName(user.brand);
   await Promise.all([
-    emitNotification('warranty.claim_rejected', { user: claim.customer._id, humanId: claim.humanId, brandName: name, reason: text, cta: customerCta(claim) }),
+    emitNotification('warranty.claim_rejected', { brand: claim.brand, warrantyClaim: claim._id, user: claim.customer._id, humanId: claim.humanId, brandName: name, reason: text, cta: rejectionCode==='OUT_OF_WARRANTY'?{label:'Book a paid repair',route:`/services?category=${encodeURIComponent(claim.categoryKey)}`}:customerCta(claim) }),
     emitToAdmins('warranty.claim_decided_admin', {
       humanId: claim.humanId,
       brandName: name,
@@ -259,7 +289,7 @@ export async function rejectClaim(user, id, { reason }) {
   return toBrandView(claim);
 }
 
-export async function requestInfo(user, id, { message }) {
+export async function requestInfo(user, id, { message,documentKinds }) {
   const text = message?.trim();
   if (!text || text.length < 5) throw new ApiError(400, 'Tell the customer what you need (at least 5 characters)');
 
@@ -270,11 +300,13 @@ export async function requestInfo(user, id, { message }) {
   assertDecidable(claim);
 
   const actor = await brandActor(user);
-  claim.infoRequests.push({ message: text, requestedBy: user.id, requestedAt: new Date() });
+  claim.infoRequests.push({ message: text, documentKinds, requestedBy: user.id, requestedAt: new Date() });
   appendEvent(claim, { action: 'INFO_REQUESTED', toStatus: S.INFO_REQUESTED, actor, note: text, visibility: 'customer' });
   await saveClaim(claim);
 
   await emitNotification('warranty.info_requested', {
+    brand: claim.brand,
+    warrantyClaim: claim._id,
     user: claim.customer._id,
     humanId: claim.humanId,
     brandName: await brandName(user.brand),

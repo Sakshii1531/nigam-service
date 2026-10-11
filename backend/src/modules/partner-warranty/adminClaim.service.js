@@ -1,6 +1,7 @@
+import { Escalation } from '../super-admin/escalation.model.js';
 import mongoose from 'mongoose';
 import { WarrantyClaim } from './warrantyClaim.model.js';
-import { appendEvent, saveClaim } from './claimTimeline.js';
+import { appendEvent, saveClaim, setJobStage } from './claimTimeline.js';
 import { CLAIM_STATUS, CLAIM_STATUSES, SERVICE_STAGES, canTransition, customerStatusLabel } from './claimStatus.js';
 import { claimLinks } from './claimLinks.js';
 import { approveAndCreateJob, createServiceJobForClaim, dispatchServiceJob } from './claimJob.service.js';
@@ -41,7 +42,9 @@ function toAdminSummary(claim) {
   return {
     id: String(claim._id),
     humanId: claim.humanId,
+    source:claim.source,brandTicketNo:claim.brandTicketNo||null,priority:claim.priority,registeredBy:claim.registeredBy||null,coverageDecision:claim.coverageDecision,warranty:claim.warranty,
     status: claim.status,
+    jobStage: claim.jobStage || null, jobStageAt: claim.jobStageAt || null,
     brand: claim.brand?._id ? { id: String(claim.brand._id), name: claim.brand.name } : null,
     customer: claim.customer?._id ? { id: String(claim.customer._id), name: claim.customer.name, phone: claim.customer.phone || null } : null,
     category: claim.group?._id ? { id: String(claim.group._id), name: claim.group.name } : null,
@@ -89,6 +92,10 @@ export async function listClaims(filters = {}) {
   const { brand, group, category, productType, status, from, to, city, pincode, escalated, allocationFailed, slaState: sla, q, page, limit, sort } = filters;
   const query = {};
   if (brand) query.brand = brand;
+  if(filters.source)query.source=filters.source;
+  if(filters.priority)query.priority=filters.priority;
+  if(filters.jobStage)query.jobStage=filters.jobStage;
+  if(filters.warrantyStatus)query['warranty.status']=filters.warrantyStatus;
   if (group) query.group = group;
   if (category) query.categoryKey = category;
   if (productType) query.productType = productType;
@@ -153,16 +160,21 @@ export async function getClaim(id) {
   return {
     ...toAdminSummary(claim),
     customerStatusLabel: customerStatusLabel(claim.status),
+    allocation: claim.allocation, closure: claim.closure,
     statusBeforeHold: claim.statusBeforeHold,
     modelNumber: claim.modelNumber,
     serialNumber: claim.serialNumber,
     purchaseDate: claim.purchaseDate,
     remarks: claim.remarks || null,
-    warrantyCheck: claim.warrantyCheck,
+    warranty: claim.warranty,
+    source: claim.source,
+    brandTicketNo: claim.brandTicketNo || null,
+    registeredBy: claim.registeredBy || null,
     address: claim.address,
     documents: claim.documents.map((d) => ({ id: String(d._id), kind: d.kind, url: d.url, name: d.name || null, uploadedAt: d.uploadedAt })),
     infoRequests: claim.infoRequests.map((r) => ({ id: String(r._id), message: r.message, requestedAt: r.requestedAt, response: r.response || null, respondedAt: r.respondedAt || null })),
-    rejectionReason: claim.rejectionReason,
+    rejectionReason: claim.rejectionReason,rejectionCode:claim.rejectionCode,
+    preferredVisit: claim.preferredVisit?.date ? claim.preferredVisit : null,
     visit: claim.visit?.date ? claim.visit : null,
     flags: claim.flags,
     sla: claim.sla,
@@ -180,6 +192,7 @@ export async function getClaim(id) {
         cancellationReason: j.cancellationReason || null,
         jobStep: job?.activeStep || null,
         payout: job?.payout?.total ?? null,
+        payoutFlags: job?.payout?.flags || [],
       };
     }),
     timeline: claim.timeline.map((e) => ({
@@ -240,6 +253,13 @@ async function activeJobOf(claim) {
  * the SR is Cancelled and an accepted Job is stopped. Written directly (not via
  * transitionStatus), so the claim's status sync never reacts to it.
  */
+function withdrawOffer(claim, sr, reason) {
+  const attempt = [...claim.allocation.attempts].reverse().find(a => !a.outcome && String(a.serviceRequest) === String(sr?._id));
+  if (!attempt) return false;
+  attempt.outcome = 'withdrawn'; attempt.reason = reason; attempt.resolvedAt = new Date();
+  return true;
+}
+
 async function retireJob(sr, reason) {
   const job = await Job.findOne({ serviceRequest: sr._id });
   if (job && !['completed', 'cancelled'].includes(job.activeStep)) {
@@ -261,9 +281,11 @@ async function retireJob(sr, reason) {
 async function startNewJob(claim, { serviceProviderId } = {}) {
   const sr = await createServiceJobForClaim(claim);
   claim.serviceRequest = sr._id;
+  // A replacement job starts its own stage history, even when the old job was finding a partner.
+  setJobStage(claim, 'PARTNER_FINDING', { force: true });
   await saveClaim(claim);
   if (serviceProviderId) await assignServiceProvider(String(sr._id), serviceProviderId);
-  else await dispatchServiceJob(claim._id);
+  else await dispatchServiceJob(claim._id, claim.brand?._id || claim.brand);
   return sr;
 }
 
@@ -348,6 +370,7 @@ export async function reassignPartner(user, id, { serviceProviderId, reason, for
   const accepted = await Job.exists({ serviceRequest: sr._id });
 
   if (!accepted) {
+    withdrawOffer(claim, sr, reason);
     const previous = sr.serviceProvider;
     appendEvent(claim, { action: 'REASSIGNED', actor, note: reason, visibility: 'internal' });
     await saveClaim(claim);
@@ -358,7 +381,7 @@ export async function reassignPartner(user, id, { serviceProviderId, reason, for
         { _id: sr._id },
         { serviceProvider: null, status: 'New', isAccepted: false, ...(previous ? { $addToSet: { declinedBy: previous } } : {}) },
       );
-      await dispatchServiceJob(claim._id);
+      await dispatchServiceJob(claim._id, claim.brand?._id || claim.brand);
     }
     if (previous && String(previous) !== String(serviceProviderId || '')) {
       await notifyPartner(previous, 'warranty.job_withdrawn_partner', claim, sr, { kind: 'reassigned' });
@@ -417,6 +440,7 @@ export async function escalate(user, id, { reason }) {
 export async function deEscalate(user, id, { reason }) {
   const claim = await loadClaim(id);
   if (!claim.flags.escalated) throw new ApiError(409, 'This claim is not escalated');
+  if (await Escalation.exists({ warrantyClaim: claim._id, status: { $ne: 'Resolved' } })) throw new ApiError(409, 'Resolve the open escalation records with a resolution before clearing this flag');
   claim.flags.escalated = false;
   appendEvent(claim, { action: 'DE_ESCALATED', actor: await adminActor(user), note: reason, visibility: 'brand' });
   await saveClaim(claim);
@@ -431,6 +455,8 @@ export async function deEscalate(user, id, { reason }) {
 export async function hold(user, id, { reason }) {
   const claim = await loadClaim(id);
   if (claim.status === S.ON_HOLD) throw new ApiError(409, 'This claim is already on hold');
+  const offeredSr = await activeJobOf(claim);
+  if (withdrawOffer(claim, offeredSr, reason)) setJobStage(claim, 'PARTNER_FINDING', { actor: await adminActor(user) });
   appendEvent(claim, { action: 'PUT_ON_HOLD', toStatus: S.ON_HOLD, actor: await adminActor(user), note: reason, visibility: 'customer' });
   await saveClaim(claim);
 
@@ -460,7 +486,7 @@ export async function resume(user, id, { reason }) {
     // Catch up on anything the job did while the claim was paused, and
     // re-offer a job that nobody holds.
     await syncClaimFromJob(sr);
-    if (sr.status === 'New' && !sr.serviceProvider) await dispatchServiceJob(claim._id);
+    if (sr.status === 'New' && !sr.serviceProvider) await dispatchServiceJob(claim._id, claim.brand?._id || claim.brand);
     else if (sr.serviceProvider && (await Job.exists({ serviceRequest: sr._id }))) {
       await notifyPartner(sr.serviceProvider, 'warranty.job_resumed_partner', claim, sr);
     }
@@ -475,6 +501,7 @@ export async function cancel(user, id, { reason }) {
   if ([S.CANCELLED, S.CLOSED, S.REJECTED].includes(claim.status)) {
     throw new ApiError(409, `This claim is already ${claim.status.toLowerCase()}`);
   }
+  withdrawOffer(claim, await activeJobOf(claim), reason);
   appendEvent(claim, { action: 'CANCELLED', toStatus: S.CANCELLED, actor: await adminActor(user), note: reason, visibility: 'customer' });
   await saveClaim(claim);
   const sr = await activeJobOf(claim);

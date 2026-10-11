@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: Object.values(ROLES), required: true, index: true },
     name: { type: String, required: true, trim: true },
     phone: { type: String, index: true, sparse: true },
+    alternatePhone: String,
     email: { type: String, index: true, sparse: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true, select: false },
     // Set when an account is provisioned with a temporary credential (ASM or
@@ -34,6 +35,11 @@ const userSchema = new mongoose.Schema(
 
     // brand_admin-only: which brand this account is scoped to (enforced by requireBrandScope in Phase 3).
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
+
+    // Brand staff: the employee number the brand knows this person by. Shown
+    // with every decision they make (docs/brand-crm README D10).
+    employeeId: { type: String, trim: true },
+    department: { type: String, trim: true },
 
     // RBAC assignment — the roles/permissions this user has, distinct from the coarse
     // `role` field above (which just says which of the 4 apps they log into).
@@ -62,6 +68,12 @@ const userSchema = new mongoose.Schema(
 // have a `phone` (or `email`) participate in that unique constraint.
 userSchema.index({ phone: 1, role: 1 }, { unique: true, partialFilterExpression: { phone: { $exists: true } } });
 userSchema.index({ email: 1, role: 1 }, { unique: true, partialFilterExpression: { email: { $exists: true } } });
+
+// Employee IDs are unique within a brand, not across brands.
+userSchema.index(
+  { brand: 1, employeeId: 1 },
+  { unique: true, partialFilterExpression: { employeeId: { $type: 'string' }, role: 'brand_admin' } },
+);
 
 userSchema.pre('save', async function assignCustomerHumanId() {
   if (this.isNew && !this.humanId && this.role === ROLES.CUSTOMER) {

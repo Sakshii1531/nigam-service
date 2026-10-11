@@ -21,12 +21,15 @@ export function errorHandler(err, req, res, next) {
   // a truncated URL), and that surfaced as a 500 with the raw driver message —
   // "Cast to ObjectId failed for value ..." — rendered straight onto the page.
   const isBadId = err.name === 'CastError' && err.kind === 'ObjectId';
+  // An upload over multer's limit is the client's file, not a server fault.
+  const isUploadError = err.name === 'MulterError';
 
   const statusCode = err.statusCode
-    || (isBadId ? 404 : err.name === 'ValidationError' ? 400 : 500);
-  const message = isBadId && !err.statusCode
+    || (isBadId ? 404 : err.name === 'ValidationError' || isUploadError ? 400 : 500);
+  let message = isBadId && !err.statusCode
     ? `No ${err.model?.modelName || 'record'} found for id "${err.value}"`
     : err.message || 'Internal server error';
+  if (isUploadError && err.code === 'LIMIT_FILE_SIZE') message = 'File too large — videos can be at most 50 MB';
 
   if (statusCode >= 500) {
     req.log ? req.log.error({ err }, message) : console.error(err);

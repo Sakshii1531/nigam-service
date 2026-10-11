@@ -28,6 +28,7 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { testDbUri } from './helpers/testDb.js';
 import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { jobFlow } from './helpers/jobFlow.js';
+import { assignTemplateRole } from '../src/modules/brand-crm/roleTemplates.service.js';
 
 const TEST_DB_URI = testDbUri('partnerWarrantyModel');
 const YEAR = new Date().getFullYear();
@@ -61,6 +62,7 @@ async function makeClaim(overrides = {}) {
     Brand.create({ name: `Brand ${new mongoose.Types.ObjectId()}`, status: 'Active' }),
   ]);
   return WarrantyClaim.create({
+    source: 'ncc_app',
     customer: customer._id,
     brand: brand._id,
     categoryKey: 'AC',
@@ -235,6 +237,10 @@ describe('Phase 1 — bug fixes', () => {
       User.create({ role: ROLES.BRAND_ADMIN, name: 'LG Admin', email: 'lg-notify@test.local', brand: lg._id, passwordHash: 'x' }),
       User.create({ role: ROLES.BRAND_ADMIN, name: 'Samsung Admin', email: 'ss-notify@test.local', brand: samsung._id, passwordHash: 'x' }),
     ]);
+    await Promise.all([
+      assignTemplateRole(lgAdmin._id, lg._id),
+      assignTemplateRole(samsungAdmin._id, samsung._id),
+    ]);
     const customer = await makeCustomer();
 
     await createServiceRequest({ user: customer._id, brand: lg._id, warranty: 'In Warranty', category: 'AC' });
@@ -287,6 +293,7 @@ describe('Phase 1 — bug fixes', () => {
       brand: brand._id,
       passwordHash: await hashPassword('password123'),
     });
+    await assignTemplateRole(admin._id, brand._id);
     const token = await flow.loginAndVerify({ role: ROLES.BRAND_ADMIN, identifier: admin.email });
     const list = await request(app).get('/api/v1/brand/claims').set('Authorization', `Bearer ${token}`).expect(200);
     expect(list.body.data.map((c) => c.item)).toContain('Compressor');

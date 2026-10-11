@@ -136,10 +136,35 @@ export const CLAIM_ACTIONS = Object.freeze([
   'MANUAL_ASSIGNMENT',
   'REASSIGNED',
   'STATUS_OVERRIDDEN',
+  // Brand CRM (docs/brand-crm/ARCHITECTURE.md §5). A ticket from any source
+  // is still created with CLAIM_SUBMITTED; its source is on the ticket.
+  'CCE_ASSIGNED',
+  'PRIORITY_CHANGED',
+  'PRODUCT_UPDATED',
+  'WARRANTY_VERIFIED',
+  'WARRANTY_OVERRIDDEN',
+  'CONTACT_REQUESTED',
+  'CUSTOMER_CONTACTED',
+  'CUSTOMER_NOTIFIED',
+  'RESCHEDULE_REQUESTED',
+  'RESCHEDULED',
+  'JOB_STAGE_CHANGED',
+  'PART_REQUESTED',
+  'PART_APPROVED',
+  'PART_REJECTED',
+  'PART_DISPATCHED',
+  'PART_RECEIVED',
+  'PART_INSTALLED',
+  'ESCALATION_RAISED',
+  'ESCALATION_RESOLVED',
+  'CHARGE_CAPTURED',
+  'INVOICED',
+  'RATED',
 ]);
 
 export const EVENT_VISIBILITY = Object.freeze(['customer', 'brand', 'internal']);
-export const ACTOR_KINDS = Object.freeze(['customer', 'brand', 'admin', 'partner', 'system']);
+// 'integration' = an API key (WhatsApp bot, brand CRM) acting on the brand's behalf.
+export const ACTOR_KINDS = Object.freeze(['customer', 'brand', 'admin', 'partner', 'system', 'integration']);
 
 /**
  * "Sat, 3 Oct 2026, 9 AM – 12 PM" for a visit's YYYY-MM-DD date and slot — the

@@ -4,15 +4,15 @@ import { WarrantyGroup } from './warrantyGroup.model.js';
 import { resolveSelection } from './warrantyCatalog.service.js';
 import { appendEvent, saveClaim } from './claimTimeline.js';
 import { CLAIM_STATUS, TERMINAL_STATUSES, customerStatusLabel } from './claimStatus.js';
-import { slaHours, startSla } from './claimSla.js';
-import { getSettings as getPlatformSettings } from '../super-admin/platformSettings.service.js';
+import { reevaluateTicketWarranty } from '../brand-crm/ticketWarranty.service.js';
+import { createTicket } from './ticketIntake.service.js';
+import { TICKET_SOURCE, MAX_TICKET_VIDEOS } from './ticketConstants.js';
+import { actorFromUser } from '../brand-crm/actor.js';
 import { claimLinks } from './claimLinks.js';
 import { confirmService } from './partnerWarrantyJob.service.js';
 import { User } from '../auth/user.model.js';
-import { brandWarrantyMonths, escapeRegex } from '../shared/brandWarranty.js';
-import { addMonths } from '../shared/warrantyEngine.js';
 import { isOwnUploadUrl } from '../shared/fileUpload.js';
-import { emit as emitNotification, emitToBrand, emitToAdmins } from '../notifications/notification.service.js';
+import { emitToBrand } from '../notifications/notification.service.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
@@ -43,7 +43,7 @@ function documentView(d) {
 function openInfoRequest(claim) {
   if (claim.status !== CLAIM_STATUS.INFO_REQUESTED) return null;
   const open = [...(claim.infoRequests || [])].reverse().find((r) => !r.respondedAt);
-  return open ? { id: String(open._id), message: open.message, requestedAt: open.requestedAt } : null;
+  return open ? { id: String(open._id), message: open.message,documentKinds:open.documentKinds||[],  requestedAt: open.requestedAt } : null;
 }
 
 function customerTimeline(claim) {
@@ -84,14 +84,17 @@ export function toCustomerView(claim) {
   return {
     ...toCustomerSummary(claim),
     categoryKey: claim.categoryKey,
+    rejectionCode:claim.rejectionCode||null,
     modelNumber: claim.modelNumber || null,
     serialNumber: claim.serialNumber || null,
     purchaseDate: claim.purchaseDate || null,
+    warranty: {status:claim.warranty.status,message:claim.warranty.status==='Verification Required'?"We'll verify your warranty":null},
     remarks: claim.remarks || null,
     address: claim.address,
     documents: (claim.documents || []).map(documentView),
     infoRequest: openInfoRequest(claim),
     rejectionReason: claim.status === CLAIM_STATUS.REJECTED ? claim.rejectionReason : null,
+    preferredVisit: claim.preferredVisit?.date ? claim.preferredVisit : null,
     visit: claim.visit?.date ? { date: claim.visit.date, slot: claim.visit.slot || null } : null,
     serviceJobId: claim.serviceRequest?.humanId || null,
     // The job's internal id — what the rating card submits against once closed.
@@ -125,24 +128,6 @@ async function resolveAddress(customerId, { addressId, address }) {
   return { name, house, landmark, city, state, pincode, latitude, longitude };
 }
 
-async function warrantyEstimate(brandName, purchaseDate) {
-  const months = await brandWarrantyMonths(brandName);
-  if (!purchaseDate) return { status: 'Unknown', months };
-  const expiresOn = addMonths(purchaseDate, months);
-  return { status: Date.now() <= expiresOn.getTime() ? 'In Warranty' : 'Out of Warranty', months, expiresOn };
-}
-
-/** Open claim for the same brand + serial — a second one would just split the brand's work. */
-async function findOpenDuplicate(brandId, serialNumber) {
-  return WarrantyClaim.findOne({
-    brand: brandId,
-    serialNumber: new RegExp(`^${escapeRegex(serialNumber)}$`, 'i'),
-    status: { $nin: TERMINAL_STATUSES },
-  })
-    .select('humanId')
-    .lean();
-}
-
 async function findOwnClaim(customerId, idOrHumanId) {
   const filter = mongoose.isValidObjectId(idOrHumanId) ? { _id: idOrHumanId } : { humanId: String(idOrHumanId).toUpperCase() };
   const claim = await WarrantyClaim.findOne({ ...filter, customer: customerId })
@@ -153,7 +138,14 @@ async function findOwnClaim(customerId, idOrHumanId) {
   return claim;
 }
 
-const customerActor = (user) => ({ kind: 'customer', user: user._id || user.id, name: user.name });
+/** Same document cap as before, plus at most MAX_TICKET_VIDEOS videos per ticket (brand-crm D17). */
+function assertRoomFor(claim, documents) {
+  if (claim.documents.length + documents.length > MAX_DOCUMENTS) {
+    throw new ApiError(400, `A claim can hold at most ${MAX_DOCUMENTS} documents`);
+  }
+  const videos = [...claim.documents, ...documents].filter((d) => d.kind === 'video').length;
+  if (videos > MAX_TICKET_VIDEOS) throw new ApiError(400, `A claim can hold at most ${MAX_TICKET_VIDEOS} videos`);
+}
 
 // ── Submit ───────────────────────────────────────────────────────────────────
 
@@ -168,67 +160,32 @@ export async function createClaim(customer, body) {
   const purchaseDate = new Date(body.purchaseDate);
   if (purchaseDate.getTime() > Date.now()) throw new ApiError(400, 'Purchase date cannot be in the future');
 
-  const serialNumber = body.serialNumber.trim();
-  const duplicate = await findOpenDuplicate(brand._id, serialNumber);
-  if (duplicate) {
-    throw new ApiError(409, `You already have an open claim for this product (${duplicate.humanId})`, { existingClaim: duplicate.humanId });
-  }
-
-  const [address, warrantyCheck, group] = await Promise.all([
-    resolveAddress(customer.id, body),
-    warrantyEstimate(brand.name, purchaseDate),
+  const [address, group, actor] = await Promise.all([
+    resolveAddress(customer.id, body.visitAddressId || body.visitAddress ? {addressId:body.visitAddressId,address:body.visitAddress} : body),
     body.groupId ? WarrantyGroup.findById(body.groupId).select('_id').lean() : null,
+    actorFromUser(customer.id, 'customer'),
   ]);
 
-  const now = new Date();
-  const claim = new WarrantyClaim({
-    customer: customer.id,
-    brand: brand._id,
-    group: group?._id || null,
-    category: category._id,
-    categoryKey: category.key,
-    productType: productType?._id || null,
-    productName: category.name,
-    issue: issue._id,
-    issueName: issue.name,
-    modelNumber: body.modelNumber.trim(),
-    serialNumber,
-    purchaseDate,
-    remarks: body.remarks?.trim() || undefined,
-    warrantyCheck,
-    documents,
-    address,
-    status: CLAIM_STATUS.SUBMITTED,
-  });
-  // SLA hours snapshot: the brand's own, else the platform's (Phase 9).
-  const platform = (await getPlatformSettings())?.warrantySla?.toObject?.() || {};
-  startSla(
-    claim,
+  // Everything every ticket shares — IDs, warranty check, SLA, timeline,
+  // notifications — happens in createTicket (docs/brand-crm Phase 1).
+  const claim = await createTicket(
     {
-      approval: slaHours(brand, 'approvalHours', platform),
-      assignment: slaHours(brand, 'assignmentHours', platform),
-      visit: slaHours(brand, 'visitHours', platform),
-      resolution: slaHours(brand, 'resolutionHours', platform),
+      customer: customer.id,
+      brand,
+      category,
+      productType,
+      group: group?._id || null,
+      issue,
+      modelNumber: body.modelNumber,
+      serialNumber: body.serialNumber,
+      purchaseDate,
+      remarks: body.remarks,
+      preferredVisit: body.preferredVisit,
+      documents,
+      address,
     },
-    now,
+    { source: TICKET_SOURCE.NCC_APP, actor },
   );
-
-  appendEvent(claim, { action: 'CLAIM_SUBMITTED', actor: await customerActorFor(customer.id), visibility: 'customer' });
-  await saveClaim(claim);
-
-  const common = {
-    humanId: claim.humanId,
-    brandName: brand.name,
-    productName: claim.productName,
-    issueName: claim.issueName,
-    city: address.city,
-    pincode: address.pincode,
-  };
-  await Promise.all([
-    emitNotification('warranty.claim_submitted', { ...common, user: customer.id, cta: { label: 'Track Claim', route: claimLinks.customer(claim.id) } }),
-    emitToBrand('warranty.new_claim_brand', brand._id, { ...common, cta: { label: 'Review Claim', route: claimLinks.brand(claim.id) } }),
-    emitToAdmins('warranty.new_claim_admin', { ...common, cta: { label: 'View Claim', route: claimLinks.admin(claim.id) } }),
-  ]);
 
   return toCustomerView(await claim.populate('brand', 'name logoUrl'));
 }
@@ -254,19 +211,14 @@ export async function getMyClaim(customerId, id) {
 
 // ── Add documents / answer an info request ───────────────────────────────────
 
-async function customerActorFor(customerId) {
-  const user = await User.findById(customerId).select('name').lean();
-  return customerActor({ ...user, _id: customerId });
-}
+const customerActorFor = (customerId) => actorFromUser(customerId, 'customer');
 
 export async function addDocuments(customerId, id, { documents }) {
   const claim = await findOwnClaim(customerId, id);
   if (TERMINAL_STATUSES.includes(claim.status)) {
     throw new ApiError(409, `This claim is ${claim.status.toLowerCase()} — documents can no longer be added`);
   }
-  if (claim.documents.length + documents.length > MAX_DOCUMENTS) {
-    throw new ApiError(400, `A claim can hold at most ${MAX_DOCUMENTS} documents`);
-  }
+  assertRoomFor(claim, documents);
   claim.documents.push(...checkDocuments(documents, customerId));
   appendEvent(claim, {
     action: 'DOCUMENT_ADDED',
@@ -274,6 +226,7 @@ export async function addDocuments(customerId, id, { documents }) {
     note: `${documents.length} document(s) added`,
     visibility: 'customer',
   });
+  await reevaluateTicketWarranty(claim,await customerActorFor(customerId));
   await saveClaim(claim);
   return toCustomerView(claim);
 }
@@ -286,9 +239,7 @@ export async function respondToInfoRequest(customerId, id, { message, documents 
   const request = [...claim.infoRequests].reverse().find((r) => !r.respondedAt);
   if (!request) throw new ApiError(409, 'The brand has not asked for more information on this claim');
   if (!message?.trim() && !documents.length) throw new ApiError(400, 'Add a message or at least one document');
-  if (claim.documents.length + documents.length > MAX_DOCUMENTS) {
-    throw new ApiError(400, `A claim can hold at most ${MAX_DOCUMENTS} documents`);
-  }
+  assertRoomFor(claim, documents);
 
   claim.documents.push(...checkDocuments(documents, customerId, request._id));
   request.response = message?.trim() || undefined;
@@ -300,6 +251,7 @@ export async function respondToInfoRequest(customerId, id, { message, documents 
     note: message?.trim() || undefined,
     visibility: 'customer',
   });
+  await reevaluateTicketWarranty(claim,await customerActorFor(customerId));
   await saveClaim(claim);
 
   await emitToBrand('warranty.info_provided', claim.brand._id || claim.brand, {
@@ -391,11 +343,13 @@ export async function trackMyClaim(customerId, id) {
     partner: partnerVisible
       ? { name: provider.name, phone: provider.phone || null, rating: provider.rating || null, photo: provider.photo || provider.avatar || null }
       : null,
+    preferredVisit: claim.preferredVisit?.date ? claim.preferredVisit : null,
     visit: claim.visit?.date ? { date: claim.visit.date, slot: claim.visit.slot || null } : null,
     serviceJobId: sr?.humanId || null,
     // The customer's own job — what "Rate your service" rates once closed.
     serviceRequestId: sr ? String(sr._id) : null,
     completionOtp: OTP_VISIBLE_JOB_STATUSES.has(sr?.status) ? sr.completionOtp : null,
+    videos: claim.documents.filter(d=>d.kind==='video').map(documentView),
     canConfirm: claim.status === S.SERVICE_COMPLETED && sr?.status === 'Customer Confirmation',
     rejectionReason: effective === S.REJECTED ? claim.rejectionReason : null,
   };

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { preferredVisitSchema } from '../shared/preferredVisit.js';
 
 // Customer warranty-claim request shapes (docs/partner-warranty Phase 3).
 
@@ -6,7 +7,7 @@ const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
 const text = (max) => z.string().trim().max(max);
 
 const documentSchema = z.object({
-  kind: z.enum(['invoice', 'warranty_card', 'product_photo', 'additional']),
+  kind: z.enum(['invoice', 'warranty_card', 'product_photo', 'additional', 'video']),
   url: z.string().trim().min(1).max(2048),
   name: text(200).optional(),
 });
@@ -35,8 +36,12 @@ export const createClaimSchema = z
     remarks: text(1000).optional(),
     addressId: objectId.optional(),
     address: addressSchema.optional(),
+    preferredVisit: preferredVisitSchema.optional(),
+    visitAddressId: objectId.optional(),
+    visitAddress: addressSchema.optional(),
     documents: z.array(documentSchema).min(1, 'Attach the purchase bill / invoice').max(10),
   })
+  .refine(v => !(v.visitAddressId && v.visitAddress), {message:'Send either visitAddressId or visitAddress',path:['visitAddress']})
   .refine((v) => Boolean(v.addressId) !== Boolean(v.address), {
     message: 'Send either a saved addressId or an address',
     path: ['address'],

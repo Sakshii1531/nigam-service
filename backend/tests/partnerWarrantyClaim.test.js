@@ -10,6 +10,7 @@ import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { WarrantyGroup } from '../src/modules/partner-warranty/warrantyGroup.model.js';
 import { WarrantyIssue } from '../src/modules/partner-warranty/warrantyIssue.model.js';
+import { WarrantyPolicy } from '../src/modules/brand-crm/warrantyPolicy.model.js';
 import { WarrantyClaim } from '../src/modules/partner-warranty/warrantyClaim.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
@@ -18,6 +19,8 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { testDbUri } from './helpers/testDb.js';
 import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { jobFlow } from './helpers/jobFlow.js';
+import { assignTemplateRole } from '../src/modules/brand-crm/roleTemplates.service.js';
+import { SUPER_ADMIN_TEMPLATE } from '../src/modules/brand-crm/permissions.js';
 
 const TEST_DB_URI = testDbUri('partnerWarrantyClaim');
 const YEAR = new Date().getFullYear();
@@ -45,13 +48,14 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await Promise.all(
-    [Category, Brand, WarrantyGroup, WarrantyIssue, WarrantyClaim, User, AuditLog, Notification].map((m) => m.deleteMany({})),
+    [WarrantyPolicy, Category, Brand, WarrantyGroup, WarrantyIssue, WarrantyClaim, User, AuditLog, Notification].map((m) => m.deleteMany({})),
   );
 });
 
 async function staffToken(role, extra = {}) {
   const email = `pw-claim-${emailSeq++}@test.local`;
   const user = await User.create({ role, name: `${role} ${emailSeq}`, email, passwordHash: await hashPassword('password123'), ...extra });
+  if (role === ROLES.BRAND_ADMIN && extra.brand) await assignTemplateRole(user._id, extra.brand, SUPER_ADMIN_TEMPLATE);
   return { user, token: await flow.loginAndVerify({ role, identifier: email }) };
 }
 
@@ -85,6 +89,7 @@ async function world() {
     { category: ac._id, name: 'Cooling Issue' },
     { category: fridge._id, name: 'Noise' },
   ]);
+  await WarrantyPolicy.create([lg,samsung].map(b=>({brand:b._id,policyKey:new mongoose.Types.ObjectId(),name:`${b.name} standard`,warrantyMonths:b.warrantyMonths??12,requireInvoice:true,requireSerial:true,coverage:{coveredServices:['repair']}})));
   return { ac, fridge, group, lg, samsung, cooling, fridgeNoise };
 }
 
@@ -138,20 +143,22 @@ describe('Phase 3 — submitting a claim', () => {
     expect(String(saved.brand)).toBe(String(w.lg._id));
     expect(String(saved.customer)).toBe(String(cust.user._id));
     expect(saved.categoryKey).toBe('AC');
-    expect(saved.warrantyCheck).toMatchObject({ status: 'In Warranty', months: 24 });
+    expect(saved.warranty).toMatchObject({ status: 'In Warranty', months: 24 });
     expect(saved.address.latitude).toBe(22.72);
     const due = saved.sla.brandApprovalDueAt.getTime() - before;
     expect(due).toBeGreaterThan(11.9 * HOUR);
     expect(due).toBeLessThan(12.1 * HOUR);
 
-    expect(await AuditLog.countDocuments({ entityType: 'WarrantyClaim', entityId: saved._id })).toBe(1);
+    expect(await AuditLog.countDocuments({ entityType: 'WarrantyClaim', entityId: saved._id, action:'ticket.created' })).toBe(1);
   });
 
   it('never shows the customer internal fields', async () => {
     const w = await world();
     const cust = await customerWithAddress();
     const view = (await submit(w, cust)).body.data;
-    for (const key of ['flags', 'sla', 'warrantyCheck', 'customer', 'infoRequests', 'statusBeforeHold']) {
+    expect(view.warranty.status).toBe('In Warranty');
+    for(const key of ['reasons','policy','verifiedBy','overrideNote'])expect(view.warranty).not.toHaveProperty(key);
+    for (const key of ['flags', 'sla', 'customer', 'infoRequests', 'statusBeforeHold', 'registeredBy', 'assignedCce']) {
       expect(view).not.toHaveProperty(key);
     }
   });

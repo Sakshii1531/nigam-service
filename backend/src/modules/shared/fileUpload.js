@@ -29,14 +29,20 @@ if (isFileStorageConfigured) {
   });
 }
 
-const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf']);
+const VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf', ...VIDEO_MIME_TYPES]);
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB — covers complaint/warranty photos & PDFs
+// A short clip of the fault (docs/brand-crm README D17). Multer's own limit is
+// this larger one; storeUploadedFile holds everything that isn't a video to 10MB.
+export const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
+
+export const isVideo = (mimetype) => VIDEO_MIME_TYPES.has(mimetype);
 
 // Always buffer in memory — same multer config regardless of which backend
 // (local disk vs Cloudinary) ends up persisting it in storeUploadedFile below.
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE_BYTES },
+  limits: { fileSize: MAX_VIDEO_SIZE_BYTES },
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
       const err = new Error(`Unsupported file type: ${file.mimetype}`);
@@ -84,7 +90,7 @@ function saveToCloudinary(file) {
         // PDFs (warranty invoices, docs) aren't images — 'raw' avoids Cloudinary's
         // image-pipeline validation rejecting them; images still get its normal
         // optimization/CDN delivery either way.
-        resource_type: file.mimetype === 'application/pdf' ? 'raw' : 'image',
+        resource_type: file.mimetype === 'application/pdf' ? 'raw' : isVideo(file.mimetype) ? 'video' : 'image',
       },
       (err, result) => {
         if (err) return reject(new ApiError(502, `Cloudinary upload failed: ${err.message}`));
@@ -97,6 +103,9 @@ function saveToCloudinary(file) {
 
 export async function storeUploadedFile(file) {
   if (!file) throw new Error('No file provided');
+  if (!isVideo(file.mimetype) && file.size > MAX_FILE_SIZE_BYTES) {
+    throw new ApiError(400, 'File too large — images and PDFs can be at most 10 MB');
+  }
   await convertToWebpIfNeeded(file);
   if (isFileStorageConfigured) return saveToCloudinary(file);
   if (isProd) throw new ApiError(500, 'File storage is not configured — cannot accept uploads in production');

@@ -1,18 +1,17 @@
 import { Router } from 'express';
+import { requireBrandPermissionIfBrand } from '../brand-crm/brandPermission.middleware.js';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { ok, created } from '../../utils/respond.js';
+import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
-import { User } from '../auth/user.model.js';
 import { getAsmByUserId } from '../super-admin/asm.service.js';
 import * as serviceRequestService from './serviceRequest.service.js';
 import {
   transitionSchema,
   listServiceRequestsQuerySchema,
   idParamSchema,
-  createServiceRequestSchema,
   assignSchema,
 } from './serviceRequest.validation.js';
 
@@ -81,12 +80,12 @@ function canTransition(serviceRequest, reqUser, serviceProviderId) {
   return false;
 }
 
-serviceRequestRouter.get('/', validate(listServiceRequestsQuerySchema, 'query'), async (req, res, next) => {
+serviceRequestRouter.get('/', requireBrandPermissionIfBrand('tickets:view'), validate(listServiceRequestsQuerySchema, 'query'), async (req, res, next) => {
   try {
     const filters = { ...req.query };
     if (req.user.role === ROLES.CUSTOMER) filters.user = req.user.id;
     else if (req.user.role === ROLES.SERVICE_PROVIDER) filters.serviceProvider = await requestingServiceProviderId(req.user);
-    else if (req.user.role === ROLES.BRAND_ADMIN) filters.brand = req.user.brand;
+    else if (req.user.role === ROLES.BRAND_ADMIN) {filters.brand = req.user.brand;filters.ticketOnly=true;}
     else if (req.user.role === ROLES.ASM) filters.zone = (await resolveAsmZone(req.user)) || '__no-zone-assigned__';
     // super_admin: no forced filter, can see everything.
 
@@ -97,33 +96,12 @@ serviceRequestRouter.get('/', validate(listServiceRequestsQuerySchema, 'query'),
   }
 });
 
-/**
- * Log a complaint on a customer's behalf (brand-admin's RegisterComplaint).
- *
- * Restricted to brand_admin, and `brand` is taken from the caller's own token
- * rather than the request body — otherwise one brand could file requests
- * against another and they'd show up on that brand's console. The named
- * customer must exist; the agent is not the subject of the request.
- */
-serviceRequestRouter.post(
-  '/',
-  requireRole(ROLES.BRAND_ADMIN),
-  validate(createServiceRequestSchema),
-  async (req, res, next) => {
-    try {
-      if (!req.user.brand) throw new ApiError(403, 'Account is not linked to a brand');
-      const customer = await User.findById(req.body.user).select('_id role');
-      if (!customer) throw new ApiError(404, 'Customer not found');
-      if (customer.role !== ROLES.CUSTOMER) throw new ApiError(400, 'Service requests can only be raised for a customer account');
+// No POST /: a brand no longer files a ServiceRequest directly. A complaint is
+// a Brand CRM ticket (partner-warranty/ticketIntake.createTicket); its
+// ServiceRequest — the NCC job — is created only when the ticket is approved
+// (docs/brand-crm README D4).
 
-      created(res, await serviceRequestService.createServiceRequest({ ...req.body, brand: req.user.brand }));
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-serviceRequestRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+serviceRequestRouter.get('/:id', requireBrandPermissionIfBrand('tickets:view'), validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
     const serviceRequest = await serviceRequestService.getServiceRequest(req.params.id);
     const serviceProviderId = await requestingServiceProviderId(req.user);
@@ -137,6 +115,7 @@ serviceRequestRouter.get('/:id', validate(idParamSchema, 'params'), async (req, 
 
 serviceRequestRouter.patch(
   '/:id/status',
+  requireBrandPermissionIfBrand('tickets:edit'),
   validate(idParamSchema, 'params'),
   validate(transitionSchema),
   async (req, res, next) => {
