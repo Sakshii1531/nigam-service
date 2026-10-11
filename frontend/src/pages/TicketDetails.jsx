@@ -1,8 +1,10 @@
+import CustomerParts from '../components/partner-warranty/CustomerParts';
+import VideoUploads from '../components/partner-warranty/VideoUploads';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AlertCircle, ChevronRight, Loader2, MapPin } from 'lucide-react';
 import ServiceRatingCard from '../components/common/ServiceRatingCard';
-import { WarrantyHeader, StatusPill, DocumentChip, AddDocumentButton, ErrorNote, BrandLogo } from '../components/partner-warranty/ui';
+import { WarrantyHeader, StatusPill, DocumentChip, AddDocumentButton, DocumentTile, ErrorNote, BrandLogo } from '../components/partner-warranty/ui';
 import { formatDateTime } from '../lib/partnerWarrantyFormat';
 import { SkeletonDetail } from '../components/common/Skeleton';
 import { useApiData } from '../hooks/useApiData';
@@ -20,12 +22,14 @@ const FINISHED = ['Closed', 'Cancelled', 'Rejected'];
 function InfoRequestForm({ claim, onDone }) {
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState([]);
+  const [proofs,setProofs]=useState({}),[videos,setVideos]=useState([]),[uploads,setUploads]=useState({});
+  const setBusy=(kind,busy)=>setUploads(v=>({...v,[kind]:busy}));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
 
   const send = async (e) => {
     e.preventDefault();
-    if (!message.trim() && !files.length) {
+    if (!message.trim() && !files.length&&!Object.values(proofs).some(Boolean)&&!videos.length) {
       setError('Add a message or at least one photo/document.');
       return;
     }
@@ -34,7 +38,7 @@ function InfoRequestForm({ claim, onDone }) {
     try {
       await warrantyApi.respond(claim.id, {
         message: message.trim() || undefined,
-        documents: files.map((f) => ({ kind: 'additional', url: f.url, name: f.name })),
+        documents: [...files.map((f)=>({kind:'additional',url:f.url,name:f.name})),...Object.entries(proofs).filter(([,d])=>d).map(([kind,d])=>({kind,url:d.url,name:d.name})),...videos.map(d=>({kind:'video',url:d.url,name:d.name}))],
       });
       onDone();
     } catch (err) {
@@ -61,14 +65,16 @@ function InfoRequestForm({ claim, onDone }) {
         onChange={(e) => setMessage(e.target.value)}
         className="w-full px-3 py-2.5 bg-white border border-amber-200 rounded-xl text-sm outline-none focus:border-brand-blue resize-none"
       />
+      <div className="flex flex-wrap gap-3">{claim.infoRequest.documentKinds?.filter(k=>k!=='video').map(kind=><DocumentTile key={kind} label={DOCUMENT_LABELS[kind]||kind} value={proofs[kind]} onChange={d=>setProofs(v=>({...v,[kind]:d}))} onBusyChange={b=>setBusy(kind,b)}/>)}</div>
+      {claim.infoRequest.documentKinds?.includes('video')&&<VideoUploads value={videos} onChange={setVideos} onBusyChange={b=>setBusy('video',b)}/>}
       <div className="flex flex-wrap gap-3">
         {files.map((f, i) => (
           <DocumentChip key={f.url} doc={f} onRemove={() => setFiles((list) => list.filter((_, j) => j !== i))} />
         ))}
-        <AddDocumentButton label="Add file" onAdded={(d) => setFiles((list) => [...list, d].slice(0, 10))} />
+        <AddDocumentButton onBusyChange={b=>setBusy('additional',b)} label="Add file" onAdded={(d) => setFiles((list) => [...list, d].slice(0, 10))} />
       </div>
       <ErrorNote message={error} />
-      <button type="submit" disabled={sending} className="py-3 bg-brand-navy text-white font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70">
+      <button type="submit" disabled={sending||Object.values(uploads).some(Boolean)} className="py-3 bg-brand-navy text-white font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70">
         {sending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         Send to brand
       </button>
@@ -130,6 +136,9 @@ const TicketDetails = () => {
               </div>
             </div>
 
+            <CustomerParts ticketId={c.id}/>
+            {c.warranty?.status && <div className="bg-white border rounded-2xl p-4 text-sm"><p className="font-semibold">{c.warranty.status}</p>{c.warranty.message&&<p className="text-slate-500 mt-1">{c.warranty.message}</p>}</div>}
+            {c.status==='Rejected'&&c.rejectionCode==='OUT_OF_WARRANTY'&&<Link to={`/services?category=${encodeURIComponent(c.categoryKey)}`} className="block bg-blue-800 text-white rounded-2xl p-4 text-center font-bold">Book a paid repair</Link>}
             {c.infoRequest && <InfoRequestForm claim={c} onDone={res.reload} />}
 
             {c.rejectionReason && (
@@ -155,6 +164,7 @@ const TicketDetails = () => {
                 <Row label="Serial Number" value={c.serialNumber} />
                 <Row label="Purchase Date" value={c.purchaseDate ? new Date(c.purchaseDate).toLocaleDateString('en-IN') : null} />
               </dl>
+              {c.preferredVisit?.date && <p className="text-sm py-3 border-t">Preferred visit: {c.preferredVisit.date} · {c.preferredVisit.slot}{c.preferredVisit.notes ? ` · ${c.preferredVisit.notes}` : ''}</p>}
               {c.remarks && <p className="text-sm text-slate-600 py-3 border-t border-slate-100">{c.remarks}</p>}
               <p className="text-xs text-slate-500 flex items-start gap-1.5 py-3 border-t border-slate-100">
                 <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
@@ -167,7 +177,7 @@ const TicketDetails = () => {
                 Documents
               </h2>
               <div className="flex flex-wrap gap-3">
-                {c.documents.map((d) => (
+                {c.documents.map((d) => d.kind === 'video' ? <video key={d.id} controls preload="metadata" src={resolveMediaUrl(d.url)} aria-label={d.name||'Fault video'} className="w-full rounded-xl" /> : (
                   <a key={d.id} href={resolveMediaUrl(d.url)} target="_blank" rel="noreferrer" aria-label={`Open ${DOCUMENT_LABELS[d.kind]}${d.name ? `: ${d.name}` : ''}`}>
                     <DocumentChip doc={d} label={DOCUMENT_LABELS[d.kind]} />
                   </a>

@@ -3,7 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { storeUploadedFile, LOCAL_UPLOAD_DIR, isFileStorageConfigured } from '../src/modules/shared/fileUpload.js';
+import { storeUploadedFile as storeFile, LOCAL_UPLOAD_DIR, isFileStorageConfigured } from '../src/modules/shared/fileUpload.js';
+
+const createdUploads = new Set();
+async function storeUploadedFile(file) {
+  const url = await storeFile(file);
+  if (url.startsWith('/uploads/')) createdUploads.add(path.join(LOCAL_UPLOAD_DIR, path.basename(url)));
+  return url;
+}
 
 // CLOUDINARY_* env vars are unset in the test environment (.env.example defaults), so
 // this exercises the local-disk fallback branch — the Cloudinary branch is
@@ -51,11 +58,10 @@ describe('storeUploadedFile (local-disk backend)', () => {
   });
 
   afterEach(() => {
-    // Belt-and-suspenders cleanup in case an assertion above throws before its own unlink.
-    for (const f of fs.readdirSync(LOCAL_UPLOAD_DIR)) {
-      if (f.startsWith('.')) continue;
-      fs.unlinkSync(path.join(LOCAL_UPLOAD_DIR, f));
-    }
+    // Remove only this test's uploads; browser suites and developers can be
+    // using other files in the local upload directory at the same time.
+    for (const filename of createdUploads) fs.rmSync(filename, { force: true });
+    createdUploads.clear();
   });
 });
 

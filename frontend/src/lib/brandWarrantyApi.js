@@ -10,9 +10,9 @@ const qs = (params) => {
 
 export const brandWarrantyApi = {
   list: (params = {}) => apiRequest(`/brand/warranty-claims${qs(params)}`, { auth: true, envelope: true }),
-  get: (id) => apiRequest(`/brand/warranty-claims/${id}`, { auth: true }),
+  get: (id) => apiRequest(`/brand/tickets/${id}`, { auth: true }),
   approve: (id, remarks) => apiRequest(`/brand/warranty-claims/${id}/approve`, { method: 'POST', auth: true, body: remarks ? { remarks } : {} }),
-  reject: (id, reason) => apiRequest(`/brand/warranty-claims/${id}/reject`, { method: 'POST', auth: true, body: { reason } }),
+  reject: (id, reason) => apiRequest(`/brand/warranty-claims/${id}/reject`, { method: 'POST', auth: true, body: { rejectionCode:'OTHER',reason } }),
   requestInfo: (id, message) => apiRequest(`/brand/warranty-claims/${id}/request-info`, { method: 'POST', auth: true, body: { message } }),
   note: (id, note) => apiRequest(`/brand/warranty-claims/${id}/notes`, { method: 'POST', auth: true, body: { note } }),
 

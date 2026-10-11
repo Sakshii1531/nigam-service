@@ -111,6 +111,8 @@ const TrackTicket = () => {
               </div>
             )}
 
+            {t.preferredVisit?.date && <p className="bg-white border rounded-2xl p-4 text-sm">Preferred visit: {t.preferredVisit.date} · {t.preferredVisit.slot}</p>}
+            {t.videos?.map(v=><video key={v.id} controls preload="metadata" src={resolveMediaUrl(v.url)} aria-label={v.name||'Fault video'} className="w-full rounded-2xl"/>)}
             {t.visit && (
               <div className="bg-white border border-slate-200/80 rounded-2xl px-5 py-4 flex items-center gap-3">
                 <CalendarClock className="h-5 w-5 text-brand-blue" aria-hidden="true" />

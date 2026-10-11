@@ -1,4 +1,4 @@
-import { apiRequest } from './apiClient';
+import { apiRequest, apiUpload } from './apiClient';
 
 // Customer-side Partner Warranty API (docs/partner-warranty Phases 2–7).
 // Browsing needs no login; everything under /claims is the customer's own.
@@ -15,6 +15,7 @@ export const warrantyApi = {
     apiRequest(`/partner-warranty/brands/${brandId}/products${group ? `?group=${encodeURIComponent(group)}` : ''}`),
   issues: (categoryId) => apiRequest(`/partner-warranty/products/${categoryId}/issues`),
 
+  intakeOptions: () => apiRequest('/partner-warranty/claims/intake-options', {auth:true}),
   submit: (body) => apiRequest('/partner-warranty/claims', { method: 'POST', auth: true, body }),
   myClaims: (status) => apiRequest(`/partner-warranty/claims${status ? `?status=${status}` : ''}`, { auth: true, envelope: true }),
   claim: (id) => apiRequest(`/partner-warranty/claims/${id}`, { auth: true }),
@@ -48,4 +49,15 @@ export const DOCUMENT_LABELS = {
   warranty_card: 'Warranty Card',
   product_photo: 'Product Photo',
   additional: 'Additional',
+  video: 'Fault video',
 };
+
+export const VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime';
+export async function uploadClaimVideo(file, onProgress) {
+  if(!file || !VIDEO_ACCEPT.split(',').includes(file.type)) throw new Error('Use an MP4, WebM or MOV video.');
+  if(file.size>50*1024*1024) throw new Error('Videos must be 50 MB or smaller.');
+  const body=new FormData();body.append('file',file);
+  const result=await apiUpload('/uploads',body,onProgress);
+  if(!result?.url) throw new Error('Upload failed — please try again.');
+  return {url:result.url,name:file.name};
+}

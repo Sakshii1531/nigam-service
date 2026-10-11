@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FileText, CreditCard, Camera, MapPin, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { WarrantyHeader, DocumentTile, AddDocumentButton, DocumentChip, ErrorNote } from '../components/partner-warranty/ui';
+import VideoUploads from '../components/partner-warranty/VideoUploads';
 import { warrantyApi } from '../lib/partnerWarrantyApi';
 
 // The customer's warranty claim form (docs/partner-warranty Phase 12) — the
@@ -60,6 +61,13 @@ const RaiseWarrantyRequest = () => {
 
   const [docs, setDocs] = useState({ invoice: null, warranty_card: null, product_photo: null });
   const [extra, setExtra] = useState([]);
+  const [videos,setVideos]=useState([]);
+  const [uploads,setUploads]=useState({});
+  const uploading=Object.values(uploads).some(Boolean);
+  const setUploading=busy=>setUploads(s=>({...s,video:busy}));
+  const [visit,setVisit]=useState({date:'',slot:'morning',notes:''});
+  const [intake,setIntake]=useState(null);
+  useEffect(()=>{if(!user)return;let cancelled=false;warrantyApi.intakeOptions().then(o=>{if(!cancelled)setIntake(o);}).catch(()=>{});return()=>{cancelled=true;};},[user]);
   const [form, setForm] = useState({ modelNumber: '', serialNumber: '', purchaseDate: '', remarks: '' });
   const [addressId, setAddressId] = useState(defaultAddress ? String(defaultAddress._id || defaultAddress.id) : 'new');
   const [newAddress, setNewAddress] = useState({ house: '', landmark: '', city: '', state: '', pincode: '' });
@@ -113,6 +121,7 @@ const RaiseWarrantyRequest = () => {
     const documents = [
       ...Object.entries(docs).filter(([, d]) => d).map(([kind, d]) => ({ kind, url: d.url, name: d.name })),
       ...extra.map((d) => ({ kind: 'additional', url: d.url, name: d.name })),
+      ...videos.map(d=>({kind:'video',url:d.url,name:d.name})),
     ];
     const body = {
       brandId,
@@ -123,6 +132,7 @@ const RaiseWarrantyRequest = () => {
       purchaseDate: form.purchaseDate,
       remarks: form.remarks.trim() || undefined,
       documents,
+      ...(visit.date ? {preferredVisit:visit} : {}),
       ...(addressId === 'new'
         ? { address: Object.fromEntries(Object.entries(newAddress).map(([k, v]) => [k, v.trim() || undefined])) }
         : { addressId }),
@@ -153,12 +163,12 @@ const RaiseWarrantyRequest = () => {
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-black text-black tracking-wide pl-1 mb-3">Upload Documents</legend>
           <div className="flex gap-3">
-            <DocumentTile label="Bill / Invoice" icon={FileText} required invalid={tried} value={docs.invoice} onChange={(d) => {
+            <DocumentTile label="Bill / Invoice" onBusyChange={busy=>setUploads(s=>({...s,invoice:busy}))} icon={FileText} required invalid={tried} value={docs.invoice} onChange={(d) => {
                 setDocs((s) => ({ ...s, invoice: d }));
                 if (d) setError(null); // the "upload the invoice" message no longer applies
               }} />
-            <DocumentTile label="Warranty Card" icon={CreditCard} value={docs.warranty_card} onChange={(d) => setDocs((s) => ({ ...s, warranty_card: d }))} />
-            <DocumentTile label="Product Photo" icon={Camera} value={docs.product_photo} onChange={(d) => setDocs((s) => ({ ...s, product_photo: d }))} />
+            <DocumentTile label="Warranty Card" onBusyChange={busy=>setUploads(s=>({...s,warranty_card:busy}))} icon={CreditCard} value={docs.warranty_card} onChange={(d) => setDocs((s) => ({ ...s, warranty_card: d }))} />
+            <DocumentTile label="Product Photo" onBusyChange={busy=>setUploads(s=>({...s,product_photo:busy}))} icon={Camera} value={docs.product_photo} onChange={(d) => setDocs((s) => ({ ...s, product_photo: d }))} />
           </div>
           <p className="text-[11px] text-slate-500 pl-1">Photos (JPG, PNG, WebP) or PDF, up to 10 MB each.</p>
         </fieldset>
@@ -171,9 +181,11 @@ const RaiseWarrantyRequest = () => {
             {extra.map((doc, i) => (
               <DocumentChip key={doc.url} doc={doc} onRemove={() => setExtra((list) => list.filter((_, j) => j !== i))} />
             ))}
-            {extra.length < 6 && <AddDocumentButton onAdded={(d) => setExtra((list) => [...list, d].slice(0, 6))} />}
+            {extra.length < 5 && <AddDocumentButton onAdded={(d) => setExtra((list) => [...list, d].slice(0, 5))} />}
           </div>
         </fieldset>
+
+        <VideoUploads value={videos} onChange={setVideos} onBusyChange={setUploading} />
 
         <fieldset className="flex flex-col gap-3">
           <legend className="text-sm font-black text-black tracking-wide pl-1 mb-3">Enter Details</legend>
@@ -266,6 +278,9 @@ const RaiseWarrantyRequest = () => {
           </div>
         </fieldset>
 
+        <label className="flex items-start gap-3 text-sm text-slate-700"><input type="checkbox" required className="mt-1" />I confirm this is the location for the technician's visit.</label>
+        {intake&&<fieldset className="bg-white border rounded-2xl p-5 space-y-4"><legend className="text-sm font-bold">Preferred visit (optional)</legend><Field id="pw-preferred-date" label="Preferred visit date"><input id="pw-preferred-date" type="date" min={intake.visitDates.min} max={intake.visitDates.max} value={visit.date} onChange={e=>setVisit({...visit,date:e.target.value})} className={inputClass}/></Field><Field id="pw-slot" label="Preferred slot"><select id="pw-slot" value={visit.slot} onChange={e=>setVisit({...visit,slot:e.target.value})} className={inputClass}>{intake.slots.map(s=><option key={s}>{s}</option>)}</select></Field><Field id="pw-visit-notes" label="Visit notes"><input id="pw-visit-notes" maxLength={500} value={visit.notes} onChange={e=>setVisit({...visit,notes:e.target.value})} className={inputClass}/></Field><p className="text-xs text-slate-500">Your preference helps scheduling. The confirmed appointment appears in tracking.</p></fieldset>}
+
         <div aria-live="polite">
           {error && (
             <div className="flex flex-col gap-2">
@@ -281,7 +296,7 @@ const RaiseWarrantyRequest = () => {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || uploading}
           className="w-full py-4 bg-brand-navy text-white font-bold text-base rounded-2xl cursor-pointer tracking-wide mt-2 flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}

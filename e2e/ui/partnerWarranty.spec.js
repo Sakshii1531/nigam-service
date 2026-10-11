@@ -90,12 +90,26 @@ test('a customer raises, answers, tracks and closes a Partner Warranty claim', a
   await page.getByLabel(/House \/ Street/).fill('12 MG Road');
   await page.getByLabel(/^City/).fill(`Indore${tag}`);
   await page.getByLabel(/Pincode/).fill('452001');
+  await page.getByLabel(/I confirm this is the location/).check();
   await page.getByRole('button', { name: 'Raise Ticket' }).click();
   await expect(page.getByText('Please upload the purchase bill / invoice.')).toBeVisible();
 
   await page.locator('input[type=file]').first().setInputFiles({ name: 'invoice.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(page.getByRole('button', { name: 'Remove Bill / Invoice' })).toBeVisible();
   await expect(page.getByText('Please upload the purchase bill / invoice.')).toHaveCount(0);
+  const intake=await call(request,'get','/partner-warranty/claims/intake-options',customer.accessToken);
+  await page.getByLabel('Preferred visit date',{exact:true}).fill(intake.visitDates.min);
+  await page.getByLabel('Preferred slot',{exact:true}).selectOption('afternoon');
+  const clip=await page.evaluate(async()=>{
+    const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;
+    const stream=canvas.captureStream(10);const recorder=new MediaRecorder(stream,{mimeType:'video/webm'});const chunks=[];
+    const done=new Promise(resolve=>{recorder.onstop=resolve;});recorder.ondataavailable=e=>chunks.push(e.data);
+    recorder.start();const context=canvas.getContext('2d');context.fillStyle='blue';context.fillRect(0,0,32,32);
+    await new Promise(resolve=>setTimeout(resolve,300));recorder.stop();await done;stream.getTracks().forEach(t=>t.stop());
+    return Array.from(new Uint8Array(await new Blob(chunks,{type:'video/webm'}).arrayBuffer()));
+  });
+  await page.getByLabel('Add video',{exact:true}).setInputFiles({name:'fault.webm',mimeType:'video/webm',buffer:Buffer.from(clip)});
+  await expect(page.getByRole('button',{name:'Remove video',exact:true})).toBeVisible();
   await page.screenshot({ path: `${SHOTS}phase-12-raise-request.png`, fullPage: true });
   await page.getByRole('button', { name: 'Raise Ticket' }).click();
 
@@ -107,6 +121,9 @@ test('a customer raises, answers, tracks and closes a Partner Warranty claim', a
   // ── Track Ticket updates live when the brand asks for more information ──
   await page.getByRole('button', { name: 'Track Ticket' }).click();
   await expect(page.getByText('Your claim has been sent to the brand.')).toBeVisible();
+  await expect(page.getByText(`Preferred visit: ${intake.visitDates.min} · afternoon`)).toBeVisible();
+  await expect(page.locator('video')).toHaveCount(1);
+  await expect.poll(()=>page.locator('video').evaluate(v=>v.readyState)).toBeGreaterThanOrEqual(1);
   const claimId = (await call(request, 'get', `/partner-warranty/claims/${ticket}`, customer.accessToken)).id;
   await call(request, 'post', `/brand/warranty-claims/${claimId}/request-info`, brandToken, { message: 'Please upload a photo of the serial sticker' });
   const banner = page.getByRole('link', { name: /needs more information/ });
