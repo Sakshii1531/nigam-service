@@ -1,7 +1,9 @@
+import { useWarrantyClaimLive } from '../../hooks/useWarrantyClaimLive';
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiRequest } from '../../lib/apiClient';
+import { useBrandPermissions } from '../../hooks/useBrandPermissions';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -23,7 +25,7 @@ import {
   ChevronRight,
   Plus,
   Headphones,
-  ClipboardCheck,
+
   Wrench,
   SlidersHorizontal
 } from 'lucide-react';
@@ -31,12 +33,16 @@ import {
 const Sidebar = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [openEscalations, setOpenEscalations] = useState(0);
+  const [workCount,setWorkCount]=useState(0);
   const [supportPhone, setSupportPhone] = useState('');
   const scrollContainerRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
-  
+  // Re-reads the user's permissions every minute and on focus (docs/brand-crm Phase 2).
+  const { canOpen, can } = useBrandPermissions({ poll: true });
+  const anyOpen = (...paths) => paths.some((path) => canOpen(path));
+
   const [sparePartsOpen, setSparePartsOpen] = useState(
     location.pathname === '/brand-admin/part-requests' ||
     location.pathname === '/brand-admin/inventory'
@@ -48,8 +54,19 @@ const Sidebar = () => {
     }
   }, [location.pathname]);
 
+  const canEditTickets=can('tickets:edit');
+  useEffect(()=>{
+    if(!canEditTickets)return undefined;
+    let active=true;
+    const load=async()=>{try{const result=await apiRequest('/brand/my-work',{auth:true});if(active)setWorkCount(Object.values(result.counts).reduce((sum,v)=>sum+v,0));}catch{if(active)setWorkCount(0);}};
+    load();const timer=setInterval(load,60000);window.addEventListener('brand:my-work-changed',load);
+    return ()=>{active=false;clearInterval(timer);window.removeEventListener('brand:my-work-changed',load);};
+  },[canEditTickets]);
+  const canSeeEscalations = can('escalations:view');
+  useWarrantyClaimLive(() => window.dispatchEvent(new Event('brand:escalations-changed')), null, 'brand_admin');
   useEffect(() => {
     let cancelled = false;
+    if (!canSeeEscalations) return undefined;
 
     const loadEscalationCount = async () => {
       try {
@@ -69,7 +86,7 @@ const Sidebar = () => {
       cancelled = true;
       window.removeEventListener('brand:escalations-changed', loadEscalationCount);
     };
-  }, []);
+  }, [canSeeEscalations]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,61 +141,76 @@ const Sidebar = () => {
         </div>
 
         {/* Dashboard standalone */}
-        <NavLink to="/brand-admin/dashboard" onClick={saveScroll}
-          className={({ isActive }) =>
-            'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[12px] font-bold transition-all mb-4 whitespace-nowrap ' +
-            (isActive ? 'bg-[#1565C0] text-white shadow-md' : 'text-blue-100 hover:bg-[#1a3a8a] hover:text-white')
-          }
-        >
-          <LayoutDashboard size={16} />
-          <span>Dashboard</span>
-        </NavLink>
+        {canOpen('/brand-admin/dashboard') && (
+          <NavLink to="/brand-admin/dashboard" onClick={saveScroll}
+            className={({ isActive }) =>
+              'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[12px] font-bold transition-all mb-4 whitespace-nowrap ' +
+              (isActive ? 'bg-[#1565C0] text-white shadow-md' : 'text-blue-100 hover:bg-[#1a3a8a] hover:text-white')
+            }
+          >
+            <LayoutDashboard size={16} />
+            <span>Dashboard</span>
+          </NavLink>
+        )}
 
         <nav className="space-y-5">
 
           {/* COMPLAINT MANAGEMENT */}
-          <div>
+          {anyOpen('/brand-admin/requests', '/brand-admin/tickets', '/brand-admin/complaint-monitoring', '/brand-admin/escalations') && (<div>
             <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
               Complaint Management
             </span>
             <div className="space-y-0.5">
-              <NavLink to="/brand-admin/requests" onClick={saveScroll} className={navLink}>
-                <Plus size={14} /><span>Register Complaint</span>
-                <span className="ml-auto bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">New</span>
-              </NavLink>
-              <NavLink to="/brand-admin/complaints" onClick={saveScroll} className={navLink}>
-                <ClipboardList size={14} /><span>All Complaints</span>
-              </NavLink>
-              <NavLink to="/brand-admin/complaint-monitoring" onClick={saveScroll} className={navLink}>
-                <BarChart3 size={14} /><span>Complaint Monitoring</span>
-              </NavLink>
-              <NavLink to="/brand-admin/escalations" onClick={saveScroll}
-                className={({ isActive }) =>
-                  'flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold transition-all whitespace-nowrap ' +
-                  (isActive ? 'bg-[#1565C0] text-white' : 'text-blue-100 hover:bg-[#1a3a8a] hover:text-white')
-                }
-              >
-                <span className="flex items-center gap-2.5"><AlertTriangle size={14} /><span>Escalations</span></span>
-                {openEscalations > 0 && (
-                  <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
-                    {openEscalations}
-                  </span>
-                )}
-              </NavLink>
+              {canEditTickets&&<NavLink to="/brand-admin/my-work" onClick={saveScroll} className={navLink}><Headphones size={14}/><span>My Work</span><span className="ml-auto text-[10px]">{workCount}</span></NavLink>}
+              {canOpen('/brand-admin/requests') && (
+                <NavLink to="/brand-admin/requests" onClick={saveScroll} className={navLink}>
+                  <Plus size={14} /><span>Register Complaint</span>
+                  <span className="ml-auto bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">New</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/tickets') && (
+                <NavLink to="/brand-admin/tickets" onClick={saveScroll} className={p=>navLink({...p,isActive:p.isActive&&!location.search.includes('bucket=')})}>
+                  <ClipboardList size={14} /><span>All Tickets</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/tickets')&&<NavLink to="/brand-admin/tickets?bucket=pending_approval" onClick={saveScroll} className={p=>navLink({...p,isActive:p.isActive&&location.search.includes('bucket=pending_approval')})}><ClipboardList size={14}/><span>Pending Approval</span></NavLink>}
+              {canOpen('/brand-admin/complaint-monitoring') && (
+                <NavLink to="/brand-admin/complaint-monitoring" onClick={saveScroll} className={navLink}>
+                  <BarChart3 size={14} /><span>Complaint Monitoring</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/escalations') && (
+                <NavLink to="/brand-admin/escalations" onClick={saveScroll}
+                  className={({ isActive }) =>
+                    'flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold transition-all whitespace-nowrap ' +
+                    (isActive ? 'bg-[#1565C0] text-white' : 'text-blue-100 hover:bg-[#1a3a8a] hover:text-white')
+                  }
+                >
+                  <span className="flex items-center gap-2.5"><AlertTriangle size={14} /><span>Escalations</span></span>
+                  {canSeeEscalations && openEscalations > 0 && (
+                    <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                      {openEscalations}
+                    </span>
+                  )}
+                </NavLink>
+              )}
             </div>
-          </div>
+          </div>)}
 
           {/* SERVICE & OPERATIONS */}
-          <div>
+          {anyOpen('/brand-admin/service-completion', '/brand-admin/part-requests', '/brand-admin/inventory', '/brand-admin/catalog', '/brand-admin/warranty-claims', '/brand-admin/warranty', '/brand-admin/parts-claims', '/brand-admin/warranty-settings', '/brand-admin/replacement-approvals', '/brand-admin/documents') && (<div>
             <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
               Service &amp; Operations
             </span>
             <div className="space-y-0.5">
-              <NavLink to="/brand-admin/service-completion" onClick={saveScroll} className={navLink}>
-                <CheckSquare size={14} /><span>Service Completion Monitor</span>
-              </NavLink>
+              {canOpen('/brand-admin/service-completion') && (
+                <NavLink to="/brand-admin/service-completion" onClick={saveScroll} className={navLink}>
+                  <CheckSquare size={14} /><span>Service Completion Monitor</span>
+                </NavLink>
+              )}
 
               {/* Spare Parts collapsible */}
+              {anyOpen('/brand-admin/part-requests', '/brand-admin/inventory') && (<>
               <button
                 onClick={() => setSparePartsOpen(!sparePartsOpen)}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-[12px] font-semibold text-blue-100 hover:bg-[#1a3a8a] hover:text-white transition-all whitespace-nowrap"
@@ -188,84 +220,112 @@ const Sidebar = () => {
               </button>
               {sparePartsOpen && (
                 <div className="ml-4 space-y-0.5 border-l-2 border-blue-700/50 pl-3 pb-1">
-                  <NavLink to="/brand-admin/part-requests" onClick={saveScroll}
-                    className={({ isActive }) =>
-                      'flex items-center px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ' +
-                      (isActive ? 'bg-[#1565C0] text-white shadow-sm' : 'text-blue-200 hover:text-white hover:bg-[#1a3a8a]')
-                    }
-                  >Part Requests</NavLink>
-                  <NavLink to="/brand-admin/inventory" onClick={saveScroll}
-                    className={({ isActive }) =>
-                      'flex items-center px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ' +
-                      (isActive ? 'bg-[#1565C0] text-white shadow-sm' : 'text-blue-200 hover:text-white hover:bg-[#1a3a8a]')
-                    }
-                  >Inventory</NavLink>
+                  {canOpen('/brand-admin/part-requests') && (
+                    <NavLink to="/brand-admin/part-requests" onClick={saveScroll}
+                      className={({ isActive }) =>
+                        'flex items-center px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ' +
+                        (isActive ? 'bg-[#1565C0] text-white shadow-sm' : 'text-blue-200 hover:text-white hover:bg-[#1a3a8a]')
+                      }
+                    >Part Requests</NavLink>
+                  )}
+                  {canOpen('/brand-admin/inventory') && (
+                    <NavLink to="/brand-admin/inventory" onClick={saveScroll}
+                      className={({ isActive }) =>
+                        'flex items-center px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ' +
+                        (isActive ? 'bg-[#1565C0] text-white shadow-sm' : 'text-blue-200 hover:text-white hover:bg-[#1a3a8a]')
+                      }
+                    >Inventory</NavLink>
+                  )}
                 </div>
               )}
+              </>)}
 
-              <NavLink to="/brand-admin/catalog" onClick={saveScroll} className={navLink}>
-                <Package size={14} /><span>Sub-Brands &amp; Catalog</span>
-              </NavLink>
-              {/* Partner Warranty (docs/partner-warranty Phase 13) */}
-              <NavLink to="/brand-admin/warranty-claims" onClick={saveScroll} className={navLink}>
-                <ClipboardCheck size={14} /><span>Warranty Claims</span>
-              </NavLink>
-              <NavLink to="/brand-admin/warranty" onClick={saveScroll} className={navLink}>
-                <ShieldCheck size={14} /><span>Warranty Verification</span>
-              </NavLink>
-              <NavLink to="/brand-admin/parts-claims" onClick={saveScroll} className={navLink}>
-                <Wrench size={14} /><span>Parts Claims</span>
-              </NavLink>
-              <NavLink to="/brand-admin/warranty-settings" onClick={saveScroll} className={navLink}>
-                <SlidersHorizontal size={14} /><span>Warranty Settings</span>
-              </NavLink>
-              <NavLink to="/brand-admin/replacement-approvals" onClick={saveScroll} className={navLink}>
-                <RefreshCcw size={14} /><span>Replacement Approvals</span>
-              </NavLink>
-              <NavLink to="/brand-admin/documents" onClick={saveScroll} className={navLink}>
-                <FileText size={14} /><span>Letter &amp; Document Center</span>
-              </NavLink>
+              {canOpen('/brand-admin/catalog') && (
+                <NavLink to="/brand-admin/catalog" onClick={saveScroll} className={navLink}>
+                  <Package size={14} /><span>Sub-Brands &amp; Catalog</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/warranty') && (
+                <NavLink to="/brand-admin/warranty" onClick={saveScroll} className={navLink}>
+                  <ShieldCheck size={14} /><span>Warranty Verification</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/parts-claims') && (
+                <NavLink to="/brand-admin/parts-claims" onClick={saveScroll} className={navLink}>
+                  <Wrench size={14} /><span>Parts Claims</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/warranty-settings') && (
+                <NavLink to="/brand-admin/warranty-settings" onClick={saveScroll} className={navLink}>
+                  <SlidersHorizontal size={14} /><span>Warranty Settings</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/replacement-approvals') && (
+                <NavLink to="/brand-admin/replacement-approvals" onClick={saveScroll} className={navLink}>
+                  <RefreshCcw size={14} /><span>Replacement Approvals</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/documents') && (
+                <NavLink to="/brand-admin/documents" onClick={saveScroll} className={navLink}>
+                  <FileText size={14} /><span>Letter &amp; Document Center</span>
+                </NavLink>
+              )}
             </div>
-          </div>
+          </div>)}
 
           {/* FINANCE & BILLING */}
-          <div>
+          {anyOpen('/brand-admin/invoices', '/brand-admin/call-rates', '/brand-admin/payments', '/brand-admin/reports') && (<div>
             <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
               Finance &amp; Billing
             </span>
             <div className="space-y-0.5">
-              <NavLink to="/brand-admin/invoices" onClick={saveScroll} className={navLink}>
-                <Receipt size={14} /><span>Invoices &amp; Billing</span>
-              </NavLink>
-              <NavLink to="/brand-admin/call-rates" onClick={saveScroll} className={navLink}>
-                <Phone size={14} /><span>Call Rates &amp; Charges</span>
-              </NavLink>
-              <NavLink to="/brand-admin/payments" onClick={saveScroll} className={navLink}>
-                <CreditCard size={14} /><span>Payments</span>
-              </NavLink>
-              <NavLink to="/brand-admin/reports" onClick={saveScroll} className={navLink}>
-                <TrendingUp size={14} /><span>Reports &amp; Analytics</span>
-              </NavLink>
+              {canOpen('/brand-admin/invoices') && (
+                <NavLink to="/brand-admin/invoices" onClick={saveScroll} className={navLink}>
+                  <Receipt size={14} /><span>Invoices &amp; Billing</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/call-rates') && (
+                <NavLink to="/brand-admin/call-rates" onClick={saveScroll} className={navLink}>
+                  <Phone size={14} /><span>Call Rates &amp; Charges</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/payments') && (
+                <NavLink to="/brand-admin/payments" onClick={saveScroll} className={navLink}>
+                  <CreditCard size={14} /><span>Payments</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/reports') && (
+                <NavLink to="/brand-admin/reports" onClick={saveScroll} className={navLink}>
+                  <TrendingUp size={14} /><span>Reports &amp; Analytics</span>
+                </NavLink>
+              )}
             </div>
-          </div>
+          </div>)}
 
           {/* ADMINISTRATION */}
-          <div>
+          {anyOpen('/brand-admin/users', '/brand-admin/teams', '/brand-admin/settings', '/brand-admin/audit-log') && (<div>
             <span className="text-[11px] font-black text-[#93C5FD] uppercase tracking-widest px-3 block mb-1.5">
               Administration
             </span>
             <div className="space-y-0.5">
-              <NavLink to="/brand-admin/users" onClick={saveScroll} className={navLink}>
-                <Users size={14} /><span>User &amp; Role Management</span>
-              </NavLink>
-              <NavLink to="/brand-admin/teams" onClick={saveScroll} className={navLink}>
-                <Building2 size={14} /><span>Teams &amp; Departments</span>
-              </NavLink>
-              <NavLink to="/brand-admin/settings" onClick={saveScroll} className={navLink}>
-                <Settings size={14} /><span>Settings</span>
-              </NavLink>
+              {canOpen('/brand-admin/users') && (
+                <NavLink to="/brand-admin/users" onClick={saveScroll} className={navLink}>
+                  <Users size={14} /><span>User &amp; Role Management</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/teams') && (
+                <NavLink to="/brand-admin/teams" onClick={saveScroll} className={navLink}>
+                  <Building2 size={14} /><span>Teams &amp; Departments</span>
+                </NavLink>
+              )}
+              {canOpen('/brand-admin/audit-log') && (<NavLink to="/brand-admin/audit-log" onClick={saveScroll} className={navLink}><FileText size={16}/>Audit log</NavLink>)}
+              {canOpen('/brand-admin/settings') && (
+                <NavLink to="/brand-admin/settings" onClick={saveScroll} className={navLink}>
+                  <Settings size={14} /><span>Settings</span>
+                </NavLink>
+              )}
             </div>
-          </div>
+          </div>)}
 
         </nav>
       </div>

@@ -13,6 +13,9 @@ const roleSchema = new mongoose.Schema(
     permissions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Permission' }],
     icon: String,
     color: String,
+    // Which brand role template (brand-crm/permissions.js ROLE_TEMPLATES) this
+    // role was created from; null for a brand's own custom roles.
+    template: { type: String, default: null },
   },
   { timestamps: true },
 );

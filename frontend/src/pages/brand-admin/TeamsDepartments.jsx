@@ -3,15 +3,15 @@ import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { Plus, Eye, CheckCircle2, X, Search, Trash2 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { useBrandPermissions } from '../../hooks/useBrandPermissions';
 
-// Values must match the API's department enum exactly; the labels are only for display.
-const departmentsList = ['Field Service', 'QA', 'Remote Support', 'Installation'];
+// Department values come from the API (GET /brand/permissions/catalog
+// teamDepartments); only a few older ones get a longer display label.
 const DEPARTMENT_LABELS = {
-  'Field Service': 'Field Service',
   QA: 'Quality Assurance',
-  'Remote Support': 'Remote Support',
   Installation: 'Installation Team',
 };
+const userLabel = (u) => (u.employeeId ? `${u.name} (${u.employeeId})` : u.name);
 
 function shape(team) {
   return {
@@ -20,17 +20,23 @@ function shape(team) {
     department: team.department,
     leadId: team.lead?.id || team.lead || '',
     lead: team.lead?.name || 'Unassigned',
+    members: (team.members || []).filter((m) => m && typeof m === 'object'),
     membersCount: team.members?.length ?? 0,
     region: team.region || '—',
   };
 }
 
 const TeamsDepartments = () => {
+  const { can } = useBrandPermissions();
+  const canEdit = can('teams:edit');
   const [teams, setTeams] = useState([]);
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [membersOf, setMembersOf] = useState(null); // team id whose members dialog is open
+  const [memberToAdd, setMemberToAdd] = useState('');
   const [brandUsers, setBrandUsers] = useState([]);
   const [searchQ, setSearchQ] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newTeam, setNewTeam] = useState({ name: '', department: 'Field Service', lead: '', region: '' });
+  const [newTeam, setNewTeam] = useState({ name: '', department: '', lead: '', region: '' });
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,13 +48,17 @@ const TeamsDepartments = () => {
     async function load() {
       try {
         // Team lead is a User reference, so the picker needs the brand's users.
-        const [teamData, userData] = await Promise.all([
+        const [teamData, userData, catalog] = await Promise.all([
           apiRequest('/brand/teams', { auth: true }),
           apiRequest('/brand/users', { auth: true }).catch(() => []),
+          apiRequest('/brand/permissions/catalog', { auth: true }).catch(() => null),
         ]);
         if (cancelled) return;
         setTeams((Array.isArray(teamData) ? teamData : []).map(shape));
         setBrandUsers(Array.isArray(userData) ? userData : []);
+        const depts = catalog?.teamDepartments || [];
+        setDepartmentsList(depts);
+        setNewTeam((t) => ({ ...t, department: t.department || depts[0] || '' }));
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -80,7 +90,7 @@ const TeamsDepartments = () => {
       const lead = brandUsers.find(u => u.id === newTeam.lead);
       setTeams(prev => [...prev, shape({ ...created, lead })]);
       setShowAddModal(false);
-      setNewTeam({ name: '', department: 'Field Service', lead: '', region: '' });
+      setNewTeam({ name: '', department: departmentsList[0] || '', lead: '', region: '' });
       toast(`Team "${created.name}" created successfully!`);
     } catch (err) {
       setError(`Could not create team: ${err.message}`);
@@ -99,6 +109,31 @@ const TeamsDepartments = () => {
     }
   };
 
+  const reloadTeam = (updated) => {
+    // Member add/remove responses carry raw ids; resolve them from the user list.
+    const byId = Object.fromEntries(brandUsers.map((u) => [u.id, u]));
+    const members = (updated.members || []).map((m) => byId[m] || byId[m?.id] || m).filter((m) => m && typeof m === 'object');
+    setTeams((prev) => prev.map((t) => (t.id === updated.id ? { ...shape({ ...updated, members }), lead: t.lead } : t)));
+  };
+
+  const addMember = async (teamId) => {
+    if (!memberToAdd) return;
+    try {
+      reloadTeam(await apiRequest(`/brand/teams/${teamId}/members`, { method: 'POST', auth: true, body: { userId: memberToAdd } }));
+      setMemberToAdd('');
+    } catch (err) {
+      setError(`Could not add member: ${err.message}`);
+    }
+  };
+
+  const removeMember = async (teamId, userId) => {
+    try {
+      reloadTeam(await apiRequest(`/brand/teams/${teamId}/members/${userId}`, { method: 'DELETE', auth: true }));
+    } catch (err) {
+      setError(`Could not remove member: ${err.message}`);
+    }
+  };
+
   const q = searchQ.toLowerCase();
   const filteredTeams = teams.filter(t =>
     t.name.toLowerCase().includes(q) ||
@@ -111,7 +146,7 @@ const TeamsDepartments = () => {
     <div className="min-h-screen bg-[#F1F5F9] flex relative">
       <Sidebar />
       <div className="flex-1 ml-64 flex flex-col">
-        <Topbar title="Teams & Departments" subtitle="Manage service zones, field teams, and serviceProvider departments" />
+        <Topbar title="Teams & Departments" subtitle="Brand teams, their departments and members" />
         <div className="p-5 space-y-5">
 
           {/* Top Actions */}
@@ -125,12 +160,14 @@ const TeamsDepartments = () => {
                 className="w-full pl-9 pr-4 py-2 border border-[#E2E8F0] rounded-xl text-xs outline-none bg-[#F8FAFC] focus:ring-2 focus:ring-[#0D47A1]"
               />
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 bg-[#0D47A1] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors"
-            >
-              <Plus size={13} /> Create Service Team
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-1.5 bg-[#0D47A1] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition-colors"
+              >
+                <Plus size={13} /> Create Team
+              </button>
+            )}
           </div>
 
           {/* Teams Grid */}
@@ -166,18 +203,21 @@ const TeamsDepartments = () => {
 
                 <div className="flex gap-2 pt-2 border-t border-[#F1F5F9]">
                   <button
-                    onClick={() => toast(`Viewing members of ${t.name}...`)}
+                    onClick={() => { setMembersOf(t.id); setMemberToAdd(''); }}
                     className="flex-1 bg-[#EEF4FF] hover:bg-[#D0E2FF] text-[#0D47A1] py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1"
                   >
                     <Eye size={12} /> Members
                   </button>
-                  <button
-                    onClick={() => handleDeleteTeam(t.id, t.name)}
-                    className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg hover:text-red-700 transition-colors border border-transparent hover:border-red-200"
-                    title="Delete Team"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => handleDeleteTeam(t.id, t.name)}
+                      className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg hover:text-red-700 transition-colors border border-transparent hover:border-red-200"
+                      title="Delete Team"
+                      aria-label={`Delete team ${t.name}`}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -213,7 +253,7 @@ const TeamsDepartments = () => {
                   className="w-full border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs bg-[#F8FAFC] outline-none focus:ring-2 focus:ring-[#0D47A1]"
                 >
                   {departmentsList.map(dept => (
-                    <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept]}</option>
+                    <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept] || dept}</option>
                   ))}
                 </select>
               </div>
@@ -228,7 +268,7 @@ const TeamsDepartments = () => {
                 >
                   <option value="">No lead assigned</option>
                   {brandUsers.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
+                    <option key={u.id} value={u.id}>{userLabel(u)}</option>
                   ))}
                 </select>
               </div>
@@ -250,6 +290,49 @@ const TeamsDepartments = () => {
           </div>
         </div>
       )}
+
+      {membersOf && (() => {
+        const team = teams.find((t) => t.id === membersOf);
+        if (!team) return null;
+        const memberIds = new Set(team.members.map((m) => m.id));
+        const candidates = brandUsers.filter((u) => !memberIds.has(u.id));
+        return (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={`Members of ${team.name}`}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-[#E2E8F0]">
+              <div className="p-5 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F8FAFC]">
+                <h3 className="font-bold text-[#1E293B] text-sm">Members of {team.name}</h3>
+                <button onClick={() => setMembersOf(null)} aria-label="Close" className="p-1.5 hover:bg-[#EEF2F6] rounded-full"><X size={16} /></button>
+              </div>
+              <div className="p-5 space-y-3">
+                {team.members.length === 0 && <p className="text-xs text-[#64748B]">No members yet.</p>}
+                <ul className="divide-y divide-[#F1F5F9]">
+                  {team.members.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between py-2 text-xs">
+                      <span>
+                        <span className="font-semibold text-[#1E293B]">{m.name}</span>
+                        <span className="text-[#64748B]">{m.employeeId ? ` · ${m.employeeId}` : ''}{m.department ? ` · ${m.department}` : ''}</span>
+                      </span>
+                      {canEdit && (
+                        <button onClick={() => removeMember(team.id, m.id)} aria-label={`Remove ${m.name}`} className="p-1 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={12} /></button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {canEdit && (
+                  <div className="flex gap-2">
+                    <select aria-label="User to add" value={memberToAdd} onChange={(e) => setMemberToAdd(e.target.value)}
+                      className="flex-1 border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs bg-[#F8FAFC] outline-none focus:ring-2 focus:ring-[#0D47A1]">
+                      <option value="">Add a user…</option>
+                      {candidates.map((u) => <option key={u.id} value={u.id}>{userLabel(u)}</option>)}
+                    </select>
+                    <button onClick={() => addMember(team.id)} disabled={!memberToAdd} className="bg-[#0D47A1] text-white px-3 py-2 rounded-xl text-xs font-bold disabled:opacity-50">Add</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {successMsg && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">

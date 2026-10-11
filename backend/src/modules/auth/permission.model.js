@@ -8,6 +8,9 @@ const permissionSchema = new mongoose.Schema(
     key: { type: String, required: true, unique: true },
     description: String,
     domain: { type: String, index: true }, // e.g. "users" | "techs" | "brands" | "billing" | "settings"
+    // 'brand' keys come from brand-crm/permissions.js and are the only ones a
+    // brand may put in its own roles; everything else is platform-only.
+    scope: { type: String, enum: ['platform', 'brand'], default: 'platform', index: true },
   },
   { timestamps: true },
 );

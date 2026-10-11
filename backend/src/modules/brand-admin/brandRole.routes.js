@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
+import { actorFromReq } from '../brand-crm/actor.js';
 import * as brandRoleService from './brandRole.service.js';
 import { createRoleSchema, updateRoleSchema, idParamSchema } from './brandRole.validation.js';
 
@@ -18,7 +19,7 @@ brandRoleRouter.get('/', async (req, res, next) => {
 
 brandRoleRouter.post('/', validate(createRoleSchema), async (req, res, next) => {
   try {
-    created(res, await brandRoleService.createRole(req.user.brand, req.body));
+    created(res, await brandRoleService.createRole(req.user.brand, req.body, await actorFromReq(req)));
   } catch (err) {
     next(err);
   }
@@ -26,7 +27,7 @@ brandRoleRouter.post('/', validate(createRoleSchema), async (req, res, next) => 
 
 brandRoleRouter.put('/:id', validate(idParamSchema, 'params'), validate(updateRoleSchema), async (req, res, next) => {
   try {
-    ok(res, await brandRoleService.updateRole(req.user.brand, req.params.id, req.body));
+    ok(res, await brandRoleService.updateRole(req.user.brand, req.params.id, req.body, await actorFromReq(req)));
   } catch (err) {
     next(err);
   }
@@ -34,7 +35,7 @@ brandRoleRouter.put('/:id', validate(idParamSchema, 'params'), validate(updateRo
 
 brandRoleRouter.delete('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
   try {
-    await brandRoleService.deleteRole(req.user.brand, req.params.id);
+    await brandRoleService.deleteRole(req.user.brand, req.params.id, await actorFromReq(req));
     ok(res, { deleted: true });
   } catch (err) {
     next(err);

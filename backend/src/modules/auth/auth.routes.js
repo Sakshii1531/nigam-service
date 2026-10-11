@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { loadBrandAccess } from '../brand-crm/brandPermission.middleware.js';
+import { ROLES } from '../../config/constants.js';
 import rateLimit from 'express-rate-limit';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth } from '../../middleware/auth.js';
@@ -141,6 +143,16 @@ authRouter.get('/me', requireAuth, async (req, res, next) => {
     userObj.referralsCount = referralsCount;
     // req.user.permissions comes straight from the access token (requireAuth
     // decodes it), so this stays free — no extra resolvePermissions() query.
+    // Brand users are the exception: their permissions are enforced from the
+    // database (docs/brand-crm Phase 2), so the panel must see the same set.
+    if (user.role === ROLES.BRAND_ADMIN) {
+      const access = await loadBrandAccess(user._id);
+      return ok(res, {
+        ...userObj,
+        permissions: [...(access?.permissions || [])],
+        brandRoles: access?.roles || [],
+      });
+    }
     ok(res, { ...userObj, permissions: req.user.permissions });
   } catch (err) {
     next(err);

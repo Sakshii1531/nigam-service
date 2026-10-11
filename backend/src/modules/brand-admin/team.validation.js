@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { TEAM_DEPARTMENTS } from './team.model.js';
 
-const DEPARTMENTS = ['Field Service', 'QA', 'Remote Support', 'Installation'];
+const DEPARTMENTS = TEAM_DEPARTMENTS;
 
 export const createTeamSchema = z.object({
   name: z.string().min(1),

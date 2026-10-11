@@ -1,3 +1,5 @@
+import { recordAction } from '../shared/auditLog.js';
+import { securityAudit } from '../brand-crm/securityAudit.js';
 import mongoose from 'mongoose';
 import { User } from './user.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
@@ -16,13 +18,14 @@ import { creditCoins } from '../payments-wallet/wallet.service.js';
 import { getSettings } from '../super-admin/platformSettings.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
+import { normalisePhone, normaliseCustomerIdentifier } from '../shared/phone.js';
 
 const OTP_TTL_MINUTES = 10;
 const MAX_OTP_ATTEMPTS = 5;
 
 async function findUserByIdentifier(role, identifier) {
   if (!identifier) return null;
-  const trimmed = identifier.toString().trim();
+  const trimmed = normaliseCustomerIdentifier(role, identifier);
   let user = await User.findOne({
     role,
     $or: [{ phone: trimmed }, { email: trimmed }, { humanId: trimmed }],
@@ -138,6 +141,7 @@ const PROVIDER_PHONE = /^\d{10}$/;
 const PROVIDER_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export async function login({ role, identifier, password }) {
+  identifier = normaliseCustomerIdentifier(role, identifier);
   if (role === ROLES.SERVICE_PROVIDER) {
     const value = String(identifier || '').trim();
     if (!PROVIDER_PHONE.test(value) && !PROVIDER_EMAIL.test(value)) {
@@ -146,15 +150,21 @@ export async function login({ role, identifier, password }) {
   }
   const user = await findUserByIdentifier(role, identifier);
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    if (!user && role === ROLES.BRAND_ADMIN) await recordAction({brand:null,entityType:'user',action:'auth.login_failed',actor:{kind:'brand',user:null,name:'Unknown brand user',roles:[]},meta:{stage:'password'}});
+    await securityAudit(user, 'auth.login_failed', { stage: 'password' });
     throw new ApiError(401, 'Invalid credentials');
   }
-  if (user.status !== 'Active') throw new ApiError(403, `Account is ${user.status.toLowerCase()}`);
+  if (user.status !== 'Active') {
+    await securityAudit(user, 'auth.login_failed', { stage: 'account_status' });
+    throw new ApiError(403, `Account is ${user.status.toLowerCase()}`);
+  }
 
   return initiateOtp({ role, identifier, purpose: 'login', deliveryIdentifier: user.phone || identifier });
 }
 
 /** Resend button on the OTP screen — same as login's OTP step, minus the password check. */
 export async function resendOtp({ role, identifier, purpose = 'login' }) {
+  identifier = normaliseCustomerIdentifier(role, identifier);
   if (purpose === 'signup') {
     const existingPhone = await User.findOne({ role: 'customer', phone: identifier });
     if (existingPhone) {
@@ -164,15 +174,21 @@ export async function resendOtp({ role, identifier, purpose = 'login' }) {
   }
   const user = await findUserByIdentifier(role, identifier);
   if (!user) throw new ApiError(404, 'No account found for this identifier');
+  if (user.status !== 'Active') throw new ApiError(403, 'This account is not active');
   return initiateOtp({ role, identifier, purpose, deliveryIdentifier: user.phone || identifier });
 }
 
 /** Step 2 of login: verifying the OTP is what actually issues tokens. */
 export async function verifyLoginOtp({ role, identifier, code }) {
-  await consumeOtp({ role, identifier, code, purpose: 'login' });
+  identifier = normaliseCustomerIdentifier(role, identifier);
   const user = await findUserByIdentifier(role, identifier);
   if (!user) throw new ApiError(404, 'No account found for this identifier');
-  return issueSession(user);
+  if (user.status !== 'Active') { await securityAudit(user, 'auth.login_failed', {stage:'account_status'}); throw new ApiError(403, 'This account is not active'); }
+  try { await consumeOtp({ role, identifier, code, purpose: 'login' }); }
+  catch (e) { await securityAudit(user, 'auth.login_failed', {stage:'verification'}); throw e; }
+  const session = await issueSession(user);
+  await securityAudit(user, 'auth.login_succeeded');
+  return session;
 }
 
 /**
@@ -226,6 +242,7 @@ export async function listMyReferrals(userId, { page, limit } = {}) {
 }
 
 export async function signupCheck({ phone, email }) {
+  phone = normalisePhone(phone);
   const existingPhone = await User.findOne({ role: 'customer', phone });
   const existingEmail = await User.findOne({ role: 'customer', email });
 
@@ -251,6 +268,7 @@ export async function signupCheck({ phone, email }) {
 }
 
 export async function signupVerify({ name, phone, email, password, address, state, city, streetAddress, latitude, longitude, pincode, referralCode, code }) {
+  phone = normalisePhone(phone);
   // 1. Verify OTP first
   await consumeOtp({ role: 'customer', identifier: phone, code, purpose: 'signup' });
 
@@ -366,6 +384,7 @@ export async function signupVerify({ name, phone, email, password, address, stat
 }
 
 export async function forgotPassword({ role, identifier }) {
+  identifier = normaliseCustomerIdentifier(role, identifier);
   const user = await findUserByIdentifier(role, identifier);
   // Deliberately don't reveal whether the account exists — always return the same
   // shape, but only actually send an OTP when there's a real account behind it.
@@ -374,6 +393,7 @@ export async function forgotPassword({ role, identifier }) {
 }
 
 export async function resetPassword({ role, identifier, code, newPassword }) {
+  identifier = normaliseCustomerIdentifier(role, identifier);
   await consumeOtp({ role, identifier, code, purpose: 'forgot_password' });
   const user = await findUserByIdentifier(role, identifier);
   if (!user) throw new ApiError(404, 'No account found for this identifier');
@@ -383,6 +403,7 @@ export async function resetPassword({ role, identifier, code, newPassword }) {
 
   // Revoke every existing session — a password reset should invalidate old refresh tokens.
   await RefreshToken.updateMany({ user: user._id, revoked: false }, { revoked: true });
+  await securityAudit(user, 'auth.password_changed', { changes: { password: 'changed' } });
 }
 
 export async function refreshSession(refreshTokenValue) {
@@ -679,6 +700,7 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
   await user.save();
 
   await RefreshToken.updateMany({ user: user._id, revoked: false }, { revoked: true });
+  await securityAudit(user, 'auth.password_changed', { changes: { password: 'changed' } });
 }
 
 /** Completes an admin-provisioned first login after password + OTP authentication. */
@@ -693,6 +715,7 @@ export async function completeFirstLoginPassword(userId, newPassword) {
   user.mustChangePassword = false;
   await user.save();
   await RefreshToken.updateMany({ user: user._id, revoked: false }, { revoked: true });
+  await securityAudit(user, 'auth.password_changed', { changes: { password: 'changed' } });
 }
 
 /**
@@ -705,6 +728,9 @@ export async function completeFirstLoginPassword(userId, newPassword) {
 export async function updateOwnProfile(userId, updates) {
   const user = await User.findById(userId);
   if (!user) throw new ApiError(404, 'Account not found');
+  if (user.role === ROLES.CUSTOMER && updates.phone !== undefined) {
+    updates = { ...updates, phone: normalisePhone(updates.phone) };
+  }
 
   for (const field of ['phone', 'email']) {
     const value = updates[field];
