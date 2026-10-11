@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { computeCharges, resolveRateCard } from '../src/modules/shared/pricingEngine.js';
+import { computeCharges } from '../src/modules/shared/pricingEngine.js';
 
 describe('computeCharges', () => {
   it('applies parts markup, sums labor+parts+extras, then GST on the subtotal', () => {
@@ -22,22 +22,5 @@ describe('computeCharges', () => {
     expect(result.subtotal).toBe(0);
     expect(result.total).toBe(0);
     expect(result.gstPercent).toBe(18);
-  });
-});
-
-describe('resolveRateCard', () => {
-  const rateCards = [
-    { brand: 'brand-a', category: 'AC', serviceType: 'Repair', laborRate: 300 },
-    { brand: 'brand-a', category: 'AC', serviceType: 'Installation', laborRate: 250 },
-    { brand: 'brand-b', category: 'AC', serviceType: 'Repair', laborRate: 350 },
-  ];
-
-  it('finds the matching rate card by brand+category+serviceType', () => {
-    const found = resolveRateCard(rateCards, { brand: 'brand-a', category: 'AC', serviceType: 'Repair' });
-    expect(found.laborRate).toBe(300);
-  });
-
-  it('returns null when nothing matches', () => {
-    expect(resolveRateCard(rateCards, { brand: 'brand-c', category: 'AC', serviceType: 'Repair' })).toBeNull();
   });
 });

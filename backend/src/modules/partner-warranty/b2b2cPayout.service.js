@@ -8,7 +8,7 @@ import { emit as emitNotification } from '../notifications/notification.service.
 import { ApiError } from '../../middleware/errorHandler.js';
 
 // B2B2C (partner warranty) payouts — docs/partner-warranty Phase 11, client #20.
-// A warranty job's payout (brand RateCard, frozen at accept) is not added to
+// A warranty job's payout (separate partner rate, frozen at accept) is not added to
 // the partner's withdrawable balance; it waits as `settlement.status:
 // 'unsettled'` until NCC settles it by hand, which records a settled Invoice
 // payout. The partner sees totals, and totals by brand and by product.

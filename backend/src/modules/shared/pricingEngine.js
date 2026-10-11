@@ -5,9 +5,7 @@ function round2(n) {
 }
 
 /**
- * Computes a charge breakdown from resolved inputs (a brand RateCard's
- * laborRate + partsMarkupPercent, plus whatever parts/extras a service provider added
- * during diagnosis) — pure function, no DB access. GST defaults to 18% flat
+ * Computes a charge breakdown from supplied labour, parts and extras — pure function, no DB access. GST defaults to 18% flat
  * everywhere (GST_PERCENT_DEFAULT) — confirmed by the user; the frontend's 10%
  * sighting (BACKEND_CONTEXT.md §9) was mock-data inconsistency, not a real second rate.
  */
@@ -24,13 +22,4 @@ export function computeCharges({
   const total = round2(subtotal + gstAmount);
 
   return { laborRate, partsTotal, additionalCharges, subtotal, gstPercent, gstAmount, total };
-}
-
-/** Finds the RateCard matching a brand+category+serviceType, or null (caller falls back to its own default). */
-export function resolveRateCard(rateCards, { brand, category, serviceType }) {
-  return (
-    rateCards.find(
-      (rc) => String(rc.brand) === String(brand) && rc.category === category && rc.serviceType === serviceType,
-    ) || null
-  );
 }

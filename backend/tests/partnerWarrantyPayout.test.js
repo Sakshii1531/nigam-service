@@ -15,7 +15,7 @@ import { ServiceProvider } from '../src/modules/service-provider/serviceProvider
 import { EarningsTally } from '../src/modules/service-provider/earningsTally.model.js';
 import { Payout } from '../src/modules/service-provider/payout.model.js';
 import { Job } from '../src/modules/service-provider/job.model.js';
-import { RateCard } from '../src/modules/brand-admin/rateCard.model.js';
+import { BrandRate } from '../src/modules/brand-crm/brandRate.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { testDbUri } from './helpers/testDb.js';
@@ -44,7 +44,7 @@ afterAll(async () => {
 
 beforeEach(() =>
   Promise.all(
-    [Category, Brand, WarrantyGroup, WarrantyIssue, WarrantyClaim, DomainEvent, ServiceRequest, ServiceProvider, EarningsTally, Payout, Job, RateCard, User, AuditLog, Notification].map(
+    [Category, Brand, WarrantyGroup, WarrantyIssue, WarrantyClaim, DomainEvent, ServiceRequest, ServiceProvider, EarningsTally, Payout, Job, BrandRate, User, AuditLog, Notification].map(
       (m) => m.deleteMany({}),
     ),
   ));
@@ -53,8 +53,8 @@ beforeEach(() =>
 async function setup() {
   const w = await kit.world();
   await Promise.all([
-    RateCard.create({ brand: w.lg._id, category: 'AC', serviceType: 'Repair', laborRate: 450 }),
-    RateCard.create({ brand: w.samsung._id, category: 'Refrigerator', serviceType: 'Repair', laborRate: 300 }),
+    BrandRate.create({ brand: w.lg._id, category: w.ac._id, serviceType: 'repair', brandRate: 600, partnerPayout: 450 }),
+    BrandRate.create({ brand: w.samsung._id, category: w.fridge._id, serviceType: 'repair', brandRate: 500, partnerPayout: 300 }),
   ]);
   const [lg, samsung, cust, admin] = await Promise.all([kit.brandAdmin(w.lg), kit.brandAdmin(w.samsung), kit.customer(), kit.superAdmin()]);
   const sp = await kit.flow.partner(['AC', 'Refrigerator'], 'Ravi Kumar');

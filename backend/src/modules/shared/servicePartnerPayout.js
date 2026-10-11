@@ -1,5 +1,5 @@
 import { computeCharges } from './pricingEngine.js';
-import { coveredVisitEarnings } from './serviceProviderEarnings.js';
+import { coveredVisitRate } from './serviceProviderEarnings.js';
 import { toPaise } from '../catalog/money.js';
 
 // What a service partner earns for a job, and what the customer is billed at
@@ -17,7 +17,7 @@ const rupees = (p) => p / 100;
 /**
  * The payout a job starts with. Booking-backed jobs use the booking's
  * commercial snapshot (every booking has one since the catalogue cut-over);
- * a brand-raised complaint with no booking uses the brand's RateCard. There
+ * a brand-raised complaint with no booking uses the brand's separate partner payout rate. There
  * is no percentage-of-price rule any more (client Req 7–9).
  */
 export async function initialJobPayout(serviceRequest, booking) {
@@ -27,8 +27,8 @@ export async function initialJobPayout(serviceRequest, booking) {
     const base = rupees(paise(commercial.spPayoutTotal) - paise(expressIncentive));
     return { base, expressIncentive, addOns: 0, total: commercial.spPayoutTotal };
   }
-  const covered = await coveredVisitEarnings(serviceRequest);
-  return { base: covered, expressIncentive: 0, addOns: 0, total: covered };
+  const covered = await coveredVisitRate(serviceRequest);
+  return { base: covered.amount, expressIncentive: 0, addOns: 0, total: covered.amount, ...(covered.missing ? { flags: ['PAYOUT_MISSING'] } : {}) };
 }
 
 /** Recomputes payout.addOns / payout.total from the job's catalogue add-ons. */
@@ -36,6 +36,7 @@ export function withAddOnPayout(payout, addOns = []) {
   const addOnsPaise = addOns.filter((a) => a.checked !== false).reduce((sum, a) => sum + paise(a.spPayout), 0);
   const basePaise = paise(payout?.base) + paise(payout?.expressIncentive);
   return {
+    ...(payout?.flags?.length ? { flags: [...payout.flags] } : {}),
     base: payout?.base || 0,
     expressIncentive: payout?.expressIncentive || 0,
     addOns: rupees(addOnsPaise),

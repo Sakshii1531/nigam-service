@@ -1,24 +1,15 @@
 import { initialJobPayout } from './servicePartnerPayout.js';
-import { RateCard } from '../brand-admin/rateCard.model.js';
-
-// Covered work (Brand Warranty / AMC / EW) is priced from the brand's RateCard
-// for that appliance category. This used to be a flat 150 because no RateCard
-// existed; it does now, so the flat value is only the fallback for a brand that
-// has not configured a card for the category.
-const DEFAULT_COVERED_VISIT_EARNINGS = 150;
-
-export async function coveredVisitEarnings(serviceRequest) {
-  if (!serviceRequest?.brand || !serviceRequest?.category) return DEFAULT_COVERED_VISIT_EARNINGS;
-  const card = await RateCard.findOne({ brand: serviceRequest.brand, category: serviceRequest.category });
-  return card?.laborRate ?? DEFAULT_COVERED_VISIT_EARNINGS;
+import { resolveRate } from '../brand-crm/rateResolver.js';
+import { Category } from '../catalog/category.model.js';
+import { WarrantyClaim } from '../partner-warranty/warrantyClaim.model.js';
+export async function coveredVisitRate(serviceRequest){
+ // Catalogue-backed work keeps its booking snapshot; this path is for covered complaints.
+ const claim=serviceRequest?.warrantyClaim?await WarrantyClaim.findById(serviceRequest.warrantyClaim).select('category serviceType address').lean():null;
+ const category=claim?.category|| (await Category.findOne({key:serviceRequest?.category}).select('_id').lean())?._id;
+ if(!serviceRequest?.warrantyClaim&&(serviceRequest?.amcSubscription||serviceRequest?.extendedWarrantyOrder))return {amount:150,missing:false};
+ if(!serviceRequest?.brand||!category)return {amount:0,missing:true};
+ const result=await resolveRate({brand:serviceRequest.brand,categoryId:category,serviceType:claim?.serviceType||'repair',state:claim?.address?.state||serviceRequest.address?.state,city:claim?.address?.city||serviceRequest.address?.city});
+ return {amount:result.row?.partnerPayout??0,missing:result.row?.partnerPayout==null};
 }
-
-/**
- * What the service provider should expect to earn from a request before
- * accepting it — the same rule acceptJob freezes onto the Job: the booking's
- * fixed catalogue payout (docs/master-catalogue Phase 5), or the brand
- * RateCard for a complaint with no booking.
- */
-export async function estimateServiceProviderEarnings(serviceRequest, booking) {
-  return (await initialJobPayout(serviceRequest, booking)).total;
-}
+export async function coveredVisitEarnings(serviceRequest){return (await coveredVisitRate(serviceRequest)).amount;}
+export async function estimateServiceProviderEarnings(serviceRequest,booking){return (await initialJobPayout(serviceRequest,booking)).total;}
