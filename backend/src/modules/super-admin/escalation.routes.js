@@ -1,3 +1,4 @@
+import { mutationAudit } from '../brand-crm/auditMutations.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
@@ -15,6 +16,7 @@ import {
 
 export const escalationRouter = Router();
 escalationRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
+escalationRouter.use(mutationAudit({admin:true,prefix:'/escalations'}));
 
 escalationRouter.get('/', validate(listQuerySchema, 'query'), async (req, res, next) => {
   try {
@@ -47,7 +49,7 @@ escalationRouter.patch(
   validate(assignManagerSchema),
   async (req, res, next) => {
     try {
-      ok(res, await escalationService.assignManager(req.params.id, req.body.managerId));
+      ok(res, await escalationService.assignManager(req.params.id, req.body.managerId, req.user.id));
     } catch (err) {
       next(err);
     }
@@ -60,7 +62,7 @@ escalationRouter.patch(
   validate(updateStatusSchema),
   async (req, res, next) => {
     try {
-      ok(res, await escalationService.updateStatus(req.params.id, req.body.status));
+      ok(res, await escalationService.updateStatus(req.params.id, req.body.status, req.body.resolution, req.user.id));
     } catch (err) {
       next(err);
     }

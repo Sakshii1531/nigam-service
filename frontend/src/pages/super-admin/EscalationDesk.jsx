@@ -28,7 +28,8 @@ function toDeskStatus(status, manager) {
 function shape(esc) {
   return {
     id: esc.id,
-    ticket: esc.serviceRequest?.humanId ? `#${esc.serviceRequest.humanId}` : `#${esc.id}`,
+    warrantyClaim: esc.warrantyClaim,
+    ticket: esc.warrantyClaim?.humanId ? `#${esc.warrantyClaim.humanId}` : esc.serviceRequest?.humanId ? `#${esc.serviceRequest.humanId}` : `#${esc.id}`,
     description: esc.description || esc.reason || 'Escalation',
     city: esc.city?.name || '—',
     priority: esc.priority,
@@ -81,8 +82,11 @@ const EscalationDesk = () => {
 
   const handleResolve = async (id) => {
     try {
+      const escalation = escalations.find(e => e.id === id);
+      const resolution = escalation?.warrantyClaim ? window.prompt('Resolution (at least 10 characters)') : undefined;
+      if (escalation?.warrantyClaim && resolution === null) return;
       await apiRequest(`/super-admin/escalations/${id}/status`, {
-        method: 'PATCH', auth: true, body: { status: 'Resolved' },
+        method: 'PATCH', auth: true, body: { status: 'Resolved', ...(resolution ? { resolution } : {}) },
       });
       setEscalations(prev => prev.map(esc => esc.id === id ? { ...esc, status: 'Resolved' } : esc));
     } catch (err) {

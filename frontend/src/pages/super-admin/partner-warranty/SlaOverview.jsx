@@ -10,9 +10,10 @@ import { adminWarrantyApi } from '../../../lib/adminWarrantyApi';
 // own SLA overrides.
 
 const FIELDS = [
+  ['responseHours', 'Response'],
   ['approvalHours', 'Brand approval'],
-  ['assignmentHours', 'Partner assignment'],
-  ['visitHours', 'Technician visit'],
+  ['assignmentHours', 'Allocation'],
+  ['visitHours', 'First visit'],
   ['resolutionHours', 'Resolution'],
 ];
 

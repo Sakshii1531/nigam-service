@@ -1,3 +1,6 @@
+import { User } from '../auth/user.model.js';
+import { actorFromUser } from '../brand-crm/actor.js';
+import { updateBrandEscalation } from '../brand-admin/brandEscalation.service.js';
 import { Escalation } from './escalation.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
@@ -18,6 +21,8 @@ export async function listEscalations({ status, priority, city, page, limit, sor
     // The desk renders region, owning manager and the originating ticket, so
     // resolve those refs here rather than making the client fetch each one.
     Escalation.find(query)
+      .populate('warrantyClaim', 'humanId brandTicketNo')
+      .populate('responsible.user', 'name employeeId')
       .populate('city', 'name')
       .populate('manager', 'name')
       .populate('serviceRequest', 'humanId status')
@@ -46,8 +51,13 @@ export async function createEscalation({ serviceRequest, city, reason, descripti
   return escalation;
 }
 
-export async function assignManager(id, managerId) {
+export async function assignManager(id, managerId, userId) {
   const escalation = await findPlatformOr404(id);
+  if (escalation.warrantyClaim) {
+    if (!await User.exists({ _id: managerId, role: 'super_admin', status: 'Active' })) throw new ApiError(400, 'Choose an active NCC administrator');
+    escalation.responsible = { role: 'super_admin', user: managerId };
+    escalation.history.push({ action: 'assigned', actor: await actorFromUser(userId, 'admin'), note: 'NCC responsible person changed' });
+  }
   escalation.manager = managerId;
   if (escalation.status === 'Unassigned' || escalation.status === 'Open') escalation.status = 'In Progress';
   await escalation.save();
@@ -65,8 +75,9 @@ export async function updatePriority(id, priority) {
   return escalation;
 }
 
-export async function updateStatus(id, status) {
+export async function updateStatus(id, status, resolution, userId) {
   const escalation = await findPlatformOr404(id);
+  if (escalation.warrantyClaim) return updateBrandEscalation(escalation.brand, id, { status, resolution }, userId, { scope: 'platform', kind: 'admin' });
   escalation.status = status;
   await escalation.save();
   return escalation;

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const PRIORITIES = ['Critical', 'High', 'P1', 'P2', 'Medium', 'P3', 'Low'];
+const PRIORITIES = ['Critical', 'High', 'P1', 'P2', 'Medium', 'P3', 'Low', 'Normal'];
 const STATUSES = ['Open', 'Unassigned', 'Under Review', 'In Progress', 'Assigned to Senior', 'Resolved'];
 
 export const createEscalationSchema = z.object({
@@ -22,7 +22,7 @@ export const listQuerySchema = z.object({
 });
 
 export const assignManagerSchema = z.object({ managerId: z.string().min(1) });
-export const updateStatusSchema = z.object({ status: z.enum(STATUSES) });
+export const updateStatusSchema = z.object({ status: z.enum(STATUSES), resolution: z.string().trim().min(10).max(2000).optional() });
 export const updatePrioritySchema = z.object({ priority: z.enum(PRIORITIES) });
 
 export const idParamSchema = z.object({ id: z.string().min(1) });

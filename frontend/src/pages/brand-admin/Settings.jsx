@@ -1,3 +1,6 @@
+import Integrations from '../../components/brand-admin/Integrations';
+import BillingProfile from '../../components/brand-admin/BillingProfile';
+import SlaSettings from '../../components/brand-admin/SlaSettings';
 import { useState, useEffect } from 'react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
@@ -11,9 +14,11 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
 import { usePushPermission, pushBlockedMessage } from '../../hooks/usePushPermission';
+import { useBrandPermissions } from '../../hooks/useBrandPermissions';
 
 
 const Settings = () => {
+  const { can } = useBrandPermissions();
   const [activeTab, setActiveTab] = useState('profile');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -24,6 +29,7 @@ const Settings = () => {
   const [website, setWebsite] = useState('');
 
   // Config toggles
+  const [partsThreshold,setPartsThreshold]=useState(0);
   const [autoAssign, setAutoAssign] = useState(true);
   const [requirePhoto, setRequirePhoto] = useState(true);
   const [emailNotifs, setEmailNotifs] = useState(true);
@@ -41,7 +47,10 @@ const Settings = () => {
   const [newPassword, setNewPassword] = useState('');
 
   const tabs = [
+    ...(can('integrations:manage') ? [{ id: 'integrations', label: 'Integrations', icon: <SettingsIcon size={16}/> }] : []),
+    ...(can('settings:edit') ? [{ id: 'billing', label: 'Billing profile', icon: <SettingsIcon size={16}/> }] : []),
     { id: 'profile', label: 'Brand Profile', icon: <User size={16} /> },
+    ...(can('sla:edit') ? [{ id: 'sla', label: 'SLA & Escalation', icon: <SettingsIcon size={16}/> }] : []),
     { id: 'service', label: 'Service Config', icon: <SettingsIcon size={16} /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={16} /> },
     { id: 'security', label: 'Security', icon: <Shield size={16} /> },
@@ -59,6 +68,7 @@ const Settings = () => {
         setSupportEmail(s.supportEmail || '');
         setSupportPhone(s.supportPhone || '');
         setWebsite(s.website || '');
+        setPartsThreshold(s.partsApprovalThreshold??0);
         setAutoAssign(s.autoAssignServiceProvider !== false);
         setRequirePhoto(s.requireCompletionPhoto !== false);
         setEmailNotifs(s.emailNotifications !== false);
@@ -99,6 +109,7 @@ const Settings = () => {
         supportPhone,
         website,
         autoAssignServiceProvider: autoAssign,
+        partsApprovalThreshold: Number(partsThreshold),
         requireCompletionPhoto: requirePhoto,
         emailNotifications: emailNotifs,
         smsAlerts,
@@ -242,6 +253,9 @@ const Settings = () => {
           {/* Settings Content */}
           <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] max-w-4xl">
             
+            {activeTab === 'integrations' && <Integrations/>}
+            {activeTab === 'billing' && <BillingProfile/>}
+            {activeTab === 'sla' && <SlaSettings/>}
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <h2 className="text-lg font-bold text-[#1E293B]">Brand Profile Settings</h2>
@@ -290,6 +304,7 @@ const Settings = () => {
             {activeTab === 'service' && (
               <div className="space-y-6">
                 <h2 className="text-lg font-bold text-[#1E293B]">Service Configuration</h2>
+                <label className="block text-sm">Parts approval threshold (₹)<input aria-label="Parts approval threshold" type="number" min={0} max={10000000} value={partsThreshold} onChange={e=>setPartsThreshold(e.target.value)} className="block border rounded-lg px-3 py-2 mt-2"/><span className="text-xs text-slate-500">Brand-paid requests at or above this total require brand approval. Zero requires approval for every request.</span></label>
                 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center py-3 border-b border-[#E2E8F0]">
@@ -422,15 +437,16 @@ const Settings = () => {
             )}
 
             {/* Save Button */}
-            <div className="mt-8 flex justify-end">
+            {!['sla','billing','integrations'].includes(activeTab) && <div className="mt-8 flex justify-end">
               <button
+                disabled={!can('settings:edit') || loading || saving}
+                title={can('settings:edit') ? undefined : 'You can view settings but not change them'}
                 onClick={handleSave}
-                disabled={loading || saving}
                 className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 min-w-30 justify-center shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
               </button>
-            </div>
+            </div>}
 
           </div>
 

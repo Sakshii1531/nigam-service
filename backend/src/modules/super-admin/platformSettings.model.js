@@ -15,6 +15,8 @@ const platformSettingsSchema = new mongoose.Schema(
     pushNotifications: { type: Boolean, default: true },
     twoFactorEnabled: { type: Boolean, default: false },
     razorpayKeyId: String,
+    brandInvoiceDay: { type: Number, min: 1, max: 28, default: 1 },
+    brandInvoiceAutoDraft: { type: Boolean, default: true },
     defaultGstPercent: { type: Number, default: 18 },
 
     // Loyalty config (BACKEND_CONTEXT.md §6.3) — coin_rate and referral bonus have
@@ -42,6 +44,7 @@ const platformSettingsSchema = new mongoose.Schema(
     // Partner warranty stage deadlines in hours (docs/partner-warranty
     // Phase 9) — platform defaults; a brand's own warrantySla overrides them.
     warrantySla: {
+      responseHours: { type: Number, default: 2 },
       approvalHours: { type: Number, default: 24 },
       assignmentHours: { type: Number, default: 4 },
       visitHours: { type: Number, default: 48 },

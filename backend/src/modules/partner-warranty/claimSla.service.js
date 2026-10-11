@@ -1,5 +1,7 @@
+import { runInTransaction } from '../../utils/transaction.js';
+import { raiseSlaEscalation, notifyEscalations } from '../brand-crm/escalationEngine.js';
 import { WarrantyClaim } from './warrantyClaim.model.js';
-import { appendEvent, saveClaim } from './claimTimeline.js';
+import { appendEvent, persistClaim, flushAudit } from './claimTimeline.js';
 import { TERMINAL_STATUSES } from './claimStatus.js';
 import { evaluateSla, recomputeSlaState } from './claimSla.js';
 import { claimLinks } from './claimLinks.js';
@@ -53,42 +55,49 @@ export async function runSlaSweep({ now = new Date(), limit = 500 } = {}) {
     .limit(limit);
 
   const totals = { checked: candidates.length, warnings: 0, breaches: 0, escalated: 0 };
-  for (const claim of candidates) {
-    const raised = evaluateSla(claim, now);
-    if (!raised.length) continue;
 
-    for (const item of raised) {
-      const { type, stage } = item;
-      const list = type === 'breach' ? 'breaches' : 'warnings';
-      claim.sla[list] = [...(claim.sla[list] || []), stage.key];
-      appendEvent(claim, {
-        action: type === 'breach' ? 'SLA_BREACHED' : 'SLA_WARNING',
-        actor: SYSTEM,
-        note: `${stage.label} SLA ${type === 'breach' ? 'breached' : 'at 80%'} — due ${formatDue(claim.sla[stage.dueField])}`,
-        visibility: stage.key === 'brandApproval' ? 'brand' : 'internal',
-      });
-      if (type === 'breach' && stage.key === 'brandApproval' && !claim.flags.escalated) {
-        claim.flags.escalated = true;
-        claim.flags.escalatedAt = now;
-        claim.flags.escalationReason = 'Brand approval SLA breached';
-        appendEvent(claim, { action: 'ESCALATED', actor: SYSTEM, note: 'Brand approval SLA breached', visibility: 'brand' });
-        totals.escalated += 1;
-      }
-    }
-    recomputeSlaState(claim);
-
+  for (const candidate of candidates) {
+    let committed;
     try {
-      await saveClaim(claim);
+      committed = await runInTransaction(async session => {
+        const claim = await WarrantyClaim.findById(candidate._id).session(session);
+        if (!claim) return null;
+        const raised = evaluateSla(claim, now);
+        if (!raised.length) return null;
+        const effects = [];
+        for (const item of raised) {
+          const { type, stage } = item;
+          const list = type === 'breach' ? 'breaches' : 'warnings';
+          claim.sla[list] = [...(claim.sla[list] || []), stage.key];
+          if (type === 'breach') {
+            claim.sla.breachFacts = { ...claim.sla.breachFacts, [stage.key]: now };
+            claim.markModified('sla.breachFacts');
+          }
+          appendEvent(claim, {
+            action: type === 'breach' ? 'SLA_BREACHED' : 'SLA_WARNING', actor: SYSTEM,
+            note: `${stage.label} SLA ${type} — due ${formatDue(claim.sla[stage.dueField])}`, visibility: 'brand',
+          });
+          effects.push(...await raiseSlaEscalation(claim, item, now, session));
+        }
+        recomputeSlaState(claim);
+        await persistClaim(claim, { session });
+        return { claim, raised, effects };
+      });
     } catch (err) {
-      if (err.statusCode === 409) continue; // changed under us — the next sweep sees the fresh version
+      if (err.statusCode === 409 || err.code === 11000) continue;
       throw err;
     }
-
+    if (!committed) continue;
+    const { claim, raised, effects } = committed;
+    await flushAudit(claim);
+    await notifyEscalations(effects);
     const brandName = (await Brand.findById(claim.brand).select('name').lean())?.name;
     for (const item of raised) {
       await announce(claim, item, brandName);
       totals[item.type === 'breach' ? 'breaches' : 'warnings'] += 1;
     }
+    totals.escalated += effects.filter(e => e.escalation.scope === 'brand').length;
   }
+
   return totals;
 }

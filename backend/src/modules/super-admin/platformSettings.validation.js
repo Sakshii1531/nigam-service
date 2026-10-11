@@ -10,6 +10,8 @@ export const updateSettingsSchema = z.object({
   pushNotifications: z.boolean().optional(),
   twoFactorEnabled: z.boolean().optional(),
   razorpayKeyId: z.string().optional(),
+  brandInvoiceDay: z.number().int().min(1).max(28).optional(),
+  brandInvoiceAutoDraft: z.boolean().optional(),
   defaultGstPercent: z.number().min(0).max(100).optional(),
   coinConversionRate: z.number().positive().optional(),
   referralBonusAmount: z.number().min(0).optional(),
@@ -19,6 +21,7 @@ export const updateSettingsSchema = z.object({
   visitFeeAmount: z.number().min(0).optional(),
   warrantySla: z
     .object({
+      responseHours: z.number().positive().max(8760).optional(),
       approvalHours: z.number().positive().max(24 * 90).optional(),
       assignmentHours: z.number().positive().max(24 * 90).optional(),
       visitHours: z.number().positive().max(24 * 90).optional(),

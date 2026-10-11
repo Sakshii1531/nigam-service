@@ -8,6 +8,7 @@ import { CLAIM_STATUS } from './claimStatus.js';
 const S = CLAIM_STATUS;
 
 export const WARRANTY_SLA_DEFAULTS = Object.freeze({
+  responseHours: 2,
   approvalHours: 24,
   assignmentHours: 4,
   visitHours: 48,
@@ -32,14 +33,15 @@ export function dueAt(from, hours) {
 const AFTER_ASSIGNMENT = [S.PARTNER_ASSIGNED, S.VISIT_SCHEDULED, S.TECHNICIAN_ON_WAY, S.SERVICE_IN_PROGRESS, S.SERVICE_COMPLETED, S.CLOSED];
 
 /**
- * The four clocks. `startOn`: statuses that (re)start the clock; `metOn`:
+ * The five clocks. `startOn`: statuses that (re)start the clock; `metOn`:
  * statuses that stop it as met. Brand approval and resolution start at
  * submission (startSla).
  */
 export const SLA_STAGES = Object.freeze([
+  { key: 'response', label: 'Response', dueField: 'responseDueAt', hoursKey: 'response', startOn: [], metOn: [] },
   { key: 'brandApproval', label: 'Brand approval', dueField: 'brandApprovalDueAt', hoursKey: 'approval', startOn: [], metOn: [S.APPROVED, S.REJECTED] },
-  { key: 'assignment', label: 'Partner assignment', dueField: 'assignmentDueAt', hoursKey: 'assignment', startOn: [S.JOB_CREATED], metOn: AFTER_ASSIGNMENT },
-  { key: 'visit', label: 'Technician visit', dueField: 'visitDueAt', hoursKey: 'visit', startOn: [S.PARTNER_ASSIGNED], metOn: AFTER_ASSIGNMENT.slice(2) },
+  { key: 'assignment', label: 'Allocation', dueField: 'assignmentDueAt', hoursKey: 'assignment', startOn: [S.JOB_CREATED], metOn: AFTER_ASSIGNMENT },
+  { key: 'visit', label: 'First visit', dueField: 'visitDueAt', hoursKey: 'visit', startOn: [S.JOB_CREATED], metOn: [] },
   { key: 'resolution', label: 'Resolution', dueField: 'resolutionDueAt', hoursKey: 'resolution', startOn: [], metOn: [S.SERVICE_COMPLETED, S.CLOSED] },
 ]);
 
@@ -49,10 +51,17 @@ const TERMINAL = [S.CLOSED, S.CANCELLED, S.REJECTED];
 
 const hasSla = (claim) => Boolean(claim.sla?.hours?.approval);
 
-/** Stamps the SLA snapshot and the two clocks that start at submission. */
-export function startSla(claim, hours, now = new Date()) {
+/** Stamps the SLA snapshot and the clocks that start at submission. */
+export const PRIORITY_FACTORS = Object.freeze({ Critical: 0.5, High: 0.75, Normal: 1, Low: 1.5 });
+
+export function startSla(claim, hours, now = new Date(), factors = PRIORITY_FACTORS) {
+  const factor = factors[claim.priority] || 1;
+  hours = Object.fromEntries(Object.entries(hours).map(([key, value]) => [key, value * factor]));
   claim.sla = {
     hours,
+    version: 2,
+    priorityFactor: factor,
+    responseDueAt: hours.response ? dueAt(now, hours.response) : undefined,
     brandApprovalDueAt: dueAt(now, hours.approval),
     resolutionDueAt: dueAt(now, hours.resolution),
     met: {},
@@ -114,7 +123,7 @@ export function applySlaTransition(claim, from, to, now = new Date()) {
 
   for (const stage of SLA_STAGES) {
     if (stage.startOn.includes(to)) restart(claim, stage, now);
-    if (stage.metOn.includes(to) && !sla.met[stage.key]) sla.met[stage.key] = now;
+    if (stage.metOn.includes(to) && !sla.met[stage.key]) meetSla(claim, stage.key, now);
   }
 
   if (TERMINAL.includes(to)) sla.pausedAt = null;
@@ -138,4 +147,48 @@ export function evaluateSla(claim, now = new Date()) {
     }
   }
   return raised;
+}
+
+/** Read-time clock projection; pause freezes remaining time without losing facts. */
+export function slaStages(claim, now = Date.now()) {
+  return SLA_STAGES.map(stage => {
+    const due = claim.sla?.[stage.dueField] || null;
+    const metAt = stage.key === 'response' ? claim.firstBrandActionAt || claim.sla?.met?.response : claim.sla?.met?.[stage.key];
+    const remainingMs = due && !metAt ? new Date(due) - new Date(claim.sla?.pausedAt || now) : null;
+    const window = (claim.sla?.hours?.[stage.hoursKey] || 0) * 3600000;
+    return { key: stage.key, label: stage.label, dueAt: due, metAt: metAt || null, remainingMs,
+      paused: Boolean(claim.sla?.pausedAt), started: Boolean(due),
+      breachedAt: claim.sla?.breachFacts?.[stage.key] || null,
+      state: metAt ? 'met' : due && remainingMs <= 0 ? 'breached' : due && remainingMs <= window * (1 - WARNING_AT) ? 'warning' : 'on_track' };
+  });
+}
+
+/** Preserve elapsed time and pause offsets when changing priority. */
+export function changeSlaPriority(claim, factors = PRIORITY_FACTORS) {
+  if (!hasSla(claim)) return;
+  const previous = claim.sla.priorityFactor || 1, next = factors[claim.priority] || 1;
+  for (const stage of SLA_STAGES) {
+    const oldHours = claim.sla.hours[stage.hoursKey];
+    if (!oldHours) continue;
+    const hours = oldHours / previous * next;
+    if (claim.sla[stage.dueField] && !claim.sla.met?.[stage.key]) {
+      claim.sla[stage.dueField] = new Date(new Date(claim.sla[stage.dueField]).getTime() + (hours - oldHours) * 3600000);
+    }
+    claim.sla.hours[stage.hoursKey] = hours;
+  }
+  claim.sla.priorityFactor = next;
+}
+
+/** Persist a late completion even when it happens between sweeps. */
+export function meetSla(claim, key, now = new Date()) {
+  if (!hasSla(claim)) return;
+  const stage = SLA_STAGES.find(s => s.key === key);
+  claim.sla.met ||= {};
+  claim.sla.met[key] ||= now;
+  if (stage && claim.sla[stage.dueField] && new Date(claim.sla.met[key]) > new Date(claim.sla[stage.dueField])) {
+    claim.sla.breaches = [...new Set([...(claim.sla.breaches || []), key])];
+    claim.sla.breachFacts = { ...claim.sla.breachFacts, [key]: claim.sla.breachFacts?.[key] || claim.sla.met[key] };
+    claim.markModified?.('sla.breachFacts');
+  }
+  recomputeSlaState(claim);
 }

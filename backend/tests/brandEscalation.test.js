@@ -14,6 +14,8 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
 import { readOtpCode } from './helpers/otp.js';
+import { ensureBrandRoleTemplates } from '../src/modules/brand-crm/roleTemplates.service.js';
+import { SUPER_ADMIN_TEMPLATE } from '../src/modules/brand-crm/permissions.js';
 
 const TEST_DB_URI = testDbUri('brandEscalations');
 
@@ -37,7 +39,8 @@ async function loginAndVerify({ role, identifier, password }) {
 
 async function seedBrandWithAdmin(brandName) {
   const brand = await Brand.create({ name: brandName, category: 'Appliances', status: 'Active' });
-  const role = await Role.create({ name: 'Brand Admin', scope: 'brand', brand: brand._id, permissions: [] });
+  // The brand's owner holds Brand Super Admin (docs/brand-crm Phase 2).
+  const role = (await ensureBrandRoleTemplates(brand._id))[SUPER_ADMIN_TEMPLATE];
   const email = nextEmail();
   const password = 'password123';
   await User.create({

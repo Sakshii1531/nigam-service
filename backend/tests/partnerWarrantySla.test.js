@@ -16,6 +16,7 @@ import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { PlatformSettings } from '../src/modules/super-admin/platformSettings.model.js';
 import { startSla, applySlaTransition, evaluateSla, openStages } from '../src/modules/partner-warranty/claimSla.js';
+import { meetSla } from '../src/modules/partner-warranty/claimSla.js';
 import { runSlaSweep } from '../src/modules/partner-warranty/claimSla.service.js';
 import { testDbUri } from './helpers/testDb.js';
 import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
@@ -104,9 +105,11 @@ describe('Phase 9 — clock rules (pure)', () => {
     expect(c.sla.assignmentDueAt).toEqual(at(t0, 9));
     applySlaTransition(c, 'Job Created', 'Partner Assigned', at(t0, 6));
     expect(c.sla.met.assignment).toEqual(at(t0, 6));
-    expect(c.sla.visitDueAt).toEqual(at(t0, 54));
-    // Skipping straight to "in progress" still stops the visit clock.
+    expect(c.sla.visitDueAt).toEqual(at(t0, 53));
+    // First visit is completed by the detailed REACHED stage, never a broad status.
     applySlaTransition(c, 'Partner Assigned', 'Service In Progress', at(t0, 30));
+    expect(c.sla.met.visit).toBeFalsy();
+    meetSla(c, 'visit', at(t0, 30));
     expect(c.sla.met.visit).toEqual(at(t0, 30));
     applySlaTransition(c, 'Service In Progress', 'Service Completed', at(t0, 40));
     expect(openStages(c)).toEqual([]);
@@ -139,12 +142,12 @@ describe('Phase 9 — SLA snapshot at submission', () => {
     const admin = await kit.superAdmin();
     await api().put('/api/v1/super-admin/settings').set(bearer(admin.token)).send({ warrantySla: { visitHours: 10 } }).expect(200);
     const settings = await PlatformSettings.findOne();
-    expect(settings.warrantySla.toObject()).toEqual({ approvalHours: 24, assignmentHours: 4, visitHours: 10, resolutionHours: 168 });
+    expect(settings.warrantySla.toObject()).toEqual({ responseHours: 2, approvalHours: 24, assignmentHours: 4, visitHours: 10, resolutionHours: 168 });
 
     const cust = await kit.customer();
     const claim = await kit.submitClaim(w, cust);
     const doc = await WarrantyClaim.findById(claim.id);
-    expect(doc.sla.hours.toObject()).toEqual({ approval: 12, assignment: 4, visit: 10, resolution: 168 });
+    expect(doc.sla.hours.toObject()).toEqual({ response: 2, approval: 12, assignment: 4, visit: 10, resolution: 168 });
     expect(doc.sla.state).toBe('ok');
   });
 });
@@ -152,6 +155,7 @@ describe('Phase 9 — SLA snapshot at submission', () => {
 describe('Phase 9 — the sweep', () => {
   it('warns the brand and admins at 80 % of the approval window, once', async () => {
     const s = await scenario();
+    await WarrantyClaim.updateOne({ _id: s.claim.id }, { $set: { 'sla.met.response': new Date() } });
     const r1 = await runSlaSweep({ now: at(s.doc.createdAt, 20) });
     expect(r1).toMatchObject({ warnings: 1, breaches: 0 });
     const r2 = await runSlaSweep({ now: at(s.doc.createdAt, 21) });
@@ -159,20 +163,21 @@ describe('Phase 9 — the sweep', () => {
 
     const saved = await WarrantyClaim.findById(s.claim.id);
     expect(saved.sla.state).toBe('warning');
-    expect(saved.timeline.at(-1)).toMatchObject({ action: 'SLA_WARNING', visibility: 'brand' });
+    expect(saved.timeline.find(e => e.action === 'SLA_WARNING')).toMatchObject({ action: 'SLA_WARNING', visibility: 'brand' });
     expect(await noteCount(s.lg.user, 'Warranty Claim Awaiting Your Decision')).toBe(1);
     expect(await noteCount(s.admin.user, 'Warranty SLA at 80%')).toBe(1);
   });
 
   it('a missed approval deadline breaches and escalates — it never auto-approves', async () => {
     const s = await scenario();
+    await WarrantyClaim.updateOne({ _id: s.claim.id }, { $set: { 'sla.met.response': new Date() } });
     await runSlaSweep({ now: at(s.doc.createdAt, 25) });
 
     const saved = await WarrantyClaim.findById(s.claim.id);
     expect(saved.status).toBe('Submitted');
     expect(saved.sla.state).toBe('breached');
     expect(saved.flags).toMatchObject({ escalated: true, escalationReason: 'Brand approval SLA breached' });
-    expect(saved.timeline.map((e) => e.action)).toEqual(expect.arrayContaining(['SLA_BREACHED', 'ESCALATED']));
+    expect(saved.timeline.map((e) => e.action)).toEqual(expect.arrayContaining(['SLA_BREACHED', 'ESCALATION_RAISED']));
     expect(await noteCount(s.lg.user, 'Approval Deadline Missed — Escalated')).toBe(1);
     expect(await noteCount(s.admin.user, 'Warranty SLA Breached')).toBe(1);
 
@@ -181,7 +186,7 @@ describe('Phase 9 — the sweep', () => {
     expect(list.body.data[0].slaState).toBe('breached');
   });
 
-  it('an approved claim\'s assignment clock breaches internally (the brand is not told)', async () => {
+  it('an approved claim\'s allocation clock breaches and escalates to the brand', async () => {
     const s = await scenario();
     await api().post(`/api/v1/brand/warranty-claims/${s.claim.id}/approve`).set(bearer(s.lg.token)).send({}).expect(200);
     const approved = await WarrantyClaim.findById(s.claim.id);
@@ -191,9 +196,9 @@ describe('Phase 9 — the sweep', () => {
     await runSlaSweep({ now: at(approved.sla.assignmentDueAt, 0.1) });
     const saved = await WarrantyClaim.findById(s.claim.id);
     expect(saved.sla.breaches).toEqual(['assignment']);
-    expect(saved.timeline.at(-1)).toMatchObject({ action: 'SLA_BREACHED', visibility: 'internal' });
+    expect(saved.timeline.find(e => e.action === 'SLA_BREACHED')).toMatchObject({ action: 'SLA_BREACHED', visibility: 'brand' });
     expect(await noteCount(s.lg.user, 'Approval Deadline Missed — Escalated')).toBe(0);
-    expect(saved.flags.escalated).toBe(false);
+    expect(saved.flags.escalated).toBe(true);
   });
 
   it('does nothing while the claim waits on the customer', async () => {
@@ -225,16 +230,16 @@ describe('Phase 9 — per-brand SLA summary', () => {
     const samsungClaim = await kit.submitClaim(s.w, other, { brandId: String(s.w.samsung._id), serialNumber: 'SS-1' });
 
     // LG: one decided on time, one decided late.
-    await api().post(`/api/v1/brand/warranty-claims/${s.claim.id}/reject`).set(bearer(s.lg.token)).send({ reason: 'Not covered' }).expect(200);
+    await api().post(`/api/v1/brand/warranty-claims/${s.claim.id}/reject`).set(bearer(s.lg.token)).send({ rejectionCode: 'NOT_COVERED', reason: 'Not covered' }).expect(200);
     await WarrantyClaim.updateOne({ _id: late.id }, { 'sla.brandApprovalDueAt': new Date(Date.now() - HOUR) });
-    await api().post(`/api/v1/brand/warranty-claims/${late.id}/reject`).set(bearer(s.lg.token)).send({ reason: 'Not covered' }).expect(200);
+    await api().post(`/api/v1/brand/warranty-claims/${late.id}/reject`).set(bearer(s.lg.token)).send({ rejectionCode: 'NOT_COVERED', reason: 'Not covered' }).expect(200);
     // Samsung: still open and breached.
     await runSlaSweep({ now: at((await WarrantyClaim.findById(samsungClaim.id)).createdAt, 25) });
 
     const res = await api().get('/api/v1/super-admin/warranty-claims/sla-summary').set(bearer(s.admin.token)).expect(200);
     const byName = Object.fromEntries(res.body.data.map((r) => [r.brand.name, r]));
     expect(byName.Samsung).toMatchObject({ total: 1, open: 1, breached: 1, approval: { decided: 0, onTimePercent: null } });
-    expect(byName.LG).toMatchObject({ total: 2, open: 0, breached: 0, approval: { decided: 2, onTimePercent: 50 } });
+    expect(byName.LG).toMatchObject({ total: 2, open: 0, breached: 1, approval: { decided: 2, onTimePercent: 50 } });
     expect(byName.LG.approval.avgHours).toBeLessThan(1);
     expect(res.body.data[0].brand.name).toBe('Samsung'); // breached first
   });
