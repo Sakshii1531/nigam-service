@@ -6,11 +6,6 @@ const pagination = {
   sort: z.string().optional(),
 };
 
-export const listCustomersQuerySchema = z.object({
-  search: z.string().optional(),
-  ...pagination,
-});
-
 export const listPaginatedQuerySchema = z.object({ ...pagination });
 
 export const listWarrantyQuerySchema = z.object({

@@ -1,0 +1,104 @@
+{
+  "environment": {
+    "version": "7.0.41",
+    "cohortTickets": 10000,
+    "otherBrandTickets": 10000,
+    "billingLines": 20000
+  },
+  "reports": [
+    {
+      "report": "state-city-billing",
+      "elapsedMs": 33,
+      "rows": 2,
+      "explainMs": 26,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_completedAt_-1"
+      ]
+    },
+    {
+      "report": "source",
+      "elapsedMs": 68,
+      "rows": 2,
+      "explainMs": 32,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_createdAt_-1"
+      ]
+    },
+    {
+      "report": "product",
+      "elapsedMs": 3134,
+      "rows": 1,
+      "explainMs": 2878,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_createdAt_-1",
+        "_id_",
+        "brand_1_serialNumber_1_createdAt_-1",
+        "brand_1_appliance_1"
+      ]
+    },
+    {
+      "report": "sla",
+      "elapsedMs": 81,
+      "rows": 1,
+      "explainMs": 80,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_createdAt_-1"
+      ]
+    },
+    {
+      "report": "resolution-time",
+      "elapsedMs": 33,
+      "rows": 2,
+      "explainMs": 31,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_createdAt_-1"
+      ]
+    },
+    {
+      "report": "warranty",
+      "elapsedMs": 25,
+      "rows": 2,
+      "explainMs": 18,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_createdAt_-1"
+      ]
+    },
+    {
+      "report": "billing",
+      "elapsedMs": 732,
+      "rows": 1,
+      "explainMs": 752,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_completedAt_-1",
+        "_id_"
+      ]
+    },
+    {
+      "report": "partner-performance",
+      "elapsedMs": 1379,
+      "rows": 1,
+      "explainMs": 1410,
+      "docsExamined": 10000,
+      "keysExamined": 10000,
+      "indexes": [
+        "brand_1_createdAt_-1",
+        "_id_",
+        "serviceRequest_1"
+      ]
+    }
+  ]
+}

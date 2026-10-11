@@ -1,3 +1,4 @@
+import { getBrandDashboard } from '../brand-crm/brandDashboard.service.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
@@ -6,7 +7,6 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import * as brandInsights from './brandInsights.service.js';
 import { z } from 'zod';
 import {
-  listCustomersQuerySchema,
   listPaginatedQuerySchema,
   listWarrantyQuerySchema,
   listAmcQuerySchema,
@@ -18,15 +18,6 @@ import {
 
 export const brandInsightsRouter = Router();
 brandInsightsRouter.use(requireAuth, requireBrandScope);
-
-brandInsightsRouter.get('/customers', validate(listCustomersQuerySchema, 'query'), async (req, res, next) => {
-  try {
-    const { items, meta } = await brandInsights.listBrandCustomers(req.user.brand, req.query);
-    ok(res, items, meta);
-  } catch (err) {
-    next(err);
-  }
-});
 
 brandInsightsRouter.get('/service-providers', validate(listPaginatedQuerySchema, 'query'), async (req, res, next) => {
   try {
@@ -73,26 +64,17 @@ brandInsightsRouter.get('/claims', validate(listClaimsQuerySchema, 'query'), asy
   }
 });
 
-brandInsightsRouter.get('/dashboard', async (req, res, next) => {
+const dashboardQuery = z.object({from:z.coerce.date().optional(),to:z.coerce.date().optional()}).strict();
+brandInsightsRouter.get('/dashboard', validate(dashboardQuery, 'query'), async (req, res, next) => {
   try {
-    ok(res, await brandInsights.getBrandDashboard(req.user.brand));
+    ok(res, await getBrandDashboard(req.user, req.query, {permissions:req.brandAccess.permissions}));
   } catch (err) {
     next(err);
   }
 });
 
-const reportsQuerySchema = z.object({
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
-});
 
-brandInsightsRouter.get('/reports', validate(reportsQuerySchema, 'query'), async (req, res, next) => {
-  try {
-    ok(res, await brandInsights.getBrandReports(req.user.brand, req.query));
-  } catch (err) {
-    next(err);
-  }
-});
+
 
 brandInsightsRouter.get('/part-orders', validate(listPartOrdersQuerySchema, 'query'), async (req, res, next) => {
   try {
@@ -130,13 +112,6 @@ brandInsightsRouter.get('/inventory', validate(listPaginatedQuerySchema, 'query'
   }
 });
 
-brandInsightsRouter.get('/payments/summary', async (req, res, next) => {
-  try {
-    ok(res, await brandInsights.getBrandPaymentsSummary(req.user.brand));
-  } catch (err) {
-    next(err);
-  }
-});
 
 brandInsightsRouter.get('/payments/customer', validate(listPaymentsQuerySchema, 'query'), async (req, res, next) => {
   try {
@@ -156,14 +131,6 @@ brandInsightsRouter.get('/payments/payouts', validate(listPayoutsQuerySchema, 'q
   }
 });
 
-brandInsightsRouter.get('/payments/dues', validate(listPaginatedQuerySchema, 'query'), async (req, res, next) => {
-  try {
-    const { items, meta } = await brandInsights.listBrandPendingDues(req.user.brand, req.query);
-    ok(res, items, meta);
-  } catch (err) {
-    next(err);
-  }
-});
 
 const warrantyLookupSchema = z.object({ query: z.string().min(1) });
 

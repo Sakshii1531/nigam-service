@@ -1,308 +1,167 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import { 
-  Calendar, 
-  TrendingUp, 
-  Smile, 
-  Frown, 
-  Meh,
-  Download,
-  CheckCircle2
-} from 'lucide-react';
-import { apiRequest } from '../../lib/apiClient';
-import { exportCsv } from '../../lib/exportCsv';
-
-const CATEGORY_COLORS = ['bg-blue-600', 'bg-yellow-500', 'bg-emerald-500', 'bg-purple-500', 'bg-gray-400', 'bg-gray-300'];
-
-function reportRange(timeframe) {
-  const to = new Date();
-  const from = new Date(to);
-  if (timeframe === 'This Year') from.setMonth(0, 1);
-  else from.setDate(to.getDate() - (timeframe === 'Last Quarter' ? 89 : 29));
-  from.setHours(0, 0, 0, 0);
-  return `?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
-}
-
-const Reports = () => {
-  const [timeframe, setTimeframe] = useState('Last 30 Days');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [activeReportBar, setActiveReportBar] = useState(null);
-  const [report, setReport] = useState({ requestsByCategory: [], topServiceProviders: [], sentiment: null, monthly: [], monthlyChangePercent: null });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadReport() {
-      try {
-        setLoading(true);
-        const res = await apiRequest(`/brand/reports${reportRange(timeframe)}`, { auth: true });
-        if (!cancelled && res) setReport(res);
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    loadReport();
-    return () => { cancelled = true; };
-  }, [timeframe]);
-
-  // Bars are drawn as a share of the largest category, so the widest bar always
-  // fills the row regardless of absolute volume.
-  // No reviews yet means no percentage to show — not zero percent satisfied.
-  const sentiment = report.sentiment || { reviewCount: 0, satisfiedPercent: null, neutralPercent: null, unhappyPercent: null };
-  const pct = (v) => (v == null ? '—' : `${v}%`);
-
-  const categoryMax = Math.max(1, ...report.requestsByCategory.map((c) => c.count));
-  const categoryBars = report.requestsByCategory.map((c, i) => ({
-    label: c.label,
-    count: c.count,
-    value: Math.round((c.count / categoryMax) * 100),
-    color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-  }));
-
-  const showToast = (message) => {
-    setSuccessMessage(message);
-    setTimeout(() => {
-      setSuccessMessage('');
-    }, 3000);
-  };
-
-  const handleTimeframeChange = (e) => {
-    const val = e.target.value;
-    setTimeframe(val);
-    showToast(`Timeframe updated to ${val}`);
-  };
-
-  // Produces a real file. This announced a download that never started.
-  const handleExport = (format) => {
-    if (format?.toLowerCase().includes('pdf')) {
-      window.print();
-      return;
-    }
-    const rows = [
-      ...report.requestsByCategory.map((r) => ['Requests by category', r.category || r._id || '—', r.count]),
-      ...report.topServiceProviders.map((t) => ['Service Provider', t.name || '—', t.completed ?? t.total ?? 0]),
-    ];
-    const written = exportCsv('brand-report', ['Section', 'Label', 'Value'], rows);
-    showToast(written ? 'Report exported as CSV.' : 'There is no report data to export yet.');
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] flex relative">
-      {/* Sidebar */}
-      <Sidebar />
-
-      {/* Main Content */}
-      <div className="flex-1 ml-64 min-h-screen flex flex-col">
-        {/* Topbar */}
-        <Topbar title="Reports & Analytics" />
-
-        {/* Body */}
-        <div className="p-6 space-y-6 flex-1">
-          
-          {/* Header Actions */}
-          <div className="flex justify-between items-center">
-            <div className="flex gap-3 items-center">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#64748B]">
-                  <Calendar size={16} />
-                </div>
-                <select 
-                  value={timeframe}
-                  onChange={handleTimeframeChange}
-                  className="pl-10 pr-4 py-2 border border-[#E2E8F0] rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-[#0D47A1] text-slate-700 font-medium"
-                >
-                  <option>Last 30 Days</option>
-                  <option>Last Quarter</option>
-                  <option>This Year</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <button 
-                onClick={() => handleExport('CSV')}
-                className="bg-white text-[#1E293B] border border-[#E2E8F0] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#F8FAFC] transition-colors flex items-center gap-2"
-              >
-                <Download size={16} /> Export CSV
-              </button>
-              <button 
-                onClick={() => handleExport('PDF')}
-                className="bg-[#0D47A1] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <Download size={16} /> Export PDF
-              </button>
-            </div>
-          </div>
-
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Monthly Service Reports */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0]">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-[#1E293B]">Monthly Service Reports ({timeframe})</h2>
-                {report.monthlyChangePercent === null || report.monthlyChangePercent === undefined ? (
-                  <span className="text-xs text-[#64748B] font-medium">No prior month to compare</span>
-                ) : (
-                  <span className={`text-xs font-medium flex items-center gap-1 ${report.monthlyChangePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    <TrendingUp size={14} /> {report.monthlyChangePercent >= 0 ? '+' : ''}{report.monthlyChangePercent}% vs last month
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex items-end justify-between h-48 gap-4 pt-4">
-                {/* Real requests per month. The six bars were fixed heights
-                    (40, 65, 35, 80, 55, 90) under fixed Jan–Jun labels. */}
-                {(report.monthly || []).map((m, index) => {
-                  const month = m.label;
-                  const maxCount = Math.max(1, ...(report.monthly || []).map((x) => x.count));
-                  const heights = (report.monthly || []).map((x) => Math.round((x.count / maxCount) * 90));
-                  const isActive = activeReportBar === index;
-                  return (
-                    <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                      <div 
-                        className={`w-full rounded-t-lg transition-all duration-300 group relative cursor-pointer ${
-                          isActive ? 'bg-[#0D47A1] scale-x-105 shadow-sm' : 'bg-[#E3ECF9] hover:bg-[#0D47A1]'
-                        }`}
-                        style={{ height: `${heights[index]}%` }}
-                        onMouseEnter={() => setActiveReportBar(index)}
-                        onMouseLeave={() => setActiveReportBar(null)}
-                        onClick={() => {
-                          setActiveReportBar(index);
-                          showToast(`${month}: ${m.count} request(s)`);
-                        }}
-                      >
-                        <div className={`absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1E293B] text-white text-xs px-2 py-1 rounded transition-opacity whitespace-nowrap z-10 ${
-                          isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 pointer-events-none'
-                        }`}>
-                          {m.count} Requests
-                        </div>
-                      </div>
-                      <span className={`text-xs transition-colors font-semibold ${isActive ? 'text-[#0D47A1] font-bold' : 'text-[#64748B]'}`}>{month}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Product Failure Analysis */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0]">
-              <h2 className="text-lg font-bold text-[#1E293B] mb-6">Product Failure Analysis</h2>
-              
-              <div className="space-y-4">
-                {categoryBars.length === 0 && (
-                  <p className="text-xs font-semibold text-[#64748B]">
-                    {loading ? 'Loading…' : error || 'No complaints recorded yet.'}
-                  </p>
-                )}
-                {categoryBars.map((item, index) => (
-                  <div 
-                    key={index}
-                    onClick={() => showToast(`${item.label} accounts for ${item.value}% of failures`)}
-                    className="cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all duration-200"
-                  >
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-[#1E293B] font-semibold group-hover:text-[#0D47A1] transition-colors">{item.label}</span>
-                      <span className="text-[#64748B] font-bold">{item.value}%</span>
-                    </div>
-                    <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color} transition-all group-hover:scale-y-110`} style={{ width: `${item.value}%` }}></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ServiceProvider Productivity */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0]">
-              <h2 className="text-lg font-bold text-[#1E293B] mb-6">Service Provider Productivity</h2>
-              
-              <div className="space-y-4">
-                {report.topServiceProviders.length === 0 && (
-                  <p className="text-xs font-semibold text-[#64748B]">
-                    {loading ? 'Loading…' : error || 'No serviceProvider activity for this brand yet.'}
-                  </p>
-                )}
-                {report.topServiceProviders.map((t, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center gap-4 cursor-pointer group p-1.5 rounded-lg hover:bg-slate-50 transition-all duration-200"
-                    onClick={() => showToast(`${t.name}: ${t.completed} of ${t.total} jobs closed (${t.completionRate}%)`)}
-                  >
-                    <div className="w-8 h-8 bg-[#EEF4FF] rounded-full flex items-center justify-center text-[#0D47A1] font-bold text-xs shrink-0 group-hover:scale-105 transition-transform">
-                      {t.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-[#1E293B] font-semibold group-hover:text-[#0D47A1] transition-colors">{t.name}</span>
-                        <span className="text-[#64748B] font-bold">{t.total} jobs</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#F1F5F9] rounded-full overflow-hidden">
-                        <div className="h-full bg-[#0D47A1] transition-all group-hover:scale-y-110" style={{ width: `${t.completionRate}%` }}></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Customer Satisfaction (CSAT) */}
-            <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0]">
-              <h2 className="text-lg font-bold text-[#1E293B] mb-6">Customer Satisfaction (CSAT)</h2>
-              
-              <div className="flex items-center justify-around h-40">
-                <div 
-                  className="text-center cursor-pointer group p-2.5 rounded-xl hover:bg-slate-50 hover:scale-105 transition-all duration-200"
-                  onClick={() => showToast(sentiment.reviewCount ? `${sentiment.satisfiedPercent}% of ${sentiment.reviewCount} reviews rated 4 stars or better` : 'No reviews yet')}
-                >
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
-                    <Smile size={24} />
-                  </div>
-                  <p className="text-xl font-bold text-[#1E293B]">{pct(sentiment.satisfiedPercent)}</p>
-                  <p className="text-xs text-[#64748B]">Satisfied</p>
-                </div>
-                
-                <div 
-                  className="text-center cursor-pointer group p-2.5 rounded-xl hover:bg-slate-50 hover:scale-105 transition-all duration-200"
-                  onClick={() => showToast(sentiment.reviewCount ? `${sentiment.neutralPercent}% of ${sentiment.reviewCount} reviews rated 3 stars` : 'No reviews yet')}
-                >
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
-                    <Meh size={24} />
-                  </div>
-                  <p className="text-xl font-bold text-[#1E293B]">{pct(sentiment.neutralPercent)}</p>
-                  <p className="text-xs text-[#64748B]">Neutral</p>
-                </div>
-                
-                <div 
-                  className="text-center cursor-pointer group p-2.5 rounded-xl hover:bg-slate-50 hover:scale-105 transition-all duration-200"
-                  onClick={() => showToast(sentiment.reviewCount ? `${sentiment.unhappyPercent}% of ${sentiment.reviewCount} reviews rated 2 stars or worse` : 'No reviews yet')}
-                >
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
-                    <Frown size={24} />
-                  </div>
-                  <p className="text-xl font-bold text-[#1E293B]">{pct(sentiment.unhappyPercent)}</p>
-                  <p className="text-xs text-[#64748B]">Unsatisfied</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Success Toast */}
-      {successMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 animate-bounce">
-          <CheckCircle2 className="h-4 w-4" />
-          {successMessage}
-        </div>
-      )}
-    </div>
-  );
+import { useApiData } from '../../hooks/useApiData';
+import { useBrandPermissions } from '../../hooks/useBrandPermissions';
+import { apiRequest, apiDownload } from '../../lib/apiClient';
+const REPORT_NAMES = {
+  'state-city-billing': 'State / City billing',
+  source: 'Complaint sources',
+  product: 'Products and repeat complaints',
+  sla: 'SLA performance',
+  'resolution-time': 'Resolution time',
+  warranty: 'Warranty and decisions',
+  billing: 'Monthly billing',
+  'partner-performance': 'Partner performance'
 };
-
-export default Reports;
+const field = 'border border-slate-300 rounded-lg px-3 py-2 w-full text-sm bg-white';
+const money = n => new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR'
+}).format(n || 0);
+const format = (value, column) => value == null ? '—' : column.type === 'money' ? money(value) : column.type === 'rates' ? (value || []).map(r => `${money(r.amount)} × ${r.calls}`).join('; ') : column.type === 'hours' ? `${Number(value).toFixed(2)} h` : column.type === 'percent' ? `${value}%` : typeof value === 'number' ? Number(value.toFixed(2)).toLocaleString('en-IN') : value;
+function Chart({
+  report,
+  data
+}) {
+  const measure = {
+    'state-city-billing': 'total',
+    source: 'tickets',
+    product: 'tickets',
+    sla: 'breached',
+    'resolution-time': 'avgHours',
+    warranty: 'tickets',
+    billing: 'pending',
+    'partner-performance': 'jobs'
+  }[report];
+  const col = data.columns.find(c => c.key === measure);
+  const rows = data.rows.slice(0, 12);
+  const max = Math.max(1, ...rows.map(r => r[measure] || 0));
+  if (!rows.length) return null;
+  return <section className="bg-white border rounded-xl p-5" aria-label={`${col.label} chart`}><h2 className="font-semibold mb-4">{col.label} by {report === 'state-city-billing' ? 'state / city' : data.columns[0].label.toLowerCase()}{data.rows.length > 12 ? ' (first 12 rows)' : ''}</h2><div className="space-y-3">{rows.map((r, i) => <div key={i} className="grid grid-cols-[180px_1fr_130px] gap-3 items-center text-sm"><span>{report === 'state-city-billing' ? `${r.state} / ${r.city}` : report === 'warranty' ? `${r.dimension}: ${r.value}` : report === 'product' ? `${r.category} / ${r.productType}` : report === 'resolution-time' ? `${r.category} / ${r.city}` : r[data.columns[0].key]}</span><div className="h-4 bg-slate-100 rounded"><div className="h-full bg-blue-700 rounded" style={{
+            width: `${Math.max(0, (r[measure] || 0) / max * 100)}%`
+          }} /></div><span className="text-right tabular-nums">{format(r[measure], col)}</span></div>)}</div></section>;
+}
+export default function Reports() {
+  const [params, setParams] = useSearchParams();
+  const [expanded, setExpanded] = useState(new Set());
+  const [exporting, setExporting] = useState(false),
+    [error, setError] = useState('');
+  const {
+    can
+  } = useBrandPermissions();
+  const report = REPORT_NAMES[params.get('report')] ? params.get('report') : 'state-city-billing';
+  const query = new URLSearchParams(params);
+  query.delete('report');
+  const options = useApiData(() => apiRequest('/brand/reports/options', {
+    auth: true
+  }), [], {
+    initial: {}
+  });
+  const requestKey = `${report}?${query.toString()}`;
+  const data = useApiData(async () => ({
+    requestKey,
+    result: await apiRequest(`/brand/reports/${report}${query.size ? `?${query}` : ''}`, {
+      auth: true
+    })
+  }), [requestKey], {
+    initial: null
+  });
+  const o = options.data || {},
+    r = data.data?.requestKey === requestKey ? data.data.result : null;
+  const setFilter = (key, value) => {
+    setParams(current => {
+      const next = new URLSearchParams(current);
+      value ? next.set(key, value) : next.delete(key);
+      if (key === 'state') next.delete('city');
+      if (key === 'city' && value) {
+        const selectedCity = (o.cities || []).find(city => city.name === value);
+        if (selectedCity?.state) next.set('state', selectedCity.state);
+      }
+      if (key === 'categoryKey') next.delete('productType');
+      if (key === 'report') next.delete('status');
+      return next;
+    });
+  };
+  const preset = value => {
+    setParams(current => {
+      const next = new URLSearchParams(current);
+      next.delete('from');
+      next.delete('to');
+      if (value !== 'all') {
+        const end = new Date();
+        end.setUTCHours(0, 0, 0, 0);
+        end.setUTCDate(end.getUTCDate() + 1);
+        const start = new Date(end);
+        start.setUTCDate(start.getUTCDate() - (value === '7' ? 7 : 30));
+        if (value === 'month') start.setUTCFullYear(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+        next.set('from', start.toISOString().slice(0, 10));
+        next.set('to', end.toISOString().slice(0, 10));
+      }
+      return next;
+    });
+  };
+  const download = async extension => {
+    setExporting(true);
+    setError('');
+    try {
+      const p = new URLSearchParams(query);
+      p.set('format', extension);
+      const blob = await apiDownload(`/brand/reports/${report}?${p}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${o.ticketPrefix || 'BRAND'}-${report}-${params.get('from') || 'all'}-${params.get('to') || 'all'}.${extension}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+  const isBilling = ['state-city-billing', 'billing'].includes(report);
+  const selectedCategory = (o.categories || []).find(c => c.key === params.get('categoryKey'));
+  const select = (key, label, values) => <label className="text-xs" key={key}>{label}<select aria-label={label} className={field} value={params.get(key) || ''} onChange={e => setFilter(key, e.target.value)}><option value="">All</option>{values.map(v => <option key={v.value || v} value={v.value || v}>{v.label || v}</option>)}</select></label>;
+  return <div className="min-h-screen bg-slate-50 flex"><Sidebar /><main className="ml-64 flex-1 min-w-0"><Topbar title="Reports & Analytics" subtitle="Brand ticket performance and reconciled billing" /><div className="p-6 space-y-5">
+    <div className="flex flex-wrap items-end gap-3"><label className="font-semibold flex-1 max-w-lg">Report<select aria-label="Report" className={field} value={report} onChange={e => setFilter('report', e.target.value)}>{Object.entries(REPORT_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>{can('reports:export') && <><button disabled={exporting || !r || data.loading} onClick={() => download('csv')} className="bg-blue-800 text-white px-4 py-2 rounded-lg">Export CSV</button><button disabled={exporting || !r || data.loading} onClick={() => download('xlsx')} className="border border-blue-800 text-blue-800 px-4 py-2 rounded-lg bg-white">Export Excel</button></>}</div>
+    <section className="bg-white border rounded-xl p-4 grid grid-cols-2 xl:grid-cols-5 gap-3" aria-label="Report filters"><label className="text-xs">Date preset<select aria-label="Date preset" defaultValue="custom" className={field} onChange={e => preset(e.target.value)}><option value="custom" disabled>Custom / URL dates</option><option value="all">All time</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="month">This month</option></select></label>{['from', 'to'].map(k => <label key={k} className="text-xs">{k === 'from' ? 'From date' : 'Before date (exclusive)'}<input aria-label={k === 'from' ? 'From date' : 'Before date (exclusive)'} type="date" className={field} value={params.get(k) || ''} onChange={e => setFilter(k, e.target.value)} /></label>)}
+      {select('state', 'State', [...new Set((o.cities || []).map(c => c.state).filter(Boolean))])}
+      {select('city', 'City', [...new Set((o.cities || []).filter(c => !params.get('state') || c.state === params.get('state')).map(c => c.name))])}
+      {select('categoryKey', 'Service category', (o.categories || []).map(c => ({
+            value: c.key,
+            label: c.name
+          })))}
+      {select('serviceType', 'Service type', o.serviceTypes || [])}
+      {select('productType', 'Product type', (o.productTypes || []).filter(p => !selectedCategory || String(p.category) === String(selectedCategory._id)).map(p => ({
+            value: p._id,
+            label: p.name
+          })))}
+      {select('status', isBilling ? 'Line status' : 'Ticket status', isBilling ? o.lineStatuses || [] : o.ticketStatuses || [])}
+      {select('source', 'Source', o.sources || [])}
+    </section>
+    {(error || data.error || options.error) && <p role="alert" className="p-4 bg-red-50 text-red-800 rounded-lg">{error || data.error?.message || options.error?.message}</p>}
+    {(data.loading || !r && !data.error) && <div role="status" aria-label="Loading report" className="space-y-3 animate-pulse"><div className="h-12 bg-slate-200 rounded" /><div className="h-48 bg-slate-200 rounded" /></div>}
+    {r && !data.loading && <>
+      {r.totals && <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{Object.entries(r.totals).map(([key, value]) => <div key={key} className="bg-white border rounded-xl p-4"><p className="text-sm capitalize text-slate-500">{key}</p><p data-testid={`report-${key}`} className="text-xl font-bold">{key === 'calls' ? value : money(value)}</p></div>)}</div>}
+      <section className="bg-white border rounded-xl overflow-x-auto"><table className="w-full text-left text-sm"><caption className="text-left p-4 font-semibold">{REPORT_NAMES[report]}</caption><thead className="bg-slate-100"><tr>{r.columns.map(c => <th key={c.key} scope="col" className="p-3 whitespace-nowrap">{c.label}</th>)}</tr></thead><tbody>
+        {report === 'state-city-billing' ? (r.states || []).map(state => <StateRows key={state.state} state={state} data={r} expanded={expanded.has(state.state)} toggle={() => setExpanded(prev => {
+                  const next = new Set(prev);
+                  next.has(state.state) ? next.delete(state.state) : next.add(state.state);
+                  return next;
+                })} />) : r.rows.map((row, i) => <tr key={i} className="border-t">{r.columns.map(c => <td key={c.key} className="p-3">{format(row[c.key], c)}</td>)}</tr>)}
+      </tbody>{r.totals && r.rows.length > 0 && <tfoot className="bg-slate-100 font-semibold"><tr>{r.columns.map(c => <td key={c.key} className="p-3">{c.key === 'state' ? 'Grand total' : r.totals[c.key] != null ? format(r.totals[c.key], c) : ''}</td>)}</tr></tfoot>}</table>{!r.rows.length && <p className="p-8 text-slate-500">No records match these filters. Try a wider date range.</p>}</section>
+      {!!r.rows.length && <Chart report={report} data={r} />}
+      {(r.note || r.percentileMethod) && <p className="text-xs text-slate-500">{r.note || r.percentileMethod}</p>}
+    </>}
+  </div></main></div>;
+}
+function StateRows({
+  state,
+  data,
+  expanded,
+  toggle
+}) {
+  return <><tr className="bg-blue-50 border-t font-semibold">{data.columns.map(c => <td className="p-3" key={c.key}>{c.key === 'state' ? <button aria-expanded={expanded} onClick={toggle} className="text-blue-900">{expanded ? '▾' : '▸'} {state.state}</button> : state[c.key] != null ? format(state[c.key], c) : ''}</td>)}</tr>{expanded && data.rows.filter(r => r.state === state.state).map(row => <tr key={row.city} className="border-t">{data.columns.map(c => <td key={c.key} className="p-3">{format(row[c.key], c)}</td>)}</tr>)}</>;
+}

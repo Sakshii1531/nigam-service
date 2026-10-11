@@ -1,3 +1,9 @@
+import { syncJobStage } from '../partner-warranty/claimDispatch.js';
+import { evaluateWarranty } from '../brand-crm/warrantyPolicy.service.js';
+import { ProductSerial } from '../brand-crm/productSerial.model.js';
+import { WarrantyClaim } from '../partner-warranty/warrantyClaim.model.js';
+import { Category } from '../catalog/category.model.js';
+import { normalisePhone } from '../shared/phone.js';
 import mongoose from 'mongoose';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
@@ -8,34 +14,21 @@ import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.
 import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
 import { Review } from '../reviews/review.model.js';
-import { Invoice } from './invoice.model.js';
 import { PartOrder } from '../service-provider/partOrder.model.js';
 import { ServiceProviderInventoryItem } from '../service-provider/serviceProviderInventoryItem.model.js';
 import { Job } from '../service-provider/job.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
 import { Payout } from '../service-provider/payout.model.js';
-import { Escalation } from '../super-admin/escalation.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
-import { computeWarrantyStatus, DEFAULT_BRAND_WARRANTY_MONTHS, addMonths } from '../shared/warrantyEngine.js';
 
 // Read-only views of "this brand's world".
 //
-// Two different linkage strengths are at play, and it matters which:
-//
-//  - Customers, service providers and completions are derived through
-//    ServiceRequest.brand, which is a real ObjectId ref — reliable.
-//  - Warranty registrations, AMC subscriptions and claims carry `brand` as a
-//    free-text String (the label captured at purchase), so those are matched by
-//    brand NAME. Renaming a brand orphans its history until those become refs.
+// Brand ownership is always joined with an ObjectId. Legacy display labels stay
+// on consumer documents but are never used as a tenant boundary.
 
 const TERMINAL_STATUSES = ['Closed', 'Cancelled'];
-
-/** Anchored + case-insensitive so "LG" doesn't also match "LG Electronics Spares". */
-function nameMatcher(brandName) {
-  return new RegExp(`^${brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-}
 
 /**
  * brandId arrives as a string (it comes off the JWT). find() casts strings to
@@ -44,76 +37,6 @@ function nameMatcher(brandName) {
  */
 function asObjectId(brandId) {
   return new mongoose.Types.ObjectId(String(brandId));
-}
-
-async function brandNameOrThrow(brandId) {
-  const brand = await Brand.findById(brandId).select('name').lean();
-  if (!brand) throw new ApiError(404, 'Brand not found');
-  return brand.name;
-}
-
-/**
- * Everyone who has raised a service request with this brand, with the per-customer
- * counts the console lists them by.
- *
- * Aggregated in one pass rather than fetching requests and grouping in JS — a
- * brand with a long history would otherwise pull its entire request table.
- */
-export async function listBrandCustomers(brandId, { search, page, limit } = {}) {
-  const { skip, limit: lim, page: pg } = parsePagination({ page, limit });
-
-  const rows = await ServiceRequest.aggregate([
-    { $match: { brand: asObjectId(brandId) } },
-    {
-      $group: {
-        _id: '$user',
-        complaints: { $sum: 1 },
-        openComplaints: { $sum: { $cond: [{ $in: ['$status', TERMINAL_STATUSES] }, 0, 1] } },
-        categories: { $addToSet: '$category' },
-        // A customer counts as under warranty if any of their requests with this
-        // brand is — warranty is recorded per request, not per person.
-        warranties: { $addToSet: '$warranty' },
-        lastRequestAt: { $max: '$createdAt' },
-      },
-    },
-    { $sort: { lastRequestAt: -1 } },
-  ]);
-
-  const users = await User.find({ _id: { $in: rows.map((r) => r._id) } })
-    .select('name email phone status')
-    .lean();
-  const byId = new Map(users.map((u) => [String(u._id), u]));
-
-  let items = rows.map((r) => {
-    const user = byId.get(String(r._id));
-    return {
-      id: String(r._id),
-      name: user?.name || 'Customer',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      status: user?.status || 'Active',
-      complaints: r.complaints,
-      openComplaints: r.openComplaints,
-      // Distinct appliance categories this customer has raised requests for.
-      categories: r.categories.filter(Boolean),
-      productCount: r.categories.filter(Boolean).length,
-      warrantyStatus: r.warranties.includes('In Warranty') ? 'Under Warranty' : 'Out of Warranty',
-      lastRequestAt: r.lastRequestAt,
-    };
-  });
-
-  if (search) {
-    const rx = nameMatcherLoose(search);
-    items = items.filter((i) => rx.test(i.name) || rx.test(i.email) || rx.test(i.phone));
-  }
-
-  const total = items.length;
-  return { items: items.slice(skip, skip + lim), meta: paginationMeta({ page: pg, limit: lim, total }) };
-}
-
-/** Unanchored variant for free-text search boxes. */
-function nameMatcherLoose(term) {
-  return new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 }
 
 /**
@@ -201,7 +124,7 @@ export async function listBrandCompletions(brandId, { page, limit, sort } = {}) 
 }
 
 export async function listBrandWarrantyRegistrations(brandId, { verificationStatus, page, limit, sort } = {}) {
-  const query = { brand: nameMatcher(await brandNameOrThrow(brandId)) };
+  const query = { brandRef: brandId };
   if (verificationStatus) query.verificationStatus = verificationStatus;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
@@ -213,7 +136,7 @@ export async function listBrandWarrantyRegistrations(brandId, { verificationStat
 }
 
 export async function listBrandAmcSubscriptions(brandId, { status, page, limit, sort } = {}) {
-  const query = { brand: nameMatcher(await brandNameOrThrow(brandId)) };
+  const query = { brandRef: brandId };
   if (status) query.status = status;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
@@ -243,7 +166,7 @@ export async function listBrandAmcSubscriptions(brandId, { status, page, limit, 
 }
 
 export async function listBrandClaims(brandId, { status, page, limit, sort } = {}) {
-  const query = { brand: nameMatcher(await brandNameOrThrow(brandId)) };
+  const query = { brandRef: brandId };
   if (status) query.status = status;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
@@ -259,318 +182,6 @@ export async function listBrandClaims(brandId, { status, page, limit, sort } = {
     Claim.countDocuments(query),
   ]);
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
-}
-
-// ── Dashboard / reports ───────────────────────────────────────────────────────
-
-/** Headline figures for the brand console's landing screen. */
-export async function getBrandDashboard(brandId) {
-  const brandObjectId = asObjectId(brandId);
-
-  // Seven whole UTC days ending today, so the trend does not shift by a day
-  // depending on the server's local timezone.
-  const trendStart = new Date();
-  trendStart.setUTCHours(0, 0, 0, 0);
-  trendStart.setUTCDate(trendStart.getUTCDate() - 6);
-
-  const [statusRows, invoiceRows, focRows, escalations, trendRows, productRows] = await Promise.all([
-    ServiceRequest.aggregate([
-      { $match: { brand: brandObjectId } },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
-    // Only settled invoices count as billed value — pending and failed money
-    // has not moved.
-    Invoice.aggregate([
-      { $match: { brand: brandObjectId, status: 'Paid' } },
-      { $group: { _id: null, total: { $sum: '$total' } } },
-    ]),
-    Claim.aggregate([
-      { $match: { brand: nameMatcher(await brandNameOrThrow(brandId)), status: 'Approved' } },
-      { $group: { _id: null, count: { $sum: 1 }, amount: { $sum: '$amount' } } },
-    ]),
-    Escalation.countDocuments({ brand: brandObjectId, status: { $ne: 'Resolved' } }),
-    // Requests per day over the last week. The console drew a fixed seven-point
-    // line (1456, 1523, … labelled 15–21 May) that never moved.
-    ServiceRequest.aggregate([
-      { $match: { brand: brandObjectId, createdAt: { $gte: trendStart } } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'UTC' } }, count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]),
-    // Requests by appliance category — also a hardcoded five-row table before.
-    ServiceRequest.aggregate([
-      { $match: { brand: brandObjectId } },
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]),
-  ]);
-
-  // Densify so a day with no requests shows as zero rather than being skipped.
-  const trendByDay = Object.fromEntries(trendRows.map((r) => [r._id, r.count]));
-  const trend = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(trendStart);
-    day.setUTCDate(trendStart.getUTCDate() + i);
-    const key = day.toISOString().slice(0, 10);
-    return { date: key, count: trendByDay[key] || 0 };
-  });
-
-  const productTotal = productRows.reduce((sum, r) => sum + r.count, 0);
-  const byProduct = productRows.map((r) => ({
-    name: r._id || 'Uncategorised',
-    value: r.count,
-    pct: productTotal ? Number(((r.count / productTotal) * 100).toFixed(1)) : 0,
-  }));
-
-  const byStatus = Object.fromEntries(statusRows.map((r) => [r._id, r.count]));
-  const total = statusRows.reduce((sum, r) => sum + r.count, 0);
-  const named = ['New', 'Assigned', 'Closed', 'Cancelled', 'Customer NA', 'Reschedule'];
-
-  return {
-    totalComplaints: total,
-    completed: byStatus.Closed || 0,
-    inProgress: Object.entries(byStatus)
-      .filter(([s]) => !named.includes(s))
-      .reduce((sum, [, c]) => sum + c, 0) + (byStatus.Assigned || 0),
-    open: byStatus.New || 0,
-    cancelled: byStatus.Cancelled || 0,
-    customerNotAvailable: byStatus['Customer NA'] || 0,
-    reschedule: byStatus.Reschedule || 0,
-    escalations,
-    totalInvoiceValue: invoiceRows[0]?.total || 0,
-    focPartsApproved: focRows[0]?.count || 0,
-    focPartsValue: focRows[0]?.amount || 0,
-    statusBreakdown: statusRows.map((r) => ({ label: r._id, count: r.count })),
-    trend,
-    byProduct,
-    finance: await brandInvoiceSummary(brandId),
-    parts: await brandPartsSummary(brandId, focRows[0]?.count || 0),
-  };
-}
-
-// An invoice not paid this long after it was raised counts as overdue.
-// Invoices carry no due date of their own, so the term is fixed here.
-export const INVOICE_OVERDUE_DAYS = 30;
-
-/** Invoice value by state — the dashboard's "Financial Overview" and the Payments cards. */
-async function brandInvoiceSummary(brandId) {
-  const overdueBefore = new Date(Date.now() - INVOICE_OVERDUE_DAYS * 86400000);
-  const [row] = await Invoice.aggregate([
-    { $match: { brand: asObjectId(brandId) } },
-    {
-      $group: {
-        _id: null,
-        total: { $sum: '$total' },
-        paid: { $sum: { $cond: [{ $eq: ['$status', 'Paid'] }, '$total', 0] } },
-        pending: { $sum: { $cond: [{ $ne: ['$status', 'Paid'] }, '$total', 0] } },
-        pendingCount: { $sum: { $cond: [{ $ne: ['$status', 'Paid'] }, 1, 0] } },
-        overdue: {
-          $sum: { $cond: [{ $and: [{ $ne: ['$status', 'Paid'] }, { $lt: ['$createdAt', overdueBefore] }] }, '$total', 0] },
-        },
-        overdueCount: {
-          $sum: { $cond: [{ $and: [{ $ne: ['$status', 'Paid'] }, { $lt: ['$createdAt', overdueBefore] }] }, 1, 0] },
-        },
-      },
-    },
-  ]);
-  const r = row || {};
-  return {
-    totalInvoiceValue: r.total || 0,
-    paidAmount: r.paid || 0,
-    pendingInvoiceValue: r.pending || 0,
-    pendingCount: r.pendingCount || 0,
-    overdueAmount: r.overdue || 0,
-    overdueCount: r.overdueCount || 0,
-    overdueDays: INVOICE_OVERDUE_DAYS,
-  };
-}
-
-/**
- * Parts picture for the brand: stock its partners hold, parts on the way,
- * FOC parts approved, and parts dispatched or handed over today. Part orders
- * belong to the brand through Job -> ServiceRequest, as in listBrandPartOrders.
- */
-async function brandPartsSummary(brandId, focPartsApproved) {
-  const requestIds = await ServiceRequest.distinct('_id', { brand: asObjectId(brandId) });
-  const providerIds = await ServiceRequest.distinct('serviceProvider', { brand: asObjectId(brandId), serviceProvider: { $ne: null } });
-  const jobIds = requestIds.length ? await Job.distinct('_id', { serviceRequest: { $in: requestIds } }) : [];
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-
-  const [stock, orders] = await Promise.all([
-    providerIds.length
-      ? ServiceProviderInventoryItem.aggregate([
-          { $match: { serviceProvider: { $in: providerIds } } },
-          { $group: { _id: null, qty: { $sum: '$qty' } } },
-        ])
-      : [],
-    jobIds.length
-      ? PartOrder.aggregate([
-          { $match: { job: { $in: jobIds } } },
-          {
-            $group: {
-              _id: null,
-              inTransit: { $sum: { $cond: [{ $eq: ['$status', 'Dispatched'] }, '$qty', 0] } },
-              dispatchedToday: {
-                $sum: {
-                  $cond: [
-                    { $and: [{ $in: ['$status', ['Dispatched', 'Handed Over', 'Delivered']] }, { $gte: ['$updatedAt', startOfDay] }] },
-                    '$qty',
-                    0,
-                  ],
-                },
-              },
-            },
-          },
-        ])
-      : [],
-  ]);
-  return {
-    inventoryOnHand: stock[0]?.qty || 0,
-    inTransit: orders[0]?.inTransit || 0,
-    focPartsApproved,
-    dispatchedToday: orders[0]?.dispatchedToday || 0,
-  };
-}
-
-/**
- * GET /brand/payments/summary — the Payments page cards: money collected and
- * paid out this calendar month on the brand's jobs, and unpaid / overdue invoices.
- */
-export async function getBrandPaymentsSummary(brandId) {
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-  const jobIds = await brandJobIds(brandId);
-  const [collected, paidOut, invoices] = await Promise.all([
-    jobIds.length
-      ? Payment.aggregate([
-          { $match: { targetType: 'job', targetId: { $in: jobIds }, status: 'Success', createdAt: { $gte: monthStart } } },
-          { $group: { _id: null, amount: { $sum: '$amount' } } },
-        ])
-      : [],
-    jobIds.length
-      ? Payout.aggregate([
-          { $match: { job: { $in: jobIds }, status: 'Settled', updatedAt: { $gte: monthStart } } },
-          // netAmount is what the partner actually received.
-          { $group: { _id: null, amount: { $sum: '$netAmount' } } },
-        ])
-      : [],
-    brandInvoiceSummary(brandId),
-  ]);
-  return {
-    collectedThisMonth: collected[0]?.amount || 0,
-    paidOutThisMonth: paidOut[0]?.amount || 0,
-    outstandingAmount: invoices.pendingInvoiceValue,
-    outstandingCount: invoices.pendingCount,
-    overdueAmount: invoices.overdueAmount,
-    overdueCount: invoices.overdueCount,
-    overdueDays: invoices.overdueDays,
-  };
-}
-
-/** Same data split by appliance and by service provider, for the reports screen. */
-export async function getBrandReports(brandId, { from, to } = {}) {
-  const brandObjectId = asObjectId(brandId);
-  const dateFilter = {};
-  if (from) dateFilter.$gte = from;
-  if (to) dateFilter.$lte = to;
-  const match = { brand: brandObjectId, ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}) };
-
-  // Six whole months ending this one, in UTC so the buckets don't shift with
-  // the server's timezone.
-  const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 5, 1));
-
-  const [byCategory, serviceProviderRows, sentimentRows, monthlyRows] = await Promise.all([
-    ServiceRequest.aggregate([
-      { $match: match },
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]),
-    ServiceRequest.aggregate([
-      { $match: { ...match, serviceProvider: { $ne: null } } },
-      {
-        $group: {
-          _id: '$serviceProvider',
-          total: { $sum: 1 },
-          completed: { $sum: { $cond: [{ $eq: ['$status', 'Closed'] }, 1, 0] } },
-        },
-      },
-      { $sort: { total: -1 } },
-      { $limit: 10 },
-    ]),
-    // Customer sentiment, bucketed from the 1-5 star reviews left on this
-    // brand's requests: 4-5 satisfied, 3 neutral, 1-2 unhappy.
-    Review.aggregate([
-      { $lookup: { from: 'servicerequests', localField: 'serviceRequest', foreignField: '_id', as: 'sr' } },
-      { $match: { 'sr.brand': brandObjectId } },
-      { $group: {
-        _id: null,
-        total: { $sum: 1 },
-        satisfied: { $sum: { $cond: [{ $gte: ['$rating', 4] }, 1, 0] } },
-        neutral: { $sum: { $cond: [{ $eq: ['$rating', 3] }, 1, 0] } },
-        unhappy: { $sum: { $cond: [{ $lte: ['$rating', 2] }, 1, 0] } },
-      } },
-    ]),
-    // Requests per month over the last six. The console drew a fixed six-bar
-    // chart (heights 40, 65, 35, 80, 55, 90 for Jan–Jun) with a "+15% vs last
-    // month" caption, none of it derived from anything.
-    ServiceRequest.aggregate([
-      { $match: { brand: brandObjectId, createdAt: { $gte: monthStart } } },
-      { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$createdAt', timezone: 'UTC' } }, count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]),
-  ]);
-
-  const monthlyByKey = Object.fromEntries(monthlyRows.map((r) => [r._id, r.count]));
-  const monthly = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + i, 1));
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-    return {
-      month: key,
-      label: d.toLocaleString('en-IN', { month: 'short', timeZone: 'UTC' }),
-      count: monthlyByKey[key] || 0,
-    };
-  });
-
-  // Change against the previous month, or null when there is no prior month to
-  // compare with — the caption used to always read "+15%".
-  const [prev, current] = [monthly[monthly.length - 2], monthly[monthly.length - 1]];
-  const monthlyChangePercent = prev && prev.count > 0
-    ? Number((((current.count - prev.count) / prev.count) * 100).toFixed(1))
-    : null;
-
-  const serviceProviders = await ServiceProvider.find({ _id: { $in: serviceProviderRows.map((r) => r._id) } })
-    .select('name rating')
-    .lean();
-  const byId = new Map(serviceProviders.map((t) => [String(t._id), t]));
-
-  const sentiment = sentimentRows[0];
-  const reviewTotal = sentiment?.total || 0;
-  // Null percentages when there are no reviews — a 0% "satisfied" would read as
-  // every customer being unhappy rather than as an absence of feedback.
-  const share = (n) => (reviewTotal ? Math.round((n / reviewTotal) * 100) : null);
-
-  return {
-    requestsByCategory: byCategory.map((r) => ({ label: r._id || 'Uncategorised', count: r.count })),
-    monthly,
-    monthlyChangePercent,
-    sentiment: {
-      reviewCount: reviewTotal,
-      satisfiedPercent: share(sentiment?.satisfied || 0),
-      neutralPercent: share(sentiment?.neutral || 0),
-      unhappyPercent: share(sentiment?.unhappy || 0),
-    },
-    topServiceProviders: serviceProviderRows.map((r) => {
-      const t = byId.get(String(r._id));
-      return {
-        name: t?.name || 'Service Provider',
-        rating: t?.rating ?? 0,
-        total: r.total,
-        completed: r.completed,
-        // Share of this service provider's brand jobs that reached Closed.
-        completionRate: r.total ? Math.round((r.completed / r.total) * 100) : 0,
-      };
-    }),
-  };
 }
 
 // ── Parts ─────────────────────────────────────────────────────────────────────
@@ -597,7 +208,7 @@ export async function listBrandPartOrders(brandId, { status, page, limit, sort }
     return { items: [], meta: paginationMeta({ page: 1, limit: 20, total: 0 }) };
   }
 
-  const query = { job: { $in: jobs.map((j) => j._id) } };
+  const query = { brand: asObjectId(brandId), job: { $in: jobs.map((j) => j._id) } };
   if (status) query.status = status;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
@@ -616,11 +227,13 @@ export async function listBrandPartOrders(brandId, { status, page, limit, sort }
 export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) {
   const { status, scheduledDate, timeSlot, notes } = typeof payload === 'string' ? { status: payload } : payload;
 
-  const partOrder = await PartOrder.findById(partOrderId).populate({
+  const partOrder = await PartOrder.findOne({ _id: partOrderId, brand: asObjectId(brandId) }).populate({
     path: 'job',
     populate: { path: 'serviceRequest' },
   });
   if (!partOrder) throw new ApiError(404, 'Part request not found');
+  if (partOrder.job?.serviceRequest?.warrantyClaim) throw new ApiError(409, 'Use brand parts approval after upgrading legacy warranty parts');
+  if (partOrder.warrantyClaim) throw new ApiError(409, 'Use brand parts approval; NCC handles fulfillment');
 
   if (partOrder.job && partOrder.job.serviceRequest) {
     if (String(partOrder.job.serviceRequest.brand) !== String(brandId)) {
@@ -657,6 +270,7 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
         : (timeSlot || '10:00 AM - 01:00 PM');
       job.revisit = {
         scheduledDate: parsedDate,
+          partReceivedAt: ['Delivered','Handed Over'].includes(status) ? new Date() : job.revisit?.partReceivedAt,
         expectedDate: parsedDate,
         timeSlot: timeSlotStr,
         status: 'Scheduled',
@@ -682,6 +296,7 @@ export async function updateBrandPartOrderStatus(brandId, partOrderId, payload) 
             description: `Spare part ${status.toLowerCase()} by brand — revisit scheduled`,
           });
           await sr.save();
+        if (sr.warrantyClaim) await syncJobStage(sr);
         }
       }
     }
@@ -791,22 +406,6 @@ export async function listBrandServiceProviderPayouts(brandId, { status, page, l
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
-/** Invoices this brand has raised that are not yet settled. */
-export async function listBrandPendingDues(brandId, { page, limit, sort } = {}) {
-  const query = { brand: asObjectId(brandId), status: { $ne: 'Paid' } };
-  const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
-  const [items, total] = await Promise.all([
-    Invoice.find(query)
-      .populate('customer', 'name phone')
-      .populate('serviceRequest', 'humanId')
-      .sort(sortObj)
-      .skip(skip)
-      .limit(lim),
-    Invoice.countDocuments(query),
-  ]);
-  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
-}
-
 /**
  * Warranty lookup for the brand console's counter staff: given a serial number
  * or a customer phone, resolve the appliance and say whether it is still
@@ -817,65 +416,20 @@ export async function listBrandPendingDues(brandId, { page, limit, sort } = {}) 
  * ordinary outcome at a service counter, not an error.
  */
 export async function lookupBrandWarranty(brandId, { query }) {
-  const brand = await Brand.findById(brandId).select('name warrantyMonths');
-  if (!brand) throw new ApiError(404, 'Brand not found');
-
-  const trimmed = String(query).trim();
-  const byName = new RegExp(`^${trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-
-  // Either a serial number on the appliance, or a customer's phone.
-  let appliance = await OwnedAppliance.findOne({
-    brand: new RegExp(`^${brand.name}$`, 'i'),
-    serialNumber: byName,
-  }).populate('user', 'name phone email');
-
-  if (!appliance) {
-    const user = await User.findOne({ phone: trimmed }).select('_id');
-    if (user) {
-      appliance = await OwnedAppliance.findOne({
-        user: user._id,
-        brand: new RegExp(`^${brand.name}$`, 'i'),
-      }).populate('user', 'name phone email');
-    }
-  }
-
-  if (!appliance) return { found: false };
-
-  const [amc, ew] = await Promise.all([
-    AMCSubscription.findOne({ user: appliance.user._id, status: 'Active', expiryDate: { $gt: new Date() } }),
-    ExtendedWarrantyOrder.findOne({ user: appliance.user._id, status: 'Active' }),
+  const brand=await Brand.findById(brandId).lean();if(!brand)throw new ApiError(404,'Brand not found');
+  const trimmed=String(query).trim();const serial=trimmed.toUpperCase();const rx=new RegExp(`^${trimmed.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}$`,'i');
+  let customerId=null;try {customerId=(await User.findOne({role:'customer',phone:normalisePhone(trimmed)}).select('_id').lean())?._id;}catch {/* A serial need not be a phone. */}
+  const [appliance,ticket,registry]=await Promise.all([
+    OwnedAppliance.findOne({brandRef:brandId,...(customerId?{user:customerId}:{serialNumber:rx})}).populate('user','name phone'),
+    WarrantyClaim.findOne({brand:brandId,...(customerId?{customer:customerId}:{serialNumber:rx})}).sort({createdAt:-1}).populate('customer','name phone'),
+    ProductSerial.findOne({brand:brandId,serialNumber:serial}).lean(),
   ]);
-
-  const warrantyMonths = brand.warrantyMonths || DEFAULT_BRAND_WARRANTY_MONTHS;
-  const status = computeWarrantyStatus({
-    purchaseDate: appliance.purchaseDate,
-    brandWarrantyMonths: warrantyMonths,
-    amcActive: Boolean(amc),
-    extendedWarrantyActive: Boolean(ew),
-  });
-
-  return {
-    found: true,
-    status,
-    covered: status !== 'Out of Warranty',
-    appliance: {
-      id: appliance.id,
-      category: appliance.category,
-      brand: appliance.brand,
-      model: appliance.model,
-      serialNumber: appliance.serialNumber,
-      purchaseDate: appliance.purchaseDate,
-      // Base brand warranty expiry; null when the purchase date was never recorded.
-      expiryDate: appliance.purchaseDate ? addMonths(appliance.purchaseDate, warrantyMonths) : null,
-    },
-    customer: {
-      // The id is needed to raise a service request against this customer from
-      // the lookup result — without it the console can only display a name.
-      id: appliance.user?.id || null,
-      name: appliance.user?.name || null,
-      phone: appliance.user?.phone || null,
-    },
-    amcActive: Boolean(amc),
-    extendedWarrantyActive: Boolean(ew),
-  };
+  if(!appliance&&!ticket&&!registry)return {found:false};
+  const category=ticket?.category||registry?.category||(appliance?(await Category.findOne({key:appliance.category}).select('_id').lean())?._id:null);
+  const model=ticket?.modelNumber||appliance?.modelNumber||appliance?.model||registry?.modelNumber;
+  const serialNumber=ticket?.serialNumber||appliance?.serialNumber||registry?.serialNumber;
+  const purchaseDate=ticket?.purchaseDate||appliance?.purchaseDate;
+  const warranty=await evaluateWarranty({brand,category,productType:ticket?.productType,model,serial:serialNumber,purchaseDate,hasInvoice:Boolean(appliance?.invoiceFileUrl)||Boolean(ticket?.documents.some(d=>d.kind==='invoice')),issue:ticket?.issue,serviceType:ticket?.serviceType||'repair'});
+  const customer=ticket?.customer||appliance?.user;
+  return {found:true,...warranty,covered:warranty.status==='In Warranty',appliance:{id:appliance?.id||ticket?.id||String(registry._id),category:appliance?.category||ticket?.categoryKey,brand:brand.name,model,serialNumber,purchaseDate,expiryDate:warranty.expiresOn},customer:customer?{id:customer.id,name:customer.name,phone:customer.phone}:null};
 }
