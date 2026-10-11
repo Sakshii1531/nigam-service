@@ -46,14 +46,16 @@ async function createServiceProvider(request) {
  * email/name per call so parallel workers never collide (same isolation
  * reasoning as booking.spec.js's setupIsolatedFixture). */
 async function createBrandWithAdmin(request) {
-  const brandRes = await request.post('/api/v1/_dev/test-brand', { data: { name: `E2E Brand ${randomUUID()}` } });
+  const categories=(await (await request.get('/api/v1/catalog/categories')).json()).data;
+  const category=categories.find(c=>c.key==='AC');
+  const brandRes = await request.post('/api/v1/_dev/test-brand', { data: { name: `E2E Brand ${randomUUID()}`,coverage:[category.id] } });
   const { id: brandId } = (await brandRes.json()).data;
 
   const email = `brand-admin-${randomUUID()}@e2e.test`;
   await request.post('/api/v1/_dev/test-user', { data: { role: 'brand_admin', email, password: 'password123', brand: brandId } });
   const token = await loginAndVerify(request, { role: 'brand_admin', identifier: email, password: 'password123' });
 
-  return { brandId, token };
+  return { brandId, token,categoryId:category.id };
 }
 
 async function createServiceRequestForBrand(request, { brandId, customerId, serviceProviderId }) {
@@ -72,16 +74,15 @@ test.describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
 
     const srA = await createServiceRequestForBrand(request, { brandId: brandA.brandId, customerId: customer.id, serviceProviderId: serviceProvider.serviceProviderId });
 
-    const invoiceRes = await request.post('/api/v1/brand/invoices', {
-      headers: { Authorization: `Bearer ${brandA.token}` },
-      data: { serviceRequest: srA, customer: customer.id, serviceProvider: serviceProvider.serviceProviderId, serviceCharge: 500 },
-    });
-    expect(invoiceRes.status()).toBe(201);
-    const invoiceA = (await invoiceRes.json()).data;
-
-    // Brand A sees its own data.
+    const retired = await request.post('/api/v1/brand/invoices', {headers:{Authorization:`Bearer ${brandA.token}`}, data:{total:500}});
+    expect(retired.status()).toBe(403);
+    // Brand queues contain linked tickets; this legacy fixture has no ticket.
     const listA = await request.get('/api/v1/service-requests', { headers: { Authorization: `Bearer ${brandA.token}` } });
-    expect((await listA.json()).data).toHaveLength(1);
+    expect((await listA.json()).data).toHaveLength(0);
+    const own = await request.get(`/api/v1/service-requests/${srA}`, { headers: { Authorization: `Bearer ${brandA.token}` } });
+    expect(own.status()).toBe(200);
+    const ownInvoices=await request.get('/api/v1/brand/billing/invoices', {headers:{Authorization:`Bearer ${brandA.token}`}});
+    expect((await ownInvoices.json()).data).toEqual([]);
 
     // Brand B sees none of it, in lists or by direct id.
     const listB = await request.get('/api/v1/service-requests', { headers: { Authorization: `Bearer ${brandB.token}` } });
@@ -96,27 +97,25 @@ test.describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
     });
     expect(transitionB.status()).toBe(403);
 
-    const invoiceListB = await request.get('/api/v1/brand/invoices', { headers: { Authorization: `Bearer ${brandB.token}` } });
+    const invoiceListB = await request.get('/api/v1/brand/billing/invoices', { headers: { Authorization: `Bearer ${brandB.token}` } });
     expect((await invoiceListB.json()).data).toHaveLength(0);
 
-    const getInvoiceB = await request.get(`/api/v1/brand/invoices/${invoiceA.id}`, { headers: { Authorization: `Bearer ${brandB.token}` } });
-    expect(getInvoiceB.status()).toBe(403);
   });
 
   test('rate cards, teams, and catalog entries never leak across brands', async ({ request }) => {
     const brandA = await createBrandWithAdmin(request);
     const brandB = await createBrandWithAdmin(request);
 
-    await request.put('/api/v1/brand/rate-cards', {
+    await request.post('/api/v1/brand/rates', {
       headers: { Authorization: `Bearer ${brandA.token}` },
-      data: { category: 'AC', serviceType: 'Repair', laborRate: 499 },
+      data: { category: brandA.categoryId, serviceType: 'repair', brandRate: 499 },
     });
     await request.post('/api/v1/brand/teams', {
       headers: { Authorization: `Bearer ${brandA.token}` },
       data: { name: 'Team A', department: 'Field Service' },
     });
 
-    const rateCardsB = await request.get('/api/v1/brand/rate-cards', { headers: { Authorization: `Bearer ${brandB.token}` } });
+    const rateCardsB = await request.get('/api/v1/brand/rates', { headers: { Authorization: `Bearer ${brandB.token}` } });
     expect((await rateCardsB.json()).data).toHaveLength(0);
     const teamsB = await request.get('/api/v1/brand/teams', { headers: { Authorization: `Bearer ${brandB.token}` } });
     expect((await teamsB.json()).data).toHaveLength(0);

@@ -9,6 +9,7 @@ import { WalletLedger } from '../src/modules/payments-wallet/walletLedger.model.
 import { SpinWheelConfig } from '../src/modules/rewards-loyalty/spinWheelConfig.model.js';
 import { ROLES } from '../src/config/constants.js';
 import { hashPassword } from '../src/modules/auth/password.js';
+import { listenOnLoopback,closeServer } from './helpers/loopbackServer.js';
 import { testDbUri } from './helpers/testDb.js';
 
 const TEST_DB_URI = testDbUri('spinwheel');
@@ -21,11 +22,11 @@ beforeAll(async () => {
   await registerAllModels();
   await mongoose.connect(TEST_DB_URI);
   await ensureIndexes();
-  app = createApp().listen(0);
+  app = await listenOnLoopback(createApp());
 });
 
 afterAll(async () => {
-  await new Promise((resolve) => app.close(resolve));
+  await closeServer(app);
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
 });
@@ -50,12 +51,12 @@ beforeEach(async () => {
   // Login to acquire token
   const _loginRes = await request(app)
     .post('/api/v1/auth/login')
-    .send({ role: 'customer', identifier: '9876543210', password: 'password123' });
+    .send({ role: 'customer', identifier: '9876543210', password: 'password123' }).expect(200);
   
   // Obtain OTP stub log code
   const verifyRes = await request(app)
     .post('/api/v1/auth/otp/verify')
-    .send({ role: 'customer', identifier: '9876543210', code: '123456' });
+    .send({ role: 'customer', identifier: '9876543210', code: '123456' }).expect(200);
   
   token = verifyRes.body?.data?.accessToken;
 

@@ -31,6 +31,7 @@ const Brands = () => {
   const [selectedBrandProfile, setSelectedBrandProfile] = useState(null);
   // SLA figures are per-brand and derived server-side; loaded when a profile opens.
   const [brandSla, setBrandSla] = useState(null);
+  const [brandReadiness, setBrandReadiness] = useState(null);
 
   useEffect(() => {
     if (!selectedBrandProfile?.id) { setBrandSla(null); return; }
@@ -38,6 +39,16 @@ const Brands = () => {
     apiRequest(`/super-admin/brands/${selectedBrandProfile.id}/sla`, { auth: true })
       .then((res) => { if (!cancelled) setBrandSla(res); })
       .catch((err) => console.warn('[brands] Could not load SLA figures:', err.message));
+    return () => { cancelled = true; };
+  }, [selectedBrandProfile?.id]);
+
+  useEffect(() => {
+    if (!selectedBrandProfile?.id) { setBrandReadiness(null); return; }
+    let cancelled = false;
+    setBrandReadiness(null);
+    apiRequest(`/super-admin/brands/${selectedBrandProfile.id}/readiness`, { auth: true })
+      .then((res) => { if (!cancelled) setBrandReadiness(res); })
+      .catch((err) => console.warn('[brands] Could not load readiness:', err.message));
     return () => { cancelled = true; };
   }, [selectedBrandProfile?.id]);
 
@@ -347,6 +358,34 @@ const Brands = () => {
                         {brandSla?.avgRating != null ? `${brandSla.avgRating} / 5.0` : '—'}
                       </span>
                     </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#F8FAFC] p-5 rounded-xl border border-[#E2E8F0]" aria-label="Brand readiness checklist">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#1E293B]">Production Readiness</h3>
+                      <p className="text-[11px] text-slate-500 mt-1">Configuration required for live warranty intake.</p>
+                    </div>
+                    {brandReadiness && (
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${brandReadiness.ready ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {brandReadiness.ready ? 'Ready' : `${brandReadiness.missing.length} missing`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-2.5 text-xs">
+                    {!brandReadiness && <p className="text-slate-500">Loading readiness…</p>}
+                    {brandReadiness?.checks?.map((check) => (
+                      <div key={check.key} className="flex items-start gap-2">
+                        {check.complete
+                          ? <CheckCircle2 size={15} className="text-green-600 shrink-0 mt-0.5" aria-hidden="true" />
+                          : <XCircle size={15} className="text-amber-600 shrink-0 mt-0.5" aria-hidden="true" />}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800">{check.label}</p>
+                          <p className="text-[10px] text-slate-500 wrap-break-word">{check.detail}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

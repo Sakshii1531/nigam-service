@@ -1,3 +1,4 @@
+import { mutationAudit } from '../brand-crm/auditMutations.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
@@ -7,7 +8,7 @@ import * as platformUserService from './platformUser.service.js';
 import { listUsersQuerySchema, updateStatusSchema, idParamSchema } from './platformUser.validation.js';
 
 export const platformUserRouter = Router();
-platformUserRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
+platformUserRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN), mutationAudit({admin:true,prefix:'/users'}));
 
 platformUserRouter.get('/', validate(listUsersQuerySchema, 'query'), async (req, res, next) => {
   try {

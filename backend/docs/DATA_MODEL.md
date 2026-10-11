@@ -1,6 +1,6 @@
 # Data Model (Phase 1)
 
-64 collections, implemented as Mongoose schemas under `src/modules/*/*.model.js`. This
+104 collections, implemented as Mongoose schemas under `src/modules/*/*.model.js`. This
 doc records the *decisions* (embed vs. reference, relationships, indexes) — field-level
 detail already lives in `../../BACKEND_CONTEXT.md` §3–§6 and isn't repeated here.
 
@@ -279,3 +279,63 @@ Fixes, in the order they matter:
 - The serviceProvider notification screen read `ServiceProviderContext`'s in-memory array, which initialises to `[]` and is only appended to in the mock branch of accepting a job. It never fetched, so serviceProviders saw none of what the platform sent them. Its badges — Dashboard, Earnings, RaisePartRequest — counted that phantom list and sat at zero permanently, while both admin topbars showed hardcoded numbers (`2` and `9`).
 
 **Nothing sends until Firebase is provisioned**: `VITE_FIREBASE_*` plus a VAPID key on the client (see `frontend/.env.example`), `FCM_SERVICE_ACCOUNT_JSON` on the server. Blank config disables push cleanly and the app falls back to the Socket.IO feed and the REST inbox, so this was built and tested against a mocked provider — **no push has been delivered to a real device**, flagged rather than claimed, same honesty standard as the Docker note above.
+
+
+## Brand CRM Phase 12 — dated rates and captured charges
+
+`RateCard` and `/brand/rate-cards` are retired. Configure `BrandRate` rows explicitly;
+legacy amounts are not copied because they mixed the brand charge and partner payout.
+The old collection is left untouched. Catalogue booking payouts and the existing
+AMC/EW fallback retain their own rules.
+
+- `BrandRate`: category reference + service type + canonical City-master state/city,
+  non-overlapping half-open `[effectiveFrom, effectiveTo)` intervals. City overrides
+  state, which overrides national. Used rows are versioned on edit. `partnerPayout`
+  is selected only internally and projected only by the NCC API; brand responses,
+  exports and brand-scoped audit diffs exclude it.
+- `BrandRateLock`: one revision document per brand serializes rate writes and charge
+  capture inside MongoDB transactions. Deploy on a replica set for atomicity, as
+  required by the existing transaction helper.
+- `BillingLine`: snapshots completed service charges, installed approved brand-payable
+  parts and paise-rounded GST. A partial unique `activeKey` allows one current line
+  per ticket plus void history. Completion → pending_closure; closure → billable;
+  cancellation/reopen → void. A visit-only line is replaced if the repair completes.
+- Missing service rates capture zero and notify brand billing users and Super Admin
+  in-app. Missing partner payouts freeze zero with `PAYOUT_MISSING` on the Job, shown
+  only to NCC. Finance adjustments are audited and blocked on invoiced/void lines.
+- Brand invoice generation/payment allocation remains Phase 13. Existing invoice
+  APIs are unchanged; captured lines are not automatically attached to them.
+
+
+## Brand CRM Phase 13 — brand invoices and receipts
+
+`BrandInvoice` replaces the unused manual brand-admin `Invoice` model. It references multiple `BillingLine` rows, freezes charge snapshots at draft and billing identity/terms at issue, tracks issued due dates and receipt totals, and uses yearly `BINV-YYYY-######` IDs. `BrandPayment` is the NCC-recorded receipt ledger, separate from customer collections and partner payouts. Balances are derived in integer paise. Financial writes and audits require MongoDB transactions; conditional line ownership updates prevent double billing and a partial unique active brand/period key makes auto-drafts idempotent. Invoices with receipts cannot be cancelled. Legacy invoice collection data is not migrated or deleted. Printable HTML is served on demand because no PDF rendering dependency is installed.
+
+
+## Brand CRM Phase 14 — report cohorts and exports
+
+Eight report aggregations live in `brand-crm/brandReports.service.js`. Ticket cohorts use `WarrantyClaim.createdAt`; billing cohorts use `BillingLine.completedAt`, with UTC exclusive end dates. All matches force the authenticated brand. Serial-repeat history searches the same brand/category within 90 days, even outside the selected cohort; linked appliance identity is an alternative. Blank identity never matches unrelated tickets. MongoDB 7+ uses approximate `$percentile`; older versions use exact linear interpolation on at most 100,000 completed tickets.
+
+State/city billing sums stored subtotal/GST/total in integer paise, retaining distinct rate counts. Monthly receipt attribution uses differences of rounded cumulative frozen invoice-line weights, so filtered city/category totals reconcile to receipts without duplicating invoices or losing paise. Draft/cancelled invoices do not count as issued value. Partner reports expose only name and this brand's performance, with ratings through tenant-bound service requests.
+
+New indexes cover brand/date ticket and completion cohorts, brand/state/city/completion, serial-repeat history, and brand/appliance lookup. Reports require `reports:view`; CSV/XLSX additionally require `reports:export`, cap at 100,000 rows, and audit `report.exported`. ExcelJS 4.4 streams XLSX files. No reporting collection or data migration is introduced. Reproduce query-plan checks with `BRAND_REPORT_BENCH_URI=mongodb://127.0.0.1:27018 node backend/scripts/benchmarkBrandReports.js`; this creates and drops only its own random local database.
+
+
+## Brand CRM Phase 15 — live dashboard cohorts
+
+`brand-crm/brandDashboard.service.js` replaces the Brand Panel's legacy service-request dashboard. `GET /brand/dashboard?from&to` requires `dashboard:view`, defaults to seven UTC days (end exclusive), and compares an equal preceding period. Ticket status/stage/SLA counts are current states within creation cohorts; approval counts use approval timeline timestamps; open brand escalations use raised dates. These are cohort comparisons, not reconstructed historical snapshots. Trends count independent ticket creation/closure dates, densify quiet periods, and use Monday UTC weeks beyond 31 days. Date ranges are bounded to 366 days.
+
+Source charts reuse the Phase 14 report and financial cards reuse Phase 13 `brandSummary`; invoice cohorts use issue dates with current outstanding balances, and unbilled lines use completion dates. Financial keys are removed server-side without `billing:view`; own-work, recent ticket and parts sections are omitted without their corresponding permissions. My Work/awaiting-part/in-transit counts represent current queues regardless of report range; installed parts use installation dates. Part statistics use tenant-keyed warranty `PartOrder` documents, excluding shared partner stock and brand-name matches.
+
+KPI links carry creation/approval/stage/SLA filters to the unified queue, issue-date/outstanding filters to billing, and raised-date filters to escalations. New indexes cover brand/closed date, approval action/date, invoice issue date and escalation cohort. The queue's `dashboardKpi` parameter is validated and shares stage/SLA/approval expressions with the dashboard.
+
+The dashboard refetches after a two-second debounce on owning-brand `claim:updated`, existing `warranty_claim:updated`, `brand:billing_updated` and `brand:escalation_updated`, and on socket reconnect; a minute clock refresh also advances SLA displays. Existing single stage-event behavior is preserved. Billing invalidations contain only the brand ID and occur after successful transaction commit; rejected or rolled-back writes emit nothing. No new collection or data migration is introduced.
+
+
+## Brand CRM Phase 16 — searchable audit trail
+
+AuditLog remains append-only through the API. Added indexes `{brand:1,createdAt:-1,_id:-1}` and `{brand:1,entityType:1,entityId:1,createdAt:-1}` for tenant history and ticket lookup. Actors retain name, employee ID, roles and department as they were when the action occurred. `meta.changes` holds persisted old/new pairs; credential fields are redacted recursively to `changed`, including direct model writers.
+
+Ticket timeline mirrors now use normalized `ticket.verb` actions, with original `meta.timelineAction`, visibility and field diffs. Timeline event names, notification mappings and webhook contracts remain unchanged. Brand audit queries require the tenant ID and exclude internal/unclassified legacy ticket mirrors; Super Admin retains the full history. Historical visible timeline entries remain available in ticket Activity. Explicit platform-only audit rows (including partner payout changes) retain `brand:null`. No production migration/backfill is executed.
+
+`GET /brand/audit-logs` requires `audit:view`; validated filters include entity type/ID, action, user ID, literal search, date range and page/limit. `format=csv` streams the filtered tenant history and records `audit.exported`; credential values and private NCC notes are excluded. Domain writers and Phase 16 legacy adapters mark request-local audit coverage; successful unaudited brand JSON mutations receive a generic safety-net record and warn in tests. See the complete route matrix in `docs/brand-crm/phase-16-audit-log.md`.

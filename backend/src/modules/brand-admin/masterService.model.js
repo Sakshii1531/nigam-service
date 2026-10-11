@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { brandScopeGuard } from '../shared/brandScopeGuard.js';
 
 const masterServiceSchema = new mongoose.Schema(
   {
@@ -11,6 +12,7 @@ const masterServiceSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+brandScopeGuard(masterServiceSchema);
 applyStandardPlugins(masterServiceSchema);
 
 export const MasterService = mongoose.models.MasterService || mongoose.model('MasterService', masterServiceSchema);

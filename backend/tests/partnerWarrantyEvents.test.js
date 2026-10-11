@@ -140,7 +140,8 @@ describe('Phase 10 — domain events', () => {
     const s = await base();
     const claim = await fullJourney(s);
     const events = await DomainEvent.find({ claim: claim.id }).sort({ createdAt: 1, _id: 1 });
-    expect(events.map((e) => e.type)).toEqual(['CLAIM_CREATED', 'CLAIM_APPROVED', 'JOB_CREATED', 'PARTNER_ASSIGNED', 'JOB_STARTED', 'JOB_COMPLETED', 'CLAIM_CLOSED']);
+    expect(events.filter(e => e.type !== 'JOB_STAGE_CHANGED').map((e) => e.type)).toEqual(['CLAIM_CREATED', 'CLAIM_APPROVED', 'JOB_CREATED', 'PARTNER_ASSIGNED', 'JOB_STARTED', 'JOB_COMPLETED', 'CLAIM_CLOSED']);
+    expect(events.filter(e => e.type === 'JOB_STAGE_CHANGED').map(e => e.payload.stage)).toEqual(['PARTNER_FINDING','JOB_OFFERED','PARTNER_ASSIGNED','VISIT_SCHEDULED','EN_ROUTE','REACHED','DIAGNOSIS','REPAIR','COMPLETED','CUSTOMER_CONFIRMATION','CLOSED']);
     expect(new Set(events.map((e) => e.status))).toEqual(new Set(['skipped']));
 
     const closed = events.at(-1).payload;
@@ -158,7 +159,7 @@ describe('Phase 10 — domain events', () => {
     const a = await kit.submitClaim(s.w, s.cust);
     await api().post(`/api/v1/brand/warranty-claims/${a.id}/request-info`).set(bearer(s.lg.token)).send({ message: 'Send the warranty card' }).expect(200);
     const b = await kit.submitClaim(s.w, s.cust);
-    await api().post(`/api/v1/brand/warranty-claims/${b.id}/reject`).set(bearer(s.lg.token)).send({ reason: 'Burn marks' }).expect(200);
+    await api().post(`/api/v1/brand/warranty-claims/${b.id}/reject`).set(bearer(s.lg.token)).send({ rejectionCode:'NOT_COVERED',reason: 'Burn marks' }).expect(200);
     await api().post(`/api/v1/super-admin/warranty-claims/${a.id}/cancel`).set(bearer(s.admin.token)).send({ reason: 'Customer withdrew' }).expect(200);
 
     const types = async (id) => (await DomainEvent.find({ claim: id }).sort({ createdAt: 1, _id: 1 })).map((e) => [e.type, e.payload.note]);
@@ -207,7 +208,7 @@ describe('Phase 10 — brand CRM webhooks', () => {
     const s = await base();
     await configure(s, { url: crm.url, enabled: true, events: ['CLAIM_REJECTED'] }).expect(200);
     const claim = await kit.submitClaim(s.w, s.cust);
-    await api().post(`/api/v1/brand/warranty-claims/${claim.id}/reject`).set(bearer(s.lg.token)).send({ reason: 'Not covered' }).expect(200);
+    await api().post(`/api/v1/brand/warranty-claims/${claim.id}/reject`).set(bearer(s.lg.token)).send({ rejectionCode:'NOT_COVERED',reason: 'Not covered' }).expect(200);
     await runWebhookSweep();
     expect(crm.received.map((r) => r.headers['x-ncc-event'])).toEqual(['CLAIM_REJECTED']);
   });

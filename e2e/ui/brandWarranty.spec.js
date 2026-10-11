@@ -91,11 +91,11 @@ test('a brand reviews its warranty claims: request info, reject needs a reason, 
 
   const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
   await signIn(page, brandSession, 'brand_admin');
-  await page.goto('/brand-admin/warranty-claims');
+  await page.goto('/brand-admin/tickets');
   await expect(page.getByRole('link', { name: mine.humanId })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(theirs.humanId)).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: /New\s*1/ })).toBeVisible();
-  await expect(page.getByText(/due in \d+h/)).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Pending Approval \(1\)/ })).toBeVisible();
+  await expect(page.getByRole('columnheader',{name:'SLA',exact:true})).toBeVisible();
   await page.screenshot({ path: `${SHOTS}phase-13-queue.png` });
 
   // Open it → Brand Review; ask for more information.
@@ -106,7 +106,7 @@ test('a brand reviews its warranty claims: request info, reject needs a reason, 
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel(/What do you need/).fill('Please send a photo of the leak');
   await dialog.getByRole('button', { name: 'Send request' }).click();
-  await expect(page.getByText('Request sent to the customer.')).toBeVisible();
+  await expect(page.getByText('Info Requested',{exact:true}).first()).toBeVisible();
   await expect(page.getByText('Waiting for the customer…')).toBeVisible();
 
   // The customer answers from their app → shows up here without a reload.
@@ -135,8 +135,8 @@ test('a brand reviews its warranty claims: request info, reject needs a reason, 
   await page.getByRole('button', { name: 'Approve' }).click();
   await page.getByRole('dialog').getByLabel(/Remarks/).fill('Covered — manufacturing defect');
   await page.getByRole('dialog').getByRole('button', { name: 'Approve claim' }).click();
-  await expect(page.getByText('Claim approved — a Service Job has been created.')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText(/^NCCJ-\d{4}-\d{6}$/)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Job Created',{exact:true}).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/^NCCJ-\d{4}-\d{6}$/).first()).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole('button', { name: 'Approve' })).toHaveCount(0);
   await page.screenshot({ path: `${SHOTS}phase-13-claim-approved.png`, fullPage: true });
 
@@ -148,6 +148,8 @@ test('a brand reviews its warranty claims: request info, reject needs a reason, 
   await page.goto('/brand-admin/warranty-settings');
   await expect(page.getByText('Your brand is listed in the customer app’s Partner Warranty.')).toBeVisible();
   await expect(page.getByRole('checkbox', { name: ac.name, exact: true })).toBeChecked();
+  await page.goto('/brand-admin/settings');
+  await page.getByRole('button', { name: 'Integrations', exact: true }).click();
   await page.getByLabel('Endpoint URL').fill('http://127.0.0.1:9/ncc-hook');
   await page.getByLabel('Send events').check();
   await page.getByRole('button', { name: 'Save webhook' }).click();

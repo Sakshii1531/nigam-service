@@ -1,15 +1,24 @@
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 
 /** Used both for a service provider's manual FOC claim (RaisePartRequest.jsx's direct
  * flow) and internally by job.service.js when spare parts are used on a
  * warranty-covered job (auto-created, not service provider-initiated). */
 export async function raiseServiceProviderClaim(serviceProviderId, { serviceRequest, brand, claimType, item, amount, reason }) {
+  const request = serviceRequest
+    ? await ServiceRequest.findById(serviceRequest).select('brand serviceProvider').lean()
+    : null;
+  if (serviceRequest && !request) throw new ApiError(404, 'Service request not found');
+  if (request?.serviceProvider && String(request.serviceProvider) !== String(serviceProviderId)) {
+    throw new ApiError(404, 'Service request not found');
+  }
   return Claim.create({
     raisedByModel: 'ServiceProvider',
     raisedBy: serviceProviderId,
     serviceRequest,
+    brandRef: request?.brand || null,
     brand,
     claimType,
     item,

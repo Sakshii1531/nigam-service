@@ -1,3 +1,10 @@
+import { intakeRouter } from './modules/brand-crm/intake.routes.js';
+import { apiKeyRouter } from './modules/brand-crm/apiKey.routes.js';
+import { brandReportsRouter } from './modules/brand-crm/brandReports.routes.js';
+import { auditRequestContext } from './modules/shared/auditContext.js';
+import { auditMutations } from './modules/brand-crm/auditMutations.js';
+import { brandAuditRouter } from './modules/brand-crm/brandAudit.routes.js';
+import { ticketPartsRouter } from './modules/brand-crm/ticketParts.routes.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -30,8 +37,8 @@ import { claimRouter as serviceProviderClaimRouter } from './modules/service-pro
 import { inventoryRouter } from './modules/service-provider/inventory.routes.js';
 import { earningsRouter } from './modules/service-provider/earnings.routes.js';
 import { academyRouter } from './modules/service-provider/academy.routes.js';
-import { invoiceRouter } from './modules/brand-admin/invoice.routes.js';
-import { rateCardRouter } from './modules/brand-admin/rateCard.routes.js';
+import { brandBillingRouter, adminBrandBillingRouter } from './modules/brand-crm/billing.routes.js';
+import { brandRateRouter, adminBrandRateRouter, adminBillingLineRouter } from './modules/brand-crm/brandRate.routes.js';
 import { replacementApprovalRouter } from './modules/brand-admin/replacementApproval.routes.js';
 import { reverseLogisticsReturnRouter } from './modules/brand-admin/reverseLogisticsReturn.routes.js';
 import { brandCatalogRouter } from './modules/brand-admin/brandCatalog.routes.js';
@@ -44,6 +51,13 @@ import { brandInsightsRouter } from './modules/brand-admin/brandInsights.routes.
 import { brandSettingsRouter } from './modules/brand-admin/brandSettings.routes.js';
 import { brandAcademyRouter } from './modules/brand-admin/brandAcademy.routes.js';
 import { brandRouter } from './modules/super-admin/brand.routes.js';
+import { brandAccessControl } from './modules/brand-crm/brandAccess.js';
+import { warrantyPolicyRouter } from './modules/brand-crm/warrantyPolicy.routes.js';
+import { ticketCommRouter } from './modules/brand-crm/ticketComm.routes.js';
+import { brandTicketRouter } from './modules/brand-crm/brandTicket.routes.js';
+import { registrationRouter } from './modules/brand-crm/registration.routes.js';
+import { customer360Router } from './modules/brand-crm/customer360.routes.js';
+import { brandPermissionRouter } from './modules/brand-crm/brandPermission.routes.js';
 import { brandAdminRouter } from './modules/super-admin/brandAdmin.routes.js';
 import { cityRouter } from './modules/super-admin/city.routes.js';
 import { asmRouter } from './modules/super-admin/asm.routes.js';
@@ -123,6 +137,7 @@ export function createApp() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.use(requestLogger);
+  app.use(auditRequestContext);
 
   // Generous global ceiling; auth.routes.js applies a tighter one on top for its
   // brute-force-sensitive endpoints (login, OTP). Skipped in NODE_ENV=test for the
@@ -151,7 +166,11 @@ export function createApp() {
   }
 
   // Static uploads directory — serves local uploads and fallback files when Cloudinary is unconfigured or offline.
-  app.use('/uploads', express.static(LOCAL_UPLOAD_DIR));
+  app.use('/uploads', express.static(LOCAL_UPLOAD_DIR, {
+    // Uploaded media is embedded by the frontend on its own origin. Keep
+    // Helmet's stricter resource policy on API responses, but allow media.
+    setHeaders: res => res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'),
+  }));
 
   // Seamless fallback for requests sent without /api/v1 prefix (e.g. /auth/login -> /api/v1/auth/login)
   app.use((req, res, next) => {
@@ -184,8 +203,27 @@ export function createApp() {
   app.use('/api/v1/service-provider/inventory', inventoryRouter);
   app.use('/api/v1/service-provider/earnings', earningsRouter);
   app.use('/api/v1/service-provider/academy', academyRouter);
-  app.use('/api/v1/brand/invoices', invoiceRouter);
-  app.use('/api/v1/brand/rate-cards', rateCardRouter);
+  // Brand Panel access control (docs/brand-crm Phase 2): authenticates, checks
+  // brand scope and the route's permission — deny by default — before any
+  // brand router runs.
+  app.use('/api/v1/brand', ...brandAccessControl, auditMutations);
+  app.use('/api/v1/intake', intakeRouter);
+  app.use('/api/v1/brand/api-keys', apiKeyRouter());
+  app.use('/api/v1/super-admin/api-keys', apiKeyRouter({ platform: true }));
+  app.use('/api/v1/brand/audit-logs', brandAuditRouter);
+  app.use('/api/v1/brand/customers', customer360Router);
+  app.use('/api/v1/brand', ticketPartsRouter);
+  app.use('/api/v1/brand', ticketCommRouter);
+  app.use('/api/v1/brand/tickets', registrationRouter);
+  app.use('/api/v1/brand/tickets',brandTicketRouter);
+  app.use('/api/v1/brand/warranty-policies', warrantyPolicyRouter);
+  app.use('/api/v1/brand/permissions', brandPermissionRouter);
+  app.use('/api/v1/brand/reports', brandReportsRouter);
+  app.use('/api/v1/brand/billing', brandBillingRouter);
+  app.use('/api/v1/super-admin/brand-billing', adminBrandBillingRouter);
+  app.use('/api/v1/brand/rates', brandRateRouter);
+  app.use('/api/v1/super-admin/brand-rates', adminBrandRateRouter);
+  app.use('/api/v1/super-admin/billing-lines', adminBillingLineRouter);
   app.use('/api/v1/brand/replacement-approvals', replacementApprovalRouter);
   app.use('/api/v1/brand/returns', reverseLogisticsReturnRouter);
   app.use('/api/v1/brand/catalog', brandCatalogRouter);

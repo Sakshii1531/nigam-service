@@ -139,7 +139,7 @@ function reportError(err, { method, silentError }) {
   window.dispatchEvent(new CustomEvent('api:error', { detail: { message: err.message, status: err.status } }));
 }
 
-async function rawRequest(path, { method = 'GET', body, accessToken, envelope = false } = {}) {
+async function rawRequest(path, { method = 'GET', body, accessToken, envelope = false, responseType = 'json' } = {}) {
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
 
   let res;
@@ -160,6 +160,8 @@ async function rawRequest(path, { method = 'GET', body, accessToken, envelope = 
   } catch {
     throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.');
   }
+
+  if (res.ok && responseType === 'text') return res.text();
 
   let json;
   try {
@@ -207,12 +209,13 @@ export async function apiRequest(
     accessToken: explicitToken, 
     portal: explicitPortal, 
     envelope = false, 
+    responseType = 'json',
     silentError = false 
   } = {}
 ) {
   if (!auth) {
     try {
-      return await rawRequest(path, { method, body, envelope });
+      return await rawRequest(path, { method, body, envelope, responseType });
     } catch (err) {
       reportError(err, { method, silentError });
       throw err;
@@ -223,12 +226,12 @@ export async function apiRequest(
   const accessToken = explicitToken || getStoredTokens(portal).accessToken;
 
   try {
-    return await rawRequest(path, { method, body, accessToken, envelope });
+    return await rawRequest(path, { method, body, accessToken, envelope, responseType });
   } catch (err) {
     if (err instanceof ApiError && err.status === 401 && accessToken) {
       try {
         const refreshed = await refreshAccessToken(portal);
-        return await rawRequest(path, { method, body, accessToken: refreshed.accessToken, envelope });
+        return await rawRequest(path, { method, body, accessToken: refreshed.accessToken, envelope, responseType });
       } catch (refreshErr) {
         if (refreshErr instanceof ApiError && refreshErr.status === 401) {
           clearTokens(portal);
@@ -243,6 +246,54 @@ export async function apiRequest(
       }
     }
     reportError(err, { method, silentError });
+    throw err;
+  }
+}
+
+/** Authenticated file download, with the same portal/token refresh as JSON calls. */
+export async function apiDownload(path) {
+  const portal = getCurrentPortal();
+  let token = getStoredTokens(portal).accessToken;
+  const request = () => fetch(`${BASE_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  let response;
+  try {
+    response = await request();
+    if (response.status === 401 && token) {
+      token = (await refreshAccessToken(portal)).accessToken;
+      response = await request();
+    }
+    if (!response.ok) {
+      const json = await response.json();
+      throw new ApiError(response.status, json?.error?.message || 'Download failed', json?.error?.details);
+    }
+    return await response.blob();
+  } catch (err) {
+    const error = err instanceof ApiError ? err : new ApiError(0, 'Cannot download the file. Check your connection');
+    reportError(error, { method: 'GET' });
+    throw error;
+  }
+}
+
+/** Multipart upload with real byte progress and the portal's refresh path. */
+export async function apiUpload(path, body, onProgress = () => {}) {
+  const portal = getCurrentPortal();
+  const send = token => new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${BASE_URL}${path}`);
+    if(token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = e => { if(e.lengthComputable) onProgress(Math.round(e.loaded/e.total*100)); };
+    xhr.onerror = () => reject(new ApiError(0, 'Cannot upload the file. Check your connection.'));
+    xhr.onload = () => {
+      let json;
+      try {json=JSON.parse(xhr.responseText);} catch {reject(new ApiError(xhr.status,'Malformed upload response'));return;}
+      if(xhr.status<200||xhr.status>=300) reject(new ApiError(xhr.status,json?.error?.message||'Upload failed',json?.error?.details));
+      else resolve(json.data);
+    };
+    xhr.send(body);
+  });
+  const token=getStoredTokens(portal).accessToken;
+  try {return await send(token);} catch(err) {
+    if(err.status===401&&token) return send((await refreshAccessToken(portal)).accessToken);
     throw err;
   }
 }

@@ -14,6 +14,7 @@ import { signAccessToken } from '../src/modules/auth/tokens.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
+import { assignTemplateRole } from '../src/modules/brand-crm/roleTemplates.service.js';
 
 const TEST_DB_URI = testDbUri('reviews');
 
@@ -38,6 +39,7 @@ async function createServiceProvider() {
 }
 async function createBrandAdmin(brand) {
   const user = await User.create({ role: ROLES.BRAND_ADMIN, email: `ba-${nextPhone()}@test.local`, name: 'BA', brand: brand._id, passwordHash: await hashPassword('x') });
+  await assignTemplateRole(user._id, brand._id);
   return { user, token: tokenFor(user) };
 }
 async function createSuperAdmin() {

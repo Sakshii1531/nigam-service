@@ -39,7 +39,9 @@ async function clearDb() {
   const Escalation = mongoose.model('Escalation');
   const AuditLog = mongoose.model('AuditLog');
   const LiveTracking = mongoose.model('LiveTracking');
-  const Invoice = mongoose.model('Invoice');
+  const BrandInvoice = mongoose.model('BrandInvoice');
+  const BrandPayment = mongoose.model('BrandPayment');
+  const BillingLine = mongoose.model('BillingLine');
   const ReplacementApproval = mongoose.model('ReplacementApproval');
   const ReverseLogisticsReturn = mongoose.model('ReverseLogisticsReturn');
   const Otp = mongoose.model('Otp');
@@ -99,7 +101,9 @@ async function clearDb() {
   await Escalation.deleteMany({});
   await AuditLog.deleteMany({});
   await LiveTracking.deleteMany({});
-  await Invoice.deleteMany({});
+  await BrandInvoice.deleteMany({});
+  await BrandPayment.deleteMany({});
+  await BillingLine.deleteMany({});
   await ReplacementApproval.deleteMany({});
   await ReverseLogisticsReturn.deleteMany({});
 

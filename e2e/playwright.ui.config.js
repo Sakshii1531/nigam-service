@@ -27,7 +27,6 @@ export default defineConfig({
   use: { baseURL: `http://localhost:${UI_PORT}` },
   webServer: [
     {
-      command: 'node ../backend/src/server.js',
       command: 'node src/server.js',
       cwd: '../backend',
       url: `${API_ORIGIN}/api/v1/health`,
@@ -40,16 +39,16 @@ export default defineConfig({
         JWT_ACCESS_SECRET: 'ui-access-secret',
         JWT_REFRESH_SECRET: 'ui-refresh-secret',
         OTP_PROVIDER: 'test',
-      // Keep a developer's real .env credentials out of the test server — the
-      // suite must not upload to their Cloudinary or send real push/WhatsApp.
-      CLOUDINARY_CLOUD_NAME: '',
-      CLOUDINARY_API_KEY: '',
-      CLOUDINARY_API_SECRET: '',
-      FCM_SERVICE_ACCOUNT_JSON: '',
-      TWILIO_ACCOUNT_SID: '',
-      TWILIO_AUTH_TOKEN: '',
-      TWILIO_WHATSAPP_FROM: '',
-      TWILIO_VOICE_NUMBER: '',
+        // Keep a developer's real .env credentials out of the test server — the
+        // suite must not upload to their Cloudinary or send real push/WhatsApp.
+        CLOUDINARY_CLOUD_NAME: '',
+        CLOUDINARY_API_KEY: '',
+        CLOUDINARY_API_SECRET: '',
+        FCM_SERVICE_ACCOUNT_JSON: '',
+        TWILIO_ACCOUNT_SID: '',
+        TWILIO_AUTH_TOKEN: '',
+        TWILIO_WHATSAPP_FROM: '',
+        TWILIO_VOICE_NUMBER: '',
         CORS_ORIGINS: `http://localhost:${UI_PORT}`,
       },
     },

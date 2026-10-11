@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireBrandPermission } from '../brand-crm/brandPermission.middleware.js';
 import { z } from 'zod';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole, requireBrandScope } from '../../middleware/auth.js';
@@ -64,12 +65,13 @@ exchangeRouter.post('/requests', validate(createExchangeRequestSchema), async (r
 exchangeRouter.get(
   '/requests/brand',
   requireBrandScope,
+  requireBrandPermission('operations:view'),
   validate(brandListQuerySchema, 'query'),
   async (req, res, next) => {
     try {
-      const brand = await Brand.findById(req.user.brand).select('name').lean();
+      const brand = await Brand.findById(req.user.brand).select('_id').lean();
       if (!brand) throw new ApiError(404, 'Brand not found');
-      const { items, meta } = await exchangeService.listExchangeRequestsForBrand(brand.name, req.query);
+      const { items, meta } = await exchangeService.listExchangeRequestsForBrand(brand._id, req.query);
       ok(res, items, meta);
     } catch (err) {
       next(err);

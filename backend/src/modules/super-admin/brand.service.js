@@ -1,9 +1,16 @@
 import { Brand } from './brand.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { logAudit } from '../shared/auditLog.js';
+import { ensureBrandRoleTemplates } from '../brand-crm/roleTemplates.service.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { Review } from '../../modules/reviews/review.model.js';
 import { Job } from '../service-provider/job.model.js';
+import { WarrantyPolicy } from '../brand-crm/warrantyPolicy.model.js';
+import { BrandRate } from '../brand-crm/brandRate.model.js';
+import { Role } from '../auth/role.model.js';
+import { User } from '../auth/user.model.js';
+import { PlatformSettings } from './platformSettings.model.js';
+import { SUPER_ADMIN_TEMPLATE } from '../brand-crm/permissions.js';
 
 export async function listBrands() {
   return Brand.find().sort({ name: 1 });
@@ -19,10 +26,76 @@ export async function getBrand(id) {
   return findOr404(id);
 }
 
+/** Configuration required before a brand can safely receive production work. */
+export async function getBrandReadiness(id) {
+  const brand = await findOr404(id);
+  const now = new Date();
+  const coverageIds = (brand.coverage || []).map(String);
+  const [activePolicies, activeRates, ownerRole, platformSettings] = await Promise.all([
+    WarrantyPolicy.countDocuments({
+      brand: brand._id,
+      isActive: true,
+      $and: [
+        { $or: [{ effectiveFrom: null }, { effectiveFrom: { $lte: now } }] },
+        { $or: [{ effectiveTo: null }, { effectiveTo: { $gt: now } }] },
+      ],
+    }),
+    BrandRate.find({
+      brand: brand._id,
+      isActive: true,
+      category: { $in: brand.coverage || [] },
+      effectiveFrom: { $lte: now },
+      $or: [{ effectiveTo: null }, { effectiveTo: { $gt: now } }],
+    }).select('category').lean(),
+    Role.findOne({ brand: brand._id, scope: 'brand', template: SUPER_ADMIN_TEMPLATE }).select('_id').lean(),
+    PlatformSettings.findOne().select('warrantySla').lean(),
+  ]);
+  const ownerCount = ownerRole
+    ? await User.countDocuments({
+      brand: brand._id,
+      role: 'brand_admin',
+      status: 'Active',
+      assignedRoles: ownerRole._id,
+    })
+    : 0;
+  const ratedCategories = new Set(activeRates.map((row) => String(row.category)));
+  const missingRateCategories = coverageIds.filter((categoryId) => !ratedCategories.has(categoryId));
+  const brandSla = brand.warrantySla?.toObject?.() || brand.warrantySla || {};
+  const platformSla = platformSettings?.warrantySla || new PlatformSettings().warrantySla;
+  const slaKeys = ['responseHours', 'approvalHours', 'assignmentHours', 'visitHours', 'resolutionHours'];
+  const hasSla = slaKeys.every((key) => brandSla[key] != null || platformSla[key] != null);
+  const slaSource = slaKeys.every((key) => brandSla[key] != null) ? 'brand' : 'brand + platform defaults';
+
+  const checks = [
+    { key: 'ticketPrefix', label: 'Ticket prefix', complete: Boolean(brand.ticketPrefix), detail: brand.ticketPrefix || 'Missing' },
+    { key: 'coverage', label: 'Product coverage', complete: coverageIds.length > 0, detail: coverageIds.length ? `${coverageIds.length} categories` : 'No categories selected' },
+    { key: 'warrantyPolicy', label: 'Active warranty policy', complete: activePolicies > 0, detail: `${activePolicies} active` },
+    { key: 'sla', label: 'Warranty SLA', complete: hasSla, detail: hasSla ? slaSource : 'Brand and platform defaults are incomplete' },
+    {
+      key: 'rates',
+      label: 'Rates for covered categories',
+      complete: coverageIds.length > 0 && missingRateCategories.length === 0,
+      detail: coverageIds.length ? `${ratedCategories.size}/${coverageIds.length} categories configured` : 'Coverage is required first',
+      missingCategoryIds: missingRateCategories,
+    },
+    { key: 'billingProfile', label: 'Billing GSTIN', complete: Boolean(brand.billing?.gstin?.trim()), detail: brand.billing?.gstin || 'Missing' },
+    { key: 'brandOwner', label: 'Active Brand Super Admin', complete: ownerCount > 0, detail: `${ownerCount} active` },
+    { key: 'warrantyEnabled', label: 'Warranty intake enabled', complete: brand.warrantyEnabled === true, detail: brand.warrantyEnabled ? 'Enabled' : 'Disabled' },
+  ];
+  return {
+    brand: { id: brand.id, name: brand.name },
+    ready: checks.every((check) => check.complete),
+    checks,
+    missing: checks.filter((check) => !check.complete).map((check) => check.key),
+  };
+}
+
 export async function createBrand(data, actingUserId) {
   const existing = await Brand.findOne({ name: data.name });
   if (existing) throw new ApiError(409, `Brand "${data.name}" already exists`);
   const brand = await Brand.create(data);
+  // Every brand starts with the nine template roles (docs/brand-crm Phase 2).
+  await ensureBrandRoleTemplates(brand._id);
   await logAudit({ user: actingUserId, action: `Created brand "${brand.name}"`, type: 'System' });
   return brand;
 }

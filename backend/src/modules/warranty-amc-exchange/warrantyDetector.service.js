@@ -3,7 +3,7 @@ import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
 import { AMCSubscription } from './amcSubscription.model.js';
 import { ExtendedWarrantyOrder } from './extendedWarrantyOrder.model.js';
 import { computeWarrantyStatus } from '../shared/warrantyEngine.js';
-import { brandWarrantyMonths, escapeRegex } from '../shared/brandWarranty.js';
+import { brandWarrantyMonths } from '../shared/brandWarranty.js';
 
 /**
  * Automatically detects the warranty/AMC/Extended-Warranty status for a booking/complaint.
@@ -32,19 +32,24 @@ export async function detectWarrantyForAppliance({
   applianceId,
 }) {
   let appliance = null;
+  let brandDoc = brandName
+    ? await Brand.findOne({ name: String(brandName).trim() }).collation({ locale: 'en', strength: 2 })
+    : null;
 
   // 1. Resolve OwnedAppliance
   if (applianceId) {
     appliance = await OwnedAppliance.findById(applianceId);
   } else if (serialNo) {
     appliance = await OwnedAppliance.findOne({ user: userId, serialNumber: serialNo });
-  } else if (brandName && category) {
+  } else if (brandDoc && category) {
     appliance = await OwnedAppliance.findOne({
       user: userId,
       category,
-      brand: new RegExp(`^${escapeRegex(brandName)}$`, 'i'),
+      brandRef: brandDoc._id,
     });
   }
+
+  if (!brandDoc && appliance?.brandRef) brandDoc = await Brand.findById(appliance.brandRef);
 
   // Use values from the appliance if it exists
   const resolvedBrand = brandName || appliance?.brand;
@@ -62,10 +67,9 @@ export async function detectWarrantyForAppliance({
     amcQuery.appliance = appliance._id;
     amcSubscription = await AMCSubscription.findOne(amcQuery).populate('plan');
   }
-  if (!amcSubscription && resolvedBrand) {
-    // Fall back to brand/category-matched subscription
-    const brandAmcQuery = { ...amcQuery, brand: new RegExp(`^${escapeRegex(resolvedBrand)}$`, 'i') };
-    amcSubscription = await AMCSubscription.findOne(brandAmcQuery).populate('plan');
+  if (!amcSubscription && brandDoc) {
+    delete amcQuery.appliance;
+    amcSubscription = await AMCSubscription.findOne({ ...amcQuery, brandRef: brandDoc._id }).populate('plan');
   }
 
   // 3. Look up active Extended Warranty order
@@ -80,19 +84,12 @@ export async function detectWarrantyForAppliance({
     ewQuery.appliance = appliance._id;
     extendedWarrantyOrder = await ExtendedWarrantyOrder.findOne(ewQuery);
   }
-  if (!extendedWarrantyOrder && resolvedBrand) {
-    // Fall back to brand-matched order
-    const brandEwQuery = { ...ewQuery, brand: new RegExp(`^${escapeRegex(resolvedBrand)}$`, 'i') };
-    extendedWarrantyOrder = await ExtendedWarrantyOrder.findOne(brandEwQuery);
+  if (!extendedWarrantyOrder && brandDoc) {
+    delete ewQuery.appliance;
+    extendedWarrantyOrder = await ExtendedWarrantyOrder.findOne({ ...ewQuery, brandRef: brandDoc._id });
   }
 
-  // 4. Resolve Brand ObjectId
-  let brandDoc = null;
-  if (resolvedBrand) {
-    brandDoc = await Brand.findOne({ name: new RegExp(`^${escapeRegex(resolvedBrand)}$`, 'i') });
-  }
-
-  // 5. Compute status
+  // 4. Compute status
   // The brand's own warranty length — not a flat 12 months for every brand.
   const warrantyStatus = computeWarrantyStatus({
     purchaseDate: resolvedPurchaseDate,
@@ -102,7 +99,7 @@ export async function detectWarrantyForAppliance({
     extendedWarrantyValidTill: extendedWarrantyOrder?.validTill,
   });
 
-  // 6. Map to service provider job type
+  // 5. Map to service provider job type
   let jobType = 'NCC Paid Service';
   if (warrantyStatus === 'Extended Warranty') jobType = 'NCC Extended Warranty';
   else if (warrantyStatus === 'AMC') jobType = 'AMC Visit';

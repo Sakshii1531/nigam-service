@@ -6,6 +6,7 @@ import { ExchangeBaseValue } from './exchangeBaseValue.model.js';
 import { computeExchangeValuation } from './exchangeValuation.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { Brand } from '../super-admin/brand.model.js';
 
 export async function getQuestionSet(category) {
   const set = await ExchangeQuestionSet.findOne({ category });
@@ -41,11 +42,13 @@ export async function valuate({ category, baseValue, answers, campaignId }) {
  * recomputed from a possibly-since-changed question set (BACKEND_CONTEXT.md §3.9). */
 export async function createExchangeRequest(userId, { category, brand, model, condition, answers, baseValue, campaignId }) {
   const valuation = await valuate({ category, baseValue, answers, campaignId });
+  const brandDoc = await Brand.findOne({ name: brand }).collation({ locale: 'en', strength: 2 }).select('_id').lean();
 
   return ExchangeRequest.create({
     user: userId,
     category,
     brand,
+    brandRef: brandDoc?._id || null,
     model,
     condition,
     answers,
@@ -81,15 +84,11 @@ export async function listExchangeRequestsCustomer(userId, { status } = {}) {
 /**
  * Trade-ins offered against a given brand's appliances.
  *
- * ExchangeRequest.brand is a free-text String (the label the customer picked
- * during valuation), not a Brand ref — so this matches on the brand's name,
- * case-insensitively and anchored so "LG" doesn't also pull in "LG Electronics
- * Spares". Tightening this to a real ref is the durable fix; until then a brand
- * renamed in the Brand collection stops matching its historical trade-ins.
+ * ExchangeRequest retains the customer's display label, but tenant access is
+ * joined only through its immutable Brand ObjectId.
  */
-export async function listExchangeRequestsForBrand(brandName, { status, page, limit, sort } = {}) {
-  const escaped = brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const query = { brand: new RegExp(`^${escaped}$`, 'i') };
+export async function listExchangeRequestsForBrand(brandId, { status, page, limit, sort } = {}) {
+  const query = { brandRef: brandId };
   if (status) query.status = status;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });

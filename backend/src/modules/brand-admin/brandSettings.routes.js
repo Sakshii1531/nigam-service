@@ -1,3 +1,4 @@
+import { getSlaSettings, updateSlaSettings, getMatrix, updateMatrix, slaSchema, matrixSchema } from '../brand-crm/slaSettings.service.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
@@ -23,3 +24,15 @@ brandSettingsRouter.put('/', validate(updateBrandSettingsSchema), async (req, re
     next(err);
   }
 });
+
+for (const [path, schema, read, write] of [
+  ['/sla', slaSchema, getSlaSettings, updateSlaSettings],
+  ['/escalation-matrix', matrixSchema, getMatrix, updateMatrix],
+]) {
+  brandSettingsRouter.get(path, async (req, res, next) => {
+    try { ok(res, await read(req.user.brand)); } catch (e) { next(e); }
+  });
+  brandSettingsRouter.put(path, validate(schema), async (req, res, next) => {
+    try { ok(res, await write(req.user, req.body)); } catch (e) { next(e); }
+  });
+}

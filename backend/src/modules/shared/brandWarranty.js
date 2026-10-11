@@ -15,10 +15,12 @@ export async function brandWarrantyMonths(brandName) {
   const name = String(brandName || '').trim();
   if (!name) return DEFAULT_BRAND_WARRANTY_MONTHS;
   const [partner, catalogue] = await Promise.all([
-    Brand.findOne({ name: new RegExp(`^${escapeRegex(name)}$`, 'i') }).select('warrantyMonths').lean(),
+    Brand.findOne({ name }).collation({ locale: 'en', strength: 2 }).select('warrantyMonths').lean(),
     CatalogueBrand.findOne({ nameKey: name.toLowerCase() }).select('warrantyMonths').lean(),
   ]);
   return partner?.warrantyMonths || catalogue?.warrantyMonths || DEFAULT_BRAND_WARRANTY_MONTHS;
 }
 
+// General text-search helper retained for ticket/customer filters. Tenant joins
+// use ObjectIds and do not use this helper.
 export { escapeRegex };

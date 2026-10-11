@@ -1,4 +1,6 @@
+import { billingSweep } from './modules/brand-crm/billing.service.js';
 import http from 'node:http';
+import { runCallbackSweep } from './modules/brand-crm/ticketComm.service.js';
 import { createApp } from './app.js';
 import { connectDB, ensureIndexes } from './config/db.js';
 import { registerAllModels } from './config/registerModels.js';
@@ -102,7 +104,22 @@ async function main() {
   };
   const webhookTimer = setInterval(runWarrantyWebhooks, 60 * 1000);
 
+  let callbacksRunning=false;
+  const callbackTimer=setInterval(async()=>{if(callbacksRunning)return;callbacksRunning=true;try{await runCallbackSweep();}catch(e){console.warn('[callbacks] sweep failed:',e.message);}finally{callbacksRunning=false;}},60000);
+
+  let billingRunning = false;
+  const runBillingSweep = async () => {
+    if (billingRunning) return;
+    billingRunning = true;
+    try { await billingSweep(); } catch (err) { console.warn('[brand-billing] sweep failed:', err.message); }
+    finally { billingRunning = false; }
+  };
+  runBillingSweep();
+  const billingTimer = setInterval(runBillingSweep, 60 * 60 * 1000);
+
   const shutdown = (signal) => {
+    clearInterval(billingTimer);
+    clearInterval(callbackTimer);
     console.log(`[server] ${signal} received, shutting down`);
     clearInterval(sweepTimer);
     clearInterval(warrantyTimer);

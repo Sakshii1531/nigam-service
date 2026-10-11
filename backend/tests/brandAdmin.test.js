@@ -1,3 +1,5 @@
+import { Category } from '../src/modules/catalog/category.model.js';
+import { WarrantyPolicy } from '../src/modules/brand-crm/warrantyPolicy.model.js';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
 import mongoose from 'mongoose';
@@ -11,8 +13,12 @@ import { ServiceProvider } from '../src/modules/service-provider/serviceProvider
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { OwnedAppliance } from '../src/modules/service-requests/ownedAppliance.model.js';
 import { ServiceRequest } from '../src/modules/service-requests/serviceRequest.model.js';
-import { Invoice } from '../src/modules/brand-admin/invoice.model.js';
-import { RateCard } from '../src/modules/brand-admin/rateCard.model.js';
+import { BrandInvoice } from '../src/modules/brand-crm/brandInvoice.model.js';
+async function seedInvoice(data) {
+  const now = new Date();
+  return BrandInvoice.create({ brand: data.brand, periodFrom: new Date(now.getTime()-86400000), periodTo: now, subtotal: data.total, gstAmount: 0, total: data.total, paidAmount: data.status === 'Paid' ? data.total : 0, status: data.status === 'Paid' ? 'paid' : data.status === 'draft' ? 'draft' : 'issued', issuedAt: now, dueDate: new Date(now.getTime()+30*86400000) });
+}
+import { BrandRate } from '../src/modules/brand-crm/brandRate.model.js';
 import { ReplacementApproval } from '../src/modules/brand-admin/replacementApproval.model.js';
 import { ReverseLogisticsReturn } from '../src/modules/brand-admin/reverseLogisticsReturn.model.js';
 import { MasterService } from '../src/modules/brand-admin/masterService.model.js';
@@ -39,6 +45,8 @@ import { Notification } from '../src/modules/notifications/notification.model.js
 import { ROLES } from '../src/config/constants.js';
 import { testDbUri } from './helpers/testDb.js';
 import { readOtpCode } from './helpers/otp.js';
+import { ensureBrandRoleTemplates } from '../src/modules/brand-crm/roleTemplates.service.js';
+import { SUPER_ADMIN_TEMPLATE } from '../src/modules/brand-crm/permissions.js';
 
 const TEST_DB_URI = testDbUri('brandAdmin');
 
@@ -63,8 +71,10 @@ async function loginAndVerify({ role, identifier, password }) {
 /** Each call creates a brand-new Brand + its own Brand Admin role + a User under
  * it — the "two tenants" isolation pattern this whole file exists to verify. */
 async function seedBrandWithAdmin(brandName) {
-  const brand = await Brand.create({ name: brandName, category: 'Appliances', status: 'Active' });
-  const role = await Role.create({ name: 'Brand Admin', scope: 'brand', brand: brand._id, permissions: [] });
+  const category=await Category.findOneAndUpdate({key:'AC'},{$set:{name:'Air Conditioner'}},{upsert:true,new:true});
+  const brand = await Brand.create({ name: brandName, category: 'Appliances', status: 'Active',coverage:[category._id] });
+  // The brand's owner holds Brand Super Admin (docs/brand-crm Phase 2).
+  const role = (await ensureBrandRoleTemplates(brand._id))[SUPER_ADMIN_TEMPLATE];
   const email = nextEmail();
   const password = 'password123';
   await User.create({
@@ -131,8 +141,8 @@ beforeEach(async () => {
     Brand.deleteMany({}),
     OwnedAppliance.deleteMany({}),
     ServiceRequest.deleteMany({}),
-    Invoice.deleteMany({}),
-    RateCard.deleteMany({}),
+    BrandInvoice.deleteMany({}),
+    BrandRate.deleteMany({}),
     ReplacementApproval.deleteMany({}),
     ReverseLogisticsReturn.deleteMany({}),
     MasterService.deleteMany({}),
@@ -165,7 +175,8 @@ describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
     const serviceProvider = await seedServiceProvider();
 
     const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
-    const invoiceA = await Invoice.create({
+    srA.warrantyClaim=new mongoose.Types.ObjectId();await srA.save();
+    const invoiceA = await seedInvoice({
       brand: brandA.brand._id,
       serviceRequest: srA._id,
       customer: customer._id,
@@ -177,13 +188,13 @@ describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
     // Brand A sees its own data.
     const listA = await request(app).get('/api/v1/service-requests').set('Authorization', `Bearer ${brandA.token}`).expect(200);
     expect(listA.body.data).toHaveLength(1);
-    const invListA = await request(app).get('/api/v1/brand/invoices').set('Authorization', `Bearer ${brandA.token}`).expect(200);
+    const invListA = await request(app).get('/api/v1/brand/billing/invoices').set('Authorization', `Bearer ${brandA.token}`).expect(200);
     expect(invListA.body.data).toHaveLength(1);
 
     // Brand B sees nothing of Brand A's.
     const listB = await request(app).get('/api/v1/service-requests').set('Authorization', `Bearer ${brandB.token}`).expect(200);
     expect(listB.body.data).toHaveLength(0);
-    const invListB = await request(app).get('/api/v1/brand/invoices').set('Authorization', `Bearer ${brandB.token}`).expect(200);
+    const invListB = await request(app).get('/api/v1/brand/billing/invoices').set('Authorization', `Bearer ${brandB.token}`).expect(200);
     expect(invListB.body.data).toHaveLength(0);
 
     // Direct-by-id access is forbidden, not just filtered out of lists.
@@ -193,7 +204,7 @@ describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
       .set('Authorization', `Bearer ${brandB.token}`)
       .send({ status: 'Engineer Accepted' })
       .expect(403);
-    await request(app).get(`/api/v1/brand/invoices/${invoiceA.id}`).set('Authorization', `Bearer ${brandB.token}`).expect(403);
+    await request(app).get(`/api/v1/brand/billing/invoices/${invoiceA.id}`).set('Authorization', `Bearer ${brandB.token}`).expect(404);
 
     // And Brand A can act on its own.
     await request(app)
@@ -208,9 +219,9 @@ describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
     const brandB = await seedBrandWithAdmin('Brand B');
 
     await request(app)
-      .put('/api/v1/brand/rate-cards')
+      .post('/api/v1/brand/rates')
       .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ category: 'AC', serviceType: 'Repair', laborRate: 499 })
+      .send({ category: String(brandA.brand.coverage[0]), serviceType: 'repair', brandRate: 499 })
       .expect(200);
     await request(app)
       .post('/api/v1/brand/teams')
@@ -223,7 +234,7 @@ describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
       .send({ name: 'AC Repair', type: 'Repair', charge: 499 })
       .expect(201);
 
-    const rateCardsB = await request(app).get('/api/v1/brand/rate-cards').set('Authorization', `Bearer ${brandB.token}`).expect(200);
+    const rateCardsB = await request(app).get('/api/v1/brand/rates').set('Authorization', `Bearer ${brandB.token}`).expect(200);
     expect(rateCardsB.body.data).toHaveLength(0);
     const teamsB = await request(app).get('/api/v1/brand/teams').set('Authorization', `Bearer ${brandB.token}`).expect(200);
     expect(teamsB.body.data).toHaveLength(0);
@@ -236,74 +247,39 @@ describe('cross-tenant isolation — the Phase 7 exit criterion', () => {
   });
 
   it('rejects a request with no Authorization header, and a non-brand-admin role', async () => {
-    await request(app).get('/api/v1/brand/invoices').expect(401);
+    await request(app).get('/api/v1/brand/billing/invoices').expect(401);
 
     const customer = await seedCustomer();
     const token = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: customer.phone, password: 'password123' });
-    await request(app).get('/api/v1/brand/invoices').set('Authorization', `Bearer ${token}`).expect(403);
+    await request(app).get('/api/v1/brand/billing/invoices').set('Authorization', `Bearer ${token}`).expect(403);
   });
 });
 
-describe('invoices', () => {
-  it('computes total server-side and rejects an invoice for another brand\'s service request', async () => {
-    const brandA = await seedBrandWithAdmin('Brand A');
-    const brandB = await seedBrandWithAdmin('Brand B');
-    const customer = await seedCustomer();
-    const serviceProvider = await seedServiceProvider();
-    const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
-
-    const res = await request(app)
-      .post('/api/v1/brand/invoices')
-      .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ serviceRequest: srA.id, customer: customer.id, serviceProvider: serviceProvider.id, serviceCharge: 500, partCharge: 100, gst: 108 })
-      .expect(201);
-    expect(res.body.data.total).toBe(708);
-
-    await request(app)
-      .post('/api/v1/brand/invoices')
-      .set('Authorization', `Bearer ${brandB.token}`)
-      .send({ serviceRequest: srA.id, customer: customer.id, serviceCharge: 100 })
-      .expect(403);
-  });
-
-  it('updates invoice status', async () => {
-    const brandA = await seedBrandWithAdmin('Brand A');
-    const customer = await seedCustomer();
-    const serviceProvider = await seedServiceProvider();
-    const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
-
-    const createRes = await request(app)
-      .post('/api/v1/brand/invoices')
-      .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ serviceRequest: srA.id, customer: customer.id, serviceCharge: 500 })
-      .expect(201);
-
-    const updateRes = await request(app)
-      .patch(`/api/v1/brand/invoices/${createRes.body.data.id}/status`)
-      .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ status: 'Paid' })
-      .expect(200);
-    expect(updateRes.body.data.status).toBe('Paid');
+describe('retired manual invoices', () => {
+  it('rejects manual creation and arbitrary paid status updates', async () => {
+    const a = await seedBrandWithAdmin('Retired invoices');
+    await request(app).post('/api/v1/brand/invoices').set('Authorization', `Bearer ${a.token}`).send({total:1}).expect(403);
+    await request(app).patch(`/api/v1/brand/invoices/${new mongoose.Types.ObjectId()}/status`).set('Authorization', `Bearer ${a.token}`).send({status:'Paid'}).expect(403);
   });
 });
 
 describe('rate cards', () => {
-  it('upserts on (brand, category, serviceType) instead of duplicating', async () => {
+  it('edits an unused rate without duplicating', async () => {
     const brandA = await seedBrandWithAdmin('Brand A');
 
-    await request(app)
-      .put('/api/v1/brand/rate-cards')
+    const firstRes = await request(app)
+      .post('/api/v1/brand/rates')
       .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ category: 'AC', serviceType: 'Repair', laborRate: 499, partsMarkupPercent: 10 })
+      .send({ category: String(brandA.brand.coverage[0]), serviceType: 'repair', brandRate: 499 })
       .expect(200);
     const secondRes = await request(app)
-      .put('/api/v1/brand/rate-cards')
+      .patch(`/api/v1/brand/rates/${firstRes.body.data.id}`)
       .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ category: 'AC', serviceType: 'Repair', laborRate: 599 })
+      .send({ brandRate: 599 })
       .expect(200);
-    expect(secondRes.body.data.laborRate).toBe(599);
+    expect(secondRes.body.data.brandRate).toBe(599);
 
-    const list = await request(app).get('/api/v1/brand/rate-cards').set('Authorization', `Bearer ${brandA.token}`).expect(200);
+    const list = await request(app).get('/api/v1/brand/rates').set('Authorization', `Bearer ${brandA.token}`).expect(200);
     expect(list.body.data).toHaveLength(1);
   });
 });
@@ -314,6 +290,7 @@ describe('replacement approvals', () => {
     const customer = await seedCustomer();
     const serviceProvider = await seedServiceProvider();
     const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
+    srA.warrantyClaim=new mongoose.Types.ObjectId();await srA.save();
 
     const createRes = await request(app)
       .post('/api/v1/brand/replacement-approvals')
@@ -411,18 +388,32 @@ describe('teams', () => {
       .send({ name: 'Field Team A', department: 'Field Service', region: 'North' })
       .expect(201);
 
-    const addRes = await request(app)
+    // Only the brand's own users can be members (docs/brand-crm Phase 2).
+    await request(app)
       .post(`/api/v1/brand/teams/${createRes.body.data.id}/members`)
       .set('Authorization', `Bearer ${brandA.token}`)
       .send({ userId: customer.id })
+      .expect(400);
+
+    const agent = await request(app)
+      .post('/api/v1/brand/users')
+      .set('Authorization', `Bearer ${brandA.token}`)
+      .send({ name: 'Field Agent', email: nextEmail(), password: 'password123' })
+      .expect(201);
+    const agentId = agent.body.data.id;
+
+    const addRes = await request(app)
+      .post(`/api/v1/brand/teams/${createRes.body.data.id}/members`)
+      .set('Authorization', `Bearer ${brandA.token}`)
+      .send({ userId: agentId })
       .expect(200);
-    expect(addRes.body.data.members).toContain(customer.id);
+    expect(addRes.body.data.members).toContain(agentId);
 
     const removeRes = await request(app)
-      .delete(`/api/v1/brand/teams/${createRes.body.data.id}/members/${customer.id}`)
+      .delete(`/api/v1/brand/teams/${createRes.body.data.id}/members/${agentId}`)
       .set('Authorization', `Bearer ${brandA.token}`)
       .expect(200);
-    expect(removeRes.body.data.members).not.toContain(customer.id);
+    expect(removeRes.body.data.members).not.toContain(agentId);
   });
 });
 
@@ -434,10 +425,17 @@ describe('brand-scoped roles', () => {
     const res = await request(app)
       .post('/api/v1/brand/roles')
       .set('Authorization', `Bearer ${brandA.token}`)
-      .send({ name: 'Support Agent', permissionKeys: ['requests:manage'] })
+      .send({ name: 'Support Agent', permissionKeys: ['tickets:view'] })
       .expect(201);
     expect(res.body.data.permissions).toHaveLength(1);
-    expect(res.body.data.permissions[0].key).toBe('requests:manage');
+    expect(res.body.data.permissions[0].key).toBe('tickets:view');
+
+    // A platform key can never be granted by a brand (docs/brand-crm Phase 2).
+    await request(app)
+      .post('/api/v1/brand/roles')
+      .set('Authorization', `Bearer ${brandA.token}`)
+      .send({ name: 'Sneaky Role', permissionKeys: ['requests:manage'] })
+      .expect(400);
 
     await request(app)
       .post('/api/v1/brand/roles')
@@ -482,6 +480,7 @@ describe('generated documents', () => {
     const customer = await seedCustomer();
     const serviceProvider = await seedServiceProvider();
     const srA = await seedServiceRequestForBrand(brandA.brand, customer, serviceProvider);
+    srA.warrantyClaim=new mongoose.Types.ObjectId();await srA.save();
 
     const res = await request(app)
       .post('/api/v1/brand/documents')
@@ -573,8 +572,8 @@ describe('brand insights — derived read-only views', () => {
 
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].id).toBe(String(mine._id));
-    // Two requests from the same customer collapse into one row with a count.
-    expect(res.body.data[0].complaints).toBe(2);
+    // Legacy jobs establish the relationship; CRM totals count master tickets.
+    expect(res.body.data[0].totalTickets).toBe(0);
   });
 
   it('scopes serviceProvider workload to this brand, not platform-wide totals', async () => {
@@ -619,57 +618,22 @@ describe('brand insights — derived read-only views', () => {
   });
 });
 
-describe('POST /service-requests — brand-admin logs a complaint', () => {
-  it('creates a request forced onto the caller\'s own brand', async () => {
+describe('POST /service-requests — retired (docs/brand-crm Phase 1)', () => {
+  // A brand complaint is a ticket now; its ServiceRequest (the NCC job) is
+  // created only on approval. Nobody can file a ServiceRequest directly.
+  it('no longer exists for a brand admin or a customer', async () => {
     const a = await seedBrandWithAdmin('Register A');
-    const b = await seedBrandWithAdmin('Register B');
     const customer = await seedCustomer();
+    const customerToken = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: customer.phone, password: 'password123' });
 
-    const res = await request(app)
-      .post('/api/v1/service-requests')
-      .set('Authorization', `Bearer ${a.token}`)
-      // A body-supplied brand must be ignored — otherwise one brand could file
-      // requests that land on another brand's console.
-      .send({ user: String(customer._id), category: 'AC', description: 'No cooling', brand: String(b.brand._id) })
-      .expect(201);
-
-    expect(String(res.body.data.brand)).toBe(String(a.brand._id));
-    expect(res.body.data.status).toBe('New');
-
-    const listRes = await request(app)
-      .get('/api/v1/service-requests')
-      .set('Authorization', `Bearer ${b.token}`)
-      .expect(200);
-    expect(listRes.body.data).toHaveLength(0);
-  });
-
-  it('404s an unknown customer and rejects a non-customer subject', async () => {
-    const a = await seedBrandWithAdmin('Register C');
-    const serviceProviderUser = await User.findOne({ role: ROLES.SERVICE_PROVIDER });
-
-    await request(app)
-      .post('/api/v1/service-requests')
-      .set('Authorization', `Bearer ${a.token}`)
-      .send({ user: String(new mongoose.Types.ObjectId()), category: 'AC' })
-      .expect(404);
-
-    if (serviceProviderUser) {
+    for (const token of [a.token, customerToken]) {
       await request(app)
         .post('/api/v1/service-requests')
-        .set('Authorization', `Bearer ${a.token}`)
-        .send({ user: String(serviceProviderUser._id), category: 'AC' })
-        .expect(400);
+        .set('Authorization', `Bearer ${token}`)
+        .send({ user: String(customer._id), category: 'AC', description: 'No cooling' })
+        .expect(404);
     }
-  });
-
-  it('is closed to customers and serviceProviders', async () => {
-    const customer = await seedCustomer();
-    const token = await loginAndVerify({ role: ROLES.CUSTOMER, identifier: customer.phone, password: 'password123' });
-    await request(app)
-      .post('/api/v1/service-requests')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ user: String(customer._id), category: 'AC' })
-      .expect(403);
+    expect(await ServiceRequest.countDocuments({ brand: a.brand._id })).toBe(0);
   });
 });
 
@@ -720,7 +684,8 @@ describe('brand settings', () => {
       .get('/api/v1/brand/settings')
       .set('Authorization', `Bearer ${b.token}`)
       .expect(200);
-    expect(bRes.body.data.supportEmail).toBeUndefined();
+    // An unset support email reads back as '' — never brand A's.
+    expect(bRes.body.data.supportEmail).toBe('');
     expect(bRes.body.data.smsAlerts).toBe(false);
     expect(bRes.body.data.brandName).toBe('Settings B');
   });
@@ -742,7 +707,7 @@ describe('brand settings', () => {
 });
 
 describe('brand dashboard and reports', () => {
-  it('counts only this brand\'s complaints and only settled invoice value', async () => {
+  it('excludes legacy service requests and includes only issued invoice value', async () => {
     const a = await seedBrandWithAdmin('Dash A');
     const b = await seedBrandWithAdmin('Dash B');
     const customer = await seedCustomer();
@@ -751,37 +716,24 @@ describe('brand dashboard and reports', () => {
     const mine = await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
     await seedServiceRequestForBrand(b.brand, customer, serviceProvider);
 
-    await Invoice.create({ brand: a.brand._id, serviceRequest: mine._id, customer: customer._id, total: 1500, status: 'Paid' });
+    await seedInvoice({ brand: a.brand._id, serviceRequest: mine._id, customer: customer._id, total: 1500, status: 'Paid' });
     // Pending money has not moved and must not be counted as billed.
-    await Invoice.create({ brand: a.brand._id, serviceRequest: mine._id, customer: customer._id, total: 9999, status: 'Pending' });
+    await seedInvoice({ brand: a.brand._id, serviceRequest: mine._id, customer: customer._id, total: 9999, status: 'draft' });
 
     const res = await request(app)
       .get('/api/v1/brand/dashboard')
       .set('Authorization', `Bearer ${a.token}`)
       .expect(200);
 
-    expect(res.body.data.totalComplaints).toBe(1);
-    expect(res.body.data.totalInvoiceValue).toBe(1500);
+    expect(res.body.data.kpis.total.value).toBe(0);
+    expect(res.body.data.kpis.totalBilling.value).toBe(1500);
   });
 
-  it('reports by category and ranks serviceProviders by this brand\'s jobs only', async () => {
-    const a = await seedBrandWithAdmin('Dash C');
-    const b = await seedBrandWithAdmin('Dash D');
-    const customer = await seedCustomer();
-    const serviceProvider = await seedServiceProvider();
-
-    await seedServiceRequestForBrand(a.brand, customer, serviceProvider);
-    // Same service provider on another brand — must not inflate their ranking here.
-    await seedServiceRequestForBrand(b.brand, customer, serviceProvider);
-
-    const res = await request(app)
-      .get('/api/v1/brand/reports')
-      .set('Authorization', `Bearer ${a.token}`)
-      .expect(200);
-
-    expect(res.body.data.topServiceProviders).toHaveLength(1);
-    expect(res.body.data.topServiceProviders[0].total).toBe(1);
-    expect(res.body.data.requestsByCategory[0].count).toBe(1);
+  it('retires the old reports endpoint', async () => {
+    const a = await seedBrandWithAdmin('Reports retired');
+    await request(app).get('/api/v1/brand/reports').set('Authorization', `Bearer ${a.token}`).expect(403);
+    const res = await request(app).get('/api/v1/brand/reports/product').set('Authorization', `Bearer ${a.token}`).expect(200);
+    expect(res.body.data.rows).toEqual([]);
   });
 
   it('is closed without a brand-scoped token', async () => {
@@ -1038,22 +990,22 @@ describe('brand payments', () => {
     const serviceProvider = await seedServiceProvider();
     const { sr } = await seedJobFor(a.brand, customer, serviceProvider);
 
-    await Invoice.create({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 1500, status: 'Pending' });
-    await Invoice.create({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 900, status: 'Failed' });
-    await Invoice.create({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 700, status: 'Paid' });
+    await seedInvoice({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 1500, status: 'Pending' });
+    await seedInvoice({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 900, status: 'Failed' });
+    await seedInvoice({ brand: a.brand._id, serviceRequest: sr._id, customer: customer._id, total: 700, status: 'Paid' });
 
     const res = await request(app)
-      .get('/api/v1/brand/payments/dues')
+      .get('/api/v1/brand/billing/invoices')
       .set('Authorization', `Bearer ${a.token}`)
       .expect(200);
 
-    expect(res.body.data).toHaveLength(2);
-    expect(res.body.data.every((i) => i.status !== 'Paid')).toBe(true);
+    expect(res.body.data.filter(i => i.balance > 0)).toHaveLength(2);
+    expect(res.body.data.find(i => i.status === 'paid').balance).toBe(0);
   });
 
   it('returns empty for a brand with no jobs, and is closed without auth', async () => {
     const a = await seedBrandWithAdmin('Pay F');
-    for (const path of ['customer', 'payouts', 'dues']) {
+    for (const path of ['customer', 'payouts']) {
       const res = await request(app)
         .get(`/api/v1/brand/payments/${path}`)
         .set('Authorization', `Bearer ${a.token}`)
@@ -1067,6 +1019,7 @@ describe('brand payments', () => {
 describe('brand warranty lookup', () => {
   it('resolves an appliance by serial and reports it as covered', async () => {
     const { brand, token } = await seedBrandWithAdmin('Warranty Brand A');
+    await WarrantyPolicy.create({brand:brand._id,policyKey:new mongoose.Types.ObjectId(),name:'Standard',warrantyMonths:12,requireInvoice:false,requireSerial:false,coverage:{coveredServices:['repair']}});
     const customer = await User.create({
       role: ROLES.CUSTOMER, phone: '9200000801', name: 'Covered Customer', passwordHash: await hashPassword('password123'),
     });
@@ -1074,7 +1027,7 @@ describe('brand warranty lookup', () => {
     const purchased = new Date();
     purchased.setMonth(purchased.getMonth() - 1);
     await OwnedAppliance.create({
-      user: customer._id, category: 'AC', brand: brand.name, model: 'X-100', serialNumber: 'SN-ABC-123', purchaseDate: purchased,
+      user: customer._id, category: 'AC', brandRef:brand._id, brand: brand.name, model: 'X-100', serialNumber: 'SN-ABC-123', purchaseDate: purchased,
     });
 
     const res = await request(app)
@@ -1091,13 +1044,14 @@ describe('brand warranty lookup', () => {
 
   it('reports an out-of-warranty appliance rather than refusing to find it', async () => {
     const { brand, token } = await seedBrandWithAdmin('Warranty Brand B');
+    await WarrantyPolicy.create({brand:brand._id,policyKey:new mongoose.Types.ObjectId(),name:'Standard',warrantyMonths:12,requireInvoice:false,requireSerial:false,coverage:{coveredServices:['repair']}});
     const customer = await User.create({
       role: ROLES.CUSTOMER, phone: '9200000802', name: 'Expired Customer', passwordHash: await hashPassword('password123'),
     });
     const old = new Date();
     old.setFullYear(old.getFullYear() - 3);
     await OwnedAppliance.create({
-      user: customer._id, category: 'AC', brand: brand.name, serialNumber: 'SN-OLD-999', purchaseDate: old,
+      user: customer._id, category: 'AC', brandRef:brand._id, brand: brand.name, serialNumber: 'SN-OLD-999', purchaseDate: old,
     });
 
     const res = await request(app)
@@ -1116,7 +1070,7 @@ describe('brand warranty lookup', () => {
       role: ROLES.CUSTOMER, phone: '9200000803', name: 'Rival Customer', passwordHash: await hashPassword('password123'),
     });
     await OwnedAppliance.create({
-      user: customer._id, category: 'AC', brand: otherBrand.name, serialNumber: 'SN-RIVAL-1', purchaseDate: new Date(),
+      user: customer._id, category: 'AC', brandRef:otherBrand._id, brand: otherBrand.name, serialNumber: 'SN-RIVAL-1', purchaseDate: new Date(),
     });
 
     const res = await request(app)
@@ -1284,7 +1238,7 @@ describe('brand write actions actually reach the customer', () => {
 });
 
 describe('brand dashboard trend and product mix', () => {
-  it('reports real per-day counts and a category breakdown', async () => {
+  it('keeps legacy service requests out of ticket trends and product mix', async () => {
     const { brand, token } = await seedBrandWithAdmin('TrendBrand');
     const user = await seedCustomer();
 
@@ -1302,14 +1256,9 @@ describe('brand dashboard trend and product mix', () => {
 
     const { trend, byProduct } = res.body.data;
 
-    // Seven whole days, densified — a quiet day reads zero rather than vanishing.
     expect(trend).toHaveLength(7);
-    expect(trend.every((t) => typeof t.count === 'number')).toBe(true);
-    expect(trend[6].count).toBe(3);
-
-    expect(byProduct[0]).toMatchObject({ name: 'AC', value: 2 });
-    expect(byProduct[0].pct).toBeCloseTo(66.7, 0);
-    expect(byProduct.find((p) => p.name === 'Refrigerator').value).toBe(1);
+    expect(trend.every(t=>t.created===0 && t.closed===0)).toBe(true);
+    expect(byProduct).toEqual([]);
   });
 
   it("does not count another brand's requests", async () => {
@@ -1325,31 +1274,7 @@ describe('brand dashboard trend and product mix', () => {
       .expect(200);
 
     expect(res.body.data.byProduct).toHaveLength(0);
-    expect(res.body.data.trend.reduce((sum, t) => sum + t.count, 0)).toBe(0);
-  });
-});
-
-describe('brand reports monthly series', () => {
-  it('returns six real months and no change figure when there is no prior month', async () => {
-    const { brand, token } = await seedBrandWithAdmin('MonthlyBrand');
-    const user = await seedCustomer();
-    await ServiceRequest.create([
-      { user: user._id, brand: brand._id, category: 'AC', description: 'a', requestMode: 'B2C' },
-      { user: user._id, brand: brand._id, category: 'AC', description: 'b', requestMode: 'B2C' },
-    ]);
-
-    const res = await request(app)
-      .get('/api/v1/brand/reports')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    const { monthly, monthlyChangePercent } = res.body.data;
-    expect(monthly).toHaveLength(6);
-    // This month carries both requests; the five before it are real zeroes.
-    expect(monthly[5].count).toBe(2);
-    expect(monthly.slice(0, 5).every((m) => m.count === 0)).toBe(true);
-    // Nothing last month, so there is no percentage to report rather than "+15%".
-    expect(monthlyChangePercent).toBeNull();
+    expect(res.body.data.trend.reduce((sum, t) => sum + t.created, 0)).toBe(0);
   });
 });
 
@@ -1366,11 +1291,11 @@ describe('dashboard & payments figures come from the brand’s own data (Phase 1
     const jobB = await Job.create({ serviceRequest: srB.id, serviceProvider: spB._id, type: 'NCC Paid Service' });
 
     // Invoices: A paid 1000, pending 500 (recent), pending 300 raised 40 days ago (overdue).
-    const inv = (brand, sr, total, status) => Invoice.create({ brand: brand._id, serviceRequest: sr.id, customer: customer._id, total, status });
+    const inv = (brand, sr, total, status) => seedInvoice({ brand: brand._id, serviceRequest: sr.id, customer: customer._id, total, status });
     await inv(brandA.brand, srA, 1000, 'Paid');
     await inv(brandA.brand, srA, 500, 'Pending');
     const old = await inv(brandA.brand, srA, 300, 'Pending');
-    await Invoice.collection.updateOne({ _id: old._id }, { $set: { createdAt: new Date(Date.now() - 40 * 86400000) } });
+    await BrandInvoice.collection.updateOne({ _id: old._id }, { $set: { dueDate: new Date(Date.now() - 10 * 86400000) } });
     await inv(brandB.brand, srB, 9999, 'Pending');
 
     // Customer payments on A's job this month (one failed), and on B's job.
@@ -1391,32 +1316,16 @@ describe('dashboard & payments figures come from the brand’s own data (Phase 1
     return { brandA };
   }
 
-  it('payments summary: collected, paid out, outstanding and overdue — only this brand', async () => {
+  it('billing summary reports this brand’s issued values and remaining dues', async () => {
     const { brandA } = await seedMoney();
-    const res = await request(app).get('/api/v1/brand/payments/summary').set('Authorization', `Bearer ${brandA.token}`).expect(200);
-    expect(res.body.data).toEqual({
-      collectedThisMonth: 700,
-      paidOutThisMonth: 400,
-      outstandingAmount: 800,
-      outstandingCount: 2,
-      overdueAmount: 300,
-      overdueCount: 1,
-      overdueDays: 30,
-    });
+    const res = await request(app).get('/api/v1/brand/billing/summary').set('Authorization', `Bearer ${brandA.token}`).expect(200);
+    expect(res.body.data).toMatchObject({invoiceValue:1800,paid:1000,pending:800,overdue:300,overdueCount:1});
   });
 
   it('dashboard: invoice finance and parts figures — only this brand', async () => {
     const { brandA } = await seedMoney();
     const res = await request(app).get('/api/v1/brand/dashboard').set('Authorization', `Bearer ${brandA.token}`).expect(200);
-    expect(res.body.data.finance).toEqual({
-      totalInvoiceValue: 1800,
-      paidAmount: 1000,
-      pendingInvoiceValue: 800,
-      pendingCount: 2,
-      overdueAmount: 300,
-      overdueCount: 1,
-      overdueDays: 30,
-    });
-    expect(res.body.data.parts).toEqual({ inventoryOnHand: 5, inTransit: 2, focPartsApproved: 0, dispatchedToday: 3 });
+    expect(res.body.data.billing).toMatchObject({invoiceValue:1800,paid:1000,pending:800,overdue:300,overdueCount:1});
+    expect(res.body.data.parts).toEqual({awaitingApproval:0,inTransit:0,installed:0});
   });
 });

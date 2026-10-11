@@ -5,6 +5,7 @@ export const updateBrandSettingsSchema = z.object({
   supportEmail: z.string().optional(),
   supportPhone: z.string().optional(),
   website: z.string().optional(),
+  partsApprovalThreshold: z.number().min(0).max(10000000).optional(),
   autoAssignServiceProvider: z.boolean().optional(),
   requireCompletionPhoto: z.boolean().optional(),
   emailNotifications: z.boolean().optional(),

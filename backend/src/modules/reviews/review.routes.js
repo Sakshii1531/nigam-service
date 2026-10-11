@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireBrandPermission } from '../brand-crm/brandPermission.middleware.js';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireBrandScope, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
@@ -111,6 +112,7 @@ reviewRouter.get(
   '/brand',
   requireAuth,
   requireBrandScope,
+  requireBrandPermission('engagement:view'),
   validate(brandListQuerySchema, 'query'),
   async (req, res, next) => {
     try {
@@ -142,6 +144,7 @@ reviewRouter.patch(
   '/:id/respond',
   requireAuth,
   requireBrandScope,
+  requireBrandPermission('engagement:edit'),
   validate(idParamSchema, 'params'),
   validate(respondSchema),
   async (req, res, next) => {

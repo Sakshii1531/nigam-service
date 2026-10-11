@@ -10,6 +10,7 @@ const claimSchema = new mongoose.Schema(
     raisedByModel: { type: String, enum: ['User', 'ServiceProvider'], required: true },
     raisedBy: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'raisedByModel', index: true },
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', default: null },
+    brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     brand: String, // e.g. "NCC Warehouse Order", "LG Partner Warranty", "NCC EW Claim"
     claimType: { type: String, enum: ['Brand', 'Extended Warranty', 'D2C', 'Warehouse Order'], default: 'D2C' },
     item: String,

@@ -7,6 +7,7 @@ const exchangeRequestSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     category: String,
     brand: String,
+    brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     model: String,
     condition: String,
     answers: { type: Map, of: String, default: {} },

@@ -1,4 +1,6 @@
 import request from 'supertest';
+import mongoose from 'mongoose';
+import { WarrantyPolicy } from '../../src/modules/brand-crm/warrantyPolicy.model.js';
 import { ROLES } from '../../src/config/constants.js';
 import { User } from '../../src/modules/auth/user.model.js';
 import { Brand } from '../../src/modules/super-admin/brand.model.js';
@@ -7,6 +9,8 @@ import { WarrantyGroup } from '../../src/modules/partner-warranty/warrantyGroup.
 import { WarrantyIssue } from '../../src/modules/partner-warranty/warrantyIssue.model.js';
 import { hashPassword } from '../../src/modules/auth/password.js';
 import { jobFlow } from './jobFlow.js';
+import { assignTemplateRole } from '../../src/modules/brand-crm/roleTemplates.service.js';
+import { SUPER_ADMIN_TEMPLATE } from '../../src/modules/brand-crm/permissions.js';
 
 const DAY = 24 * 3600 * 1000;
 
@@ -25,7 +29,13 @@ export function partnerWarrantyKit(getApp, { phoneStart }) {
     return { user, token: await flow.loginAndVerify({ role, identifier: email }) };
   }
 
-  const brandAdmin = (brand) => staff(ROLES.BRAND_ADMIN, { brand: brand._id });
+  // A brand's owner: Brand Super Admin, every brand permission (docs/brand-crm Phase 2).
+  async function brandAdmin(brand) {
+    const email = `pw-kit-${phoneStart}-${emailSeq++}@test.local`;
+    const user = await User.create({ role: ROLES.BRAND_ADMIN, name: `brand_admin ${emailSeq}`, email, brand: brand._id, passwordHash: await hashPassword('password123') });
+    await assignTemplateRole(user._id, brand._id, SUPER_ADMIN_TEMPLATE);
+    return { user, token: await flow.loginAndVerify({ role: ROLES.BRAND_ADMIN, identifier: email }) };
+  }
   const superAdmin = () => staff(ROLES.SUPER_ADMIN);
 
   async function customer({ pincode = '452001', city = 'Indore', latitude = 22.72, longitude = 75.86 } = {}) {
@@ -58,6 +68,7 @@ export function partnerWarrantyKit(getApp, { phoneStart }) {
       { category: ac._id, name: 'Cooling Issue' },
       { category: fridge._id, name: 'Noise' },
     ]);
+    await WarrantyPolicy.create([lg,samsung].map(brand=>({brand:brand._id,policyKey:new mongoose.Types.ObjectId(),name:`${brand.name} standard`,warrantyMonths:brand.warrantyMonths??12,coverage:{coveredServices:['repair','installation','demo','preventive_maintenance','inspection'],partsCovered:true,labourCovered:true},requireInvoice:true,requireSerial:true})));
     return { ac, fridge, group, lg, samsung, cooling, fridgeNoise };
   }
 

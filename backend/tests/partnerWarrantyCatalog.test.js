@@ -18,6 +18,7 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { testDbUri } from './helpers/testDb.js';
 import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { jobFlow } from './helpers/jobFlow.js';
+import { assignTemplateRole } from '../src/modules/brand-crm/roleTemplates.service.js';
 
 const TEST_DB_URI = testDbUri('partnerWarrantyCatalog');
 
@@ -46,7 +47,8 @@ beforeEach(async () => {
 
 async function tokenFor(role, extra = {}) {
   const email = `pw-cat-${emailSeq++}@test.local`;
-  await User.create({ role, name: `${role} user`, email, passwordHash: await hashPassword('password123'), ...extra });
+  const user = await User.create({ role, name: `${role} user`, email, passwordHash: await hashPassword('password123'), ...extra });
+  if (role === ROLES.BRAND_ADMIN) await assignTemplateRole(user._id, extra.brand);
   return flow.loginAndVerify({ role, identifier: email });
 }
 const bearer = (t) => ({ Authorization: `Bearer ${t}` });

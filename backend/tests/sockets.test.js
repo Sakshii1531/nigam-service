@@ -18,6 +18,7 @@ import { signAccessToken } from '../src/modules/auth/tokens.js';
 import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { sendAdHocPush } from '../src/modules/notifications/notification.service.js';
+import { getIO } from '../src/sockets/io.js';
 import { testDbUri } from './helpers/testDb.js';
 
 const TEST_DB_URI = testDbUri('sockets');
@@ -129,6 +130,24 @@ describe('socket auth', () => {
     const socket = await connectClient(token);
     expect(socket.connected).toBe(true);
     socket.disconnect();
+  });
+});
+
+describe('brand room isolation', () => {
+  it('never delivers a Samsung claim update to an LG socket', async () => {
+    const lg = await createBrandAdmin('Socket LG');
+    const samsung = await createBrandAdmin('Socket Samsung');
+    const lgSocket = await connectClient(lg.token);
+    const samsungSocket = await connectClient(samsung.token);
+    const lgHeard = waitForEvent(lgSocket, 'claim:updated', 500);
+    const samsungHeard = waitForEvent(samsungSocket, 'claim:updated');
+
+    getIO().to(`brand:${samsung.brand.id}`).emit('claim:updated', { id: 'SAMSUNG-CLAIM' });
+
+    expect((await samsungHeard)?.id).toBe('SAMSUNG-CLAIM');
+    expect(await lgHeard).toBeNull();
+    lgSocket.disconnect();
+    samsungSocket.disconnect();
   });
 });
 

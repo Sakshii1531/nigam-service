@@ -67,6 +67,7 @@ export const ID_PREFIXES = Object.freeze({
   AMC: 'NCCAMC', // NCCAMC####
   ORDER: 'NCCO', // NCCO######
   SERVICE_REQUEST: 'SR', // SR-####
+  BRAND_INVOICE: 'BINV',
   INVOICE: 'INV', // INV-YYYY-###
   CLAIM: 'NC', // NC#####
   AMC_RECORD: 'AMC', // AMC-####
@@ -151,6 +152,7 @@ export const JOB_REVISIT_STEPS = Object.freeze([
 // reset) | 'YYYY' (resets yearly) | 'YYMMDD' (resets daily) — matches the exact formats
 // the frontend already assumes (BACKEND_CONTEXT.md §7.2).
 export const ID_SCHEMES = Object.freeze({
+  [ID_PREFIXES.BRAND_INVOICE]: { digits: 6, dateSegment: 'YYYY', separator: '-' },
   [ID_PREFIXES.BOOKING]: { digits: 4, dateSegment: 'YYMMDD', separator: '-' },
   [ID_PREFIXES.WARRANTY_TICKET]: { digits: 6, dateSegment: 'YYYY', separator: '-' },
   [ID_PREFIXES.SERVICE_JOB]: { digits: 6, dateSegment: 'YYYY', separator: '-' },
@@ -184,7 +186,7 @@ export const SERVICE_REQUEST_TRANSITIONS = Object.freeze({
   // 'New' is how a service provider's rejection returns the request to the pool so
   // the engine can offer it to somebody else.
   Assigned: ['Engineer Accepted', 'Customer NA', 'Cancelled', 'New'],
-  'Engineer Accepted': ['Visit Scheduled', 'Cancelled'],
+  'Engineer Accepted': ['Visit Scheduled', 'Reschedule', 'Cancelled'],
   'Visit Scheduled': ['Engineer Reached', 'Reschedule', 'Customer NA', 'Cancelled'],
   // 'Repair Completed' direct: on a return visit the service provider arrives with
   // the approved part and finishes the job — the diagnosis was done on the

@@ -1,4 +1,8 @@
+import { Role } from '../auth/role.model.js';
+import { Permission } from '../auth/permission.model.js';
 import { Router } from 'express';
+import { assignTemplateRole } from '../brand-crm/roleTemplates.service.js';
+import { SUPER_ADMIN_TEMPLATE } from '../brand-crm/permissions.js';
 import { z } from 'zod';
 import { validate } from '../../middleware/validate.js';
 import { ApiError } from '../../middleware/errorHandler.js';
@@ -109,10 +113,15 @@ if (isTest) {
     password: z.string().min(6),
     walletCoins: z.coerce.number().int().nonnegative().optional(), // lets commerce specs test coin redemption without a real earn flow
     brand: z.string().optional(), // brand_admin-only — links the account to a real Brand tenant, see /_dev/test-brand
+    // brand_admin-only: which role template the account gets (docs/brand-crm
+    // Phase 2). Defaults to Brand Super Admin so existing specs keep full access.
+    brandRoleTemplate: z.string().optional(),
+    platformPermissions: z.array(z.string()).optional(),
+    employeeId: z.string().optional(),
   });
   devRouter.post('/_dev/test-user', validate(testUserSchema), async (req, res, next) => {
     try {
-      const { role, phone, email, password, walletCoins, brand } = req.body;
+      const { role, phone, email, password, walletCoins, brand, brandRoleTemplate, employeeId, platformPermissions } = req.body;
       if (!phone && !email) throw new ApiError(400, 'phone or email required');
 
       await User.deleteOne({ role, ...(phone ? { phone } : {}), ...(email ? { email } : {}) });
@@ -125,7 +134,16 @@ if (isTest) {
         status: 'Active',
         walletCoins,
         brand: brand || null,
+        employeeId: employeeId || undefined,
       });
+      if (role === ROLES.BRAND_ADMIN && brand) {
+        await assignTemplateRole(user._id, brand, brandRoleTemplate || SUPER_ADMIN_TEMPLATE);
+      }
+      if (role === ROLES.SUPER_ADMIN && platformPermissions?.length) {
+        const permissions = await Permission.find({key:{$in:platformPermissions},scope:'platform'});
+        const assigned = await Role.create({name:`Test finance ${user.id}`,scope:'platform',permissions:permissions.map(p=>p._id)});
+        user.assignedRoles = [assigned._id]; await user.save();
+      }
       ok(res, { id: user.id }, {}, 201);
     } catch (err) {
       next(err);
@@ -180,10 +198,10 @@ if (isTest) {
   // Brand has no real CRUD surface yet (that's Phase 8 — super-admin domain), but
   // Phase 7's brand-admin specs need real, separate Brand tenants to prove
   // cross-tenant isolation against.
-  const testBrandSchema = z.object({ name: z.string().min(1) });
+  const testBrandSchema = z.object({ name: z.string().min(1), coverage: z.array(z.string()).optional() });
   devRouter.post('/_dev/test-brand', validate(testBrandSchema), async (req, res, next) => {
     try {
-      const brand = await Brand.create({ name: req.body.name, category: 'Appliances', status: 'Active' });
+      const brand = await Brand.create({ name: req.body.name, category: 'Appliances', status: 'Active', coverage: req.body.coverage || [] });
       ok(res, { id: brand.id }, {}, 201);
     } catch (err) {
       next(err);

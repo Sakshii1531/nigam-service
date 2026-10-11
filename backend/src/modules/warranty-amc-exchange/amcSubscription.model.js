@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { ID_PREFIXES } from '../../config/constants.js';
+import { Brand } from '../super-admin/brand.model.js';
 
 const amcSubscriptionSchema = new mongoose.Schema(
   {
@@ -8,6 +9,7 @@ const amcSubscriptionSchema = new mongoose.Schema(
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'AMCPlan', required: true },
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
     brand: String,
+    brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     model: String,
     expiryDate: Date,
     status: { type: String, enum: ['Active', 'Expiring Soon', 'Expired'], default: 'Active', index: true },
@@ -20,6 +22,13 @@ const amcSubscriptionSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+amcSubscriptionSchema.pre('validate', async function resolveBrandRef() {
+  if (this.brandRef || !this.brand) return;
+  const brand = await Brand.findOne({ name: String(this.brand).trim() })
+    .collation({ locale: 'en', strength: 2 }).select('_id').lean();
+  this.brandRef = brand?._id || null;
+});
 
 applyStandardPlugins(amcSubscriptionSchema, { prefix: ID_PREFIXES.AMC });
 

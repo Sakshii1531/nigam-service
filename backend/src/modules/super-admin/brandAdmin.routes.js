@@ -1,3 +1,4 @@
+import { mutationAudit } from '../brand-crm/auditMutations.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
@@ -8,6 +9,7 @@ import { createBrandAdminSchema, updateBrandAdminSchema, resetTemporaryPasswordS
 
 export const brandAdminRouter = Router();
 brandAdminRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
+brandAdminRouter.use(mutationAudit({admin:true,prefix:'/brand-admins'}));
 
 brandAdminRouter.get('/', validate(listBrandAdminsQuerySchema, 'query'), async (req, res, next) => {
   try { ok(res, await service.listBrandAdmins(req.query)); } catch (err) { next(err); }

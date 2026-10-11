@@ -54,33 +54,20 @@ test.describe('customer app', () => {
 test.describe('brand admin', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('Payments and Dashboard show the brand’s own invoice totals, not fixed numbers', async ({ page, request }) => {
+  test('Payments and Dashboard show the brand’s own billing totals, not fixed numbers', async ({ page, request }) => {
     const brandId = (await (await request.post(`${API}/_dev/test-brand`, { data: { name: `E2E Brand ${randomUUID()}` } })).json()).data.id;
     const email = `brand-${randomUUID()}@e2e.test`;
     await request.post(`${API}/_dev/test-user`, { data: { role: 'brand_admin', email, password: 'password123', brand: brandId } });
     const admin = await verifyOtp(request, 'brand_admin', email);
 
-    const customer = await customerSession(request);
-    const spPhone = uniquePhone();
-    const sp = (await (await request.post(`${API}/_dev/test-serviceProvider`, { data: { phone: spPhone, password: 'password123', specs: ['AC'] } })).json()).data;
-    const srId = (await (await request.post(`${API}/_dev/test-service-request`, {
-      data: { customerId: customer.id, serviceProviderId: sp.serviceProviderId, category: 'AC', brand: brandId },
-    })).json()).data.id;
-    const invoice = (await (await request.post(`${API}/brand/invoices`, {
-      headers: { Authorization: `Bearer ${admin.accessToken}` },
-      data: { serviceRequest: srId, customer: customer.id, serviceProvider: sp.serviceProviderId, serviceCharge: 500 },
-    })).json()).data;
-    const rupees = `₹${Number(invoice.total).toLocaleString('en-IN')}`;
-
     await signIn(page, admin, 'brand_admin');
     await page.goto('/brand-admin/payments');
-    await expect(page.getByText('1 unpaid invoice')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(rupees).first()).toBeVisible();
+    await expect(page.getByTestId('billing-invoice-value')).toContainText('₹0.00', { timeout: 15_000 });
     await expect(page.getByText('₹40,30,020')).toHaveCount(0);
 
     await page.goto('/brand-admin/dashboard');
     await expect(page.getByText('Financial Overview')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(rupees).first()).toBeVisible();
+    await expect(page.getByText('₹0.00').first()).toBeVisible();
     await expect(page.getByText('₹48,75,230')).toHaveCount(0);
     await expect(page.getByText('15,230')).toHaveCount(0);
   });

@@ -3,8 +3,11 @@
 // the Phase 3 exit criterion ("seed one user per role; verify login -> protected
 // route -> 403 on wrong role"). Run with: npm run seed (from backend/).
 
+import mongoose from 'mongoose';
 import { connectDB, disconnectDB, ensureIndexes } from '../src/config/db.js';
 import { Permission } from '../src/modules/auth/permission.model.js';
+import { ensureBrandRoleTemplates, backfillRolelessBrandUsers } from '../src/modules/brand-crm/roleTemplates.service.js';
+import { SUPER_ADMIN_TEMPLATE } from '../src/modules/brand-crm/permissions.js';
 import { Role } from '../src/modules/auth/role.model.js';
 import { User } from '../src/modules/auth/user.model.js';
 import { ServiceProvider } from '../src/modules/service-provider/serviceProvider.model.js';
@@ -33,6 +36,8 @@ import { seedHomeSections } from './seedHomeSections.js';
 import { AMC_PLAN_SEED, EW_PLAN_SEED, SPARE_PART_SEED } from './planSeedData.js';
 import { seedMasterCatalogue } from './seedMasterCatalogue.js';
 import { seedDemoEntities } from './demoSeedData.js';
+import { WarrantyPolicy } from '../src/modules/brand-crm/warrantyPolicy.model.js';
+import { BrandRate } from '../src/modules/brand-crm/brandRate.model.js';
 
 const PRODUCTS = [
   {
@@ -131,7 +136,7 @@ const PERMISSIONS = [
 
 async function upsertPermissions() {
   const docs = await Promise.all(
-    PERMISSIONS.map((p) => Permission.findOneAndUpdate({ key: p.key }, p, { upsert: true, new: true })),
+    PERMISSIONS.map((p) => Permission.findOneAndUpdate({ key: p.key }, { ...p, scope: 'platform' }, { upsert: true, new: true })),
   );
   console.log(`[seed] ${docs.length} permissions ready`);
   return docs;
@@ -140,7 +145,8 @@ async function upsertPermissions() {
 async function upsertBrand() {
   const brand = await Brand.findOneAndUpdate(
     { name: 'Demo Brand' },
-    { name: 'Demo Brand', category: 'Appliances', status: 'Active' },
+    // ticketPrefix set here: findOneAndUpdate skips the model's derive hook.
+    { name: 'Demo Brand', category: 'Appliances', status: 'Active', ticketPrefix: 'DEMO' },
     { upsert: true, new: true },
   );
   console.log(`[seed] brand ready: ${brand.name} (${brand.id})`);
@@ -156,43 +162,87 @@ async function upsertBrand() {
 async function upsertSecondBrand() {
   const brand = await Brand.findOneAndUpdate(
     { name: 'Second Demo Brand' },
-    { name: 'Second Demo Brand', category: 'Electronics', status: 'Active' },
+    { name: 'Second Demo Brand', category: 'Electronics', status: 'Active', ticketPrefix: 'SDB' },
     { upsert: true, new: true },
   );
   console.log(`[seed] second brand ready: ${brand.name} (${brand.id})`);
   return brand;
 }
 
-async function upsertRoles(permissions, brand, secondBrand) {
-  const permByKey = Object.fromEntries(permissions.map((p) => [p.key, p._id]));
-  const brandAdminPermissions = [
-    permByKey['requests:manage'],
-    permByKey['invoices:export'],
-    permByKey['catalog:manage'],
-    permByKey['claims:approve'],
-    permByKey['teams:manage'],
-  ];
+async function upsertThirdBrand() {
+  const brand = await Brand.findOneAndUpdate(
+    { name: 'Voltas Demo' },
+    {
+      name: 'Voltas Demo', category: 'Cooling', status: 'Active', ticketPrefix: 'VOLT',
+      warrantyEnabled: true,
+      warrantySla: { responseHours: 1, approvalHours: 8, assignmentHours: 3, visitHours: 36, resolutionHours: 120 },
+      billing: { gstin: '23AAAAA0000A1Z5', legalName: 'Voltas Demo Appliances', paymentTermsDays: 21 },
+    },
+    { upsert: true, new: true },
+  );
+  console.log(`[seed] third brand ready: ${brand.name} (${brand.id})`);
+  return brand;
+}
 
+async function upsertRoles(permissions, brand, secondBrand, thirdBrand) {
   const superAdminRole = await Role.findOneAndUpdate(
     { name: 'Super Admin', scope: 'platform' },
     { name: 'Super Admin', scope: 'platform', brand: null, permissions: permissions.map((p) => p._id) },
     { upsert: true, new: true },
   );
 
-  const brandAdminRole = await Role.findOneAndUpdate(
-    { name: 'Brand Admin', scope: 'brand', brand: brand._id },
-    { name: 'Brand Admin', scope: 'brand', brand: brand._id, permissions: brandAdminPermissions },
-    { upsert: true, new: true },
-  );
+  // Brands get the nine Brand CRM role templates (docs/brand-crm Phase 2);
+  // each seeded brand admin is that brand's Brand Super Admin.
+  const brandAdminRole = (await ensureBrandRoleTemplates(brand._id))[SUPER_ADMIN_TEMPLATE];
+  const secondBrandAdminRole = (await ensureBrandRoleTemplates(secondBrand._id))[SUPER_ADMIN_TEMPLATE];
+  const thirdBrandAdminRole = (await ensureBrandRoleTemplates(thirdBrand._id))[SUPER_ADMIN_TEMPLATE];
 
-  const secondBrandAdminRole = await Role.findOneAndUpdate(
-    { name: 'Brand Admin', scope: 'brand', brand: secondBrand._id },
-    { name: 'Brand Admin', scope: 'brand', brand: secondBrand._id, permissions: brandAdminPermissions },
-    { upsert: true, new: true },
-  );
+  console.log(`[seed] roles ready: ${superAdminRole.name}, 9 brand role templates x3`);
+  return { superAdminRole, brandAdminRole, secondBrandAdminRole, thirdBrandAdminRole };
+}
 
-  console.log(`[seed] roles ready: ${superAdminRole.name}, ${brandAdminRole.name} x2`);
-  return { superAdminRole, brandAdminRole, secondBrandAdminRole };
+async function configureThirdBrand(brand) {
+  const category = await Category.findOne({ key: 'AC' });
+  if (!category) throw new Error('AC category is required for the third demo brand');
+  brand.coverage = [category._id];
+  await brand.save();
+
+  let policy = await WarrantyPolicy.findOne({ brand: brand._id, name: 'Voltas AC Standard' });
+  if (!policy) {
+    policy = await WarrantyPolicy.create({
+      brand: brand._id,
+      policyKey: new mongoose.Types.ObjectId(),
+      name: 'Voltas AC Standard',
+      appliesTo: { category: category._id },
+      warrantyMonths: 18,
+      partsWarrantyMonths: 12,
+      labourWarrantyMonths: 18,
+      coverage: {
+        coveredServices: ['repair', 'inspection'],
+        nonCoveredServices: ['installation', 'demo', 'preventive_maintenance'],
+        partsCovered: true,
+        labourCovered: true,
+        visitCharge: { payer: 'brand', amount: 0 },
+        conditions: 'Residential AC units with a valid serial number.',
+      },
+      requireInvoice: false,
+      requireSerial: true,
+      effectiveFrom: new Date('2026-01-01T00:00:00.000Z'),
+    });
+  }
+  await BrandRate.findOneAndUpdate(
+    {
+      brand: brand._id, category: category._id, serviceType: 'repair',
+      state: null, city: null, effectiveFrom: new Date('2026-01-01T00:00:00.000Z'),
+    },
+    {
+      brand: brand._id, category: category._id, categoryKey: category.key, serviceType: 'repair',
+      state: null, city: null, brandRate: 950, partnerPayout: 650, visitOnlyRate: 300,
+      effectiveFrom: new Date('2026-01-01T00:00:00.000Z'), effectiveTo: null, isActive: true,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  console.log(`[seed] third brand has a distinct AC policy, SLA and national-only rate (${policy.id})`);
 }
 
 async function upsertUser({ role, name, phone, email, password, extra = {} }) {
@@ -399,7 +449,8 @@ async function main() {
   const permissions = await upsertPermissions();
   const brand = await upsertBrand();
   const secondBrand = await upsertSecondBrand();
-  const { superAdminRole, brandAdminRole, secondBrandAdminRole } = await upsertRoles(permissions, brand, secondBrand);
+  const thirdBrand = await upsertThirdBrand();
+  const { superAdminRole, brandAdminRole, secondBrandAdminRole, thirdBrandAdminRole } = await upsertRoles(permissions, brand, secondBrand, thirdBrand);
   const { city } = await upsertPlatformFixtures();
 
   const customer = await upsertUser({
@@ -422,7 +473,15 @@ async function main() {
     name: 'Brand Admin',
     email: 'admin123@gmail.com',
     password: 'admin123',
-    extra: { brand: brand._id, assignedRoles: [brandAdminRole._id] },
+    extra: { brand: brand._id, assignedRoles: [brandAdminRole._id], employeeId: 'DEMO-001' },
+  });
+
+  await upsertUser({
+    role: ROLES.BRAND_ADMIN,
+    name: 'Voltas Demo Admin',
+    email: 'admin3@gmail.com',
+    password: 'admin123',
+    extra: { brand: thirdBrand._id, assignedRoles: [thirdBrandAdminRole._id], employeeId: 'VOLT-001' },
   });
 
   await upsertUser({
@@ -430,8 +489,14 @@ async function main() {
     name: 'Second Brand Admin',
     email: 'admin2@gmail.com',
     password: 'admin123',
-    extra: { brand: secondBrand._id, assignedRoles: [secondBrandAdminRole._id] },
+    extra: { brand: secondBrand._id, assignedRoles: [secondBrandAdminRole._id], employeeId: 'SDB-001' },
   });
+
+  // Accounts from before brand permissions were enforced keep full access.
+  for (const b of [brand, secondBrand, thirdBrand]) {
+    const n = await backfillRolelessBrandUsers(b._id);
+    if (n) console.log(`[seed] ${n} existing ${b.name} user(s) given Brand Super Admin`);
+  }
 
   await upsertUser({
     role: ROLES.SUPER_ADMIN,
@@ -457,6 +522,7 @@ async function main() {
   console.log(`[seed] serviceProvider profile ready: ${serviceProviderProfile.name} (${serviceProviderProfile.id})`);
 
   await upsertCategories();
+  await configureThirdBrand(thirdBrand);
   await upsertCatalogueBrands();
   // Master Service & Offering Catalogue (docs/master-catalogue): product
   // types, services, offerings and their rates — the only price source.

@@ -471,7 +471,7 @@ const Sidebar = () => {
     },
     {
       type: "link",
-      label: "Warranty Claims",
+      label: "Brand Tickets",
       path: "/super-admin/partner-warranty/claims",
       icon: <ClipboardList size={18} />,
       badgeKey: "warrantyNoPartner",
@@ -518,6 +518,12 @@ const Sidebar = () => {
     },
     {
       type: "link",
+      label: "Brand Rates",
+      path: "/super-admin/brand-rates",
+      icon: <Building size={18} />,
+    },
+    {
+      type: "link",
       label: "Brand Administrators",
       path: "/super-admin/brand-administrators",
       icon: <UserPlus size={18} />,
@@ -560,6 +566,7 @@ const Sidebar = () => {
       path: "/super-admin/billing",
       icon: <FileText size={18} />,
     },
+    ...(user?.permissions?.includes('billing:manage') ? [{ type: "link", label: "Brand Billing", path: "/super-admin/brand-billing", icon: <FileText size={18}/> }] : []),
     {
       type: "link",
       label: "Transactions",

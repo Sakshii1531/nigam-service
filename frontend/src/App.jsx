@@ -5,6 +5,7 @@ import {
   Routes,
   Route,
   useNavigate,
+  useParams,
   useLocation,
   Navigate,
 } from "react-router-dom";
@@ -80,22 +81,27 @@ const AllBrands = lazy(() => import("./pages/AllBrands"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const ServiceProviderLogin = lazy(() => import("./pages/service-provider/Login"));
 import { ServiceProviderProvider } from "./context/ServiceProviderContext";
+import BrandAccessGate from "./components/brand-admin/BrandAccessGate";
 const BrandLogin = lazy(() => import("./pages/brand-admin/Login"));
 const BrandDashboard = lazy(() => import("./pages/brand-admin/Dashboard"));
-const BrandRequests = lazy(() => import("./pages/brand-admin/Requests"));
+function LegacyBrandTicketRedirect(){const {id}=useParams();return <Navigate to={`/brand-admin/tickets/${id}`} replace/>;}
+const BrandMyWork = lazy(() => import("./pages/brand-admin/MyWork"));
+const BrandTickets = lazy(() => import("./pages/brand-admin/Tickets"));
 const BrandWarranty = lazy(() => import("./pages/brand-admin/Warranty"));
 const BrandServiceProviders = lazy(() => import("./pages/brand-admin/ServiceProviders"));
 const BrandInventory = lazy(() => import("./pages/brand-admin/Inventory"));
 const BrandPartRequests = lazy(() => import("./pages/brand-admin/PartRequests"));
 const BrandInvoices = lazy(() => import("./pages/brand-admin/Invoices"));
+const BrandCustomerProfile = lazy(() => import("./pages/brand-admin/CustomerProfile"));
 const BrandCustomers = lazy(() => import("./pages/brand-admin/Customers"));
 const BrandNotifications = lazy(() => import("./pages/brand-admin/Notifications"));
+const BrandAuditLog = lazy(() => import("./pages/brand-admin/AuditLog"));
 const BrandReports = lazy(() => import("./pages/brand-admin/Reports"));
 const BrandSettings = lazy(() => import("./pages/brand-admin/Settings"));
 const BrandAMCs = lazy(() => import("./pages/brand-admin/AMCs"));
 const BrandExchanges = lazy(() => import("./pages/brand-admin/Exchanges"));
-const BrandWarrantyClaims = lazy(() => import("./pages/brand-admin/WarrantyClaims"));
-const BrandWarrantyClaimDetail = lazy(() => import("./pages/brand-admin/WarrantyClaimDetail"));
+
+const BrandTicketDetail = lazy(() => import("./pages/brand-admin/TicketDetail"));
 const BrandWarrantySettings = lazy(() => import("./pages/brand-admin/WarrantySettings"));
 const BrandPartsClaims = lazy(() => import("./pages/brand-admin/PartsClaims"));
 // Super Admin → Partner Warranty (docs/partner-warranty Phase 14)
@@ -116,6 +122,8 @@ const BrandEscalations = lazy(() => import("./pages/brand-admin/Escalations"));
 const BrandServiceCompletionMonitor = lazy(() => import("./pages/brand-admin/ServiceCompletionMonitor"));
 const BrandReplacementApprovals = lazy(() => import("./pages/brand-admin/ReplacementApprovals"));
 const BrandLetterDocumentCenter = lazy(() => import("./pages/brand-admin/LetterDocumentCenter"));
+const SuperAdminBrandBilling = lazy(() => import('./pages/super-admin/BrandBilling'));
+const SuperAdminBrandRates = lazy(() => import('./pages/super-admin/BrandRates'));
 const BrandCallRatesCharges = lazy(() => import("./pages/brand-admin/CallRatesCharges"));
 const BrandPayments = lazy(() => import("./pages/brand-admin/Payments"));
 const BrandUserRoleManagement = lazy(() => import("./pages/brand-admin/UserRoleManagement"));
@@ -404,7 +412,8 @@ const ScrollToTop = () => {
           user?.city ||
           defaultAddress?.city ||
           "";
-        if (customerCity) {
+        // Existing brand tickets remain readable/respondable even where new NCC bookings are unavailable.
+        if (customerCity && !pathname.startsWith("/partner-warranty/claims")) {
           getActiveCities()
             .then((cities) => {
               const serviceable = isCityServiceable(customerCity, cities);
@@ -575,6 +584,7 @@ function App() {
                       <AppChrome />
                       <PanelContainer>
                         <Suspense fallback={<PageSkeleton />}>
+                        <BrandAccessGate>
                         <Routes>
                           <Route path="/" element={<Login />} />
                           <Route path="/home" element={<Home />} />
@@ -981,12 +991,14 @@ function App() {
                             path="/brand-admin/customers"
                             element={<BrandCustomers />}
                           />
+                          <Route path="/brand-admin/customers/:id" element={<BrandCustomerProfile />} />
                           <Route
                             path="/brand-admin/notifications"
                             element={<BrandNotifications />}
                           />
                           <Route
-                            path="/brand-admin/reports"
+                            path="/brand-admin/audit-log" element={<BrandAuditLog />} />
+                          <Route path="/brand-admin/reports"
                             element={<BrandReports />}
                           />
                           <Route
@@ -1003,12 +1015,15 @@ function App() {
                           />
                           <Route
                             path="/brand-admin/warranty-claims"
-                            element={<BrandWarrantyClaims />}
+                            element={<Navigate to="/brand-admin/tickets" replace />}
                           />
+                          <Route path="/brand-admin/my-work" element={<BrandMyWork/>}/>
+                          <Route path="/brand-admin/tickets" element={<BrandTickets/>}/>
+                          <Route path="/brand-admin/tickets/:id" element={<BrandTicketDetail/>}/>
                           {/* Partner Warranty (docs/partner-warranty Phase 13) */}
                           <Route
                             path="/brand-admin/warranty-claims/:id"
-                            element={<BrandWarrantyClaimDetail />}
+                            element={<LegacyBrandTicketRedirect />}
                           />
                           <Route
                             path="/brand-admin/warranty-settings"
@@ -1040,7 +1055,7 @@ function App() {
                           />
                           <Route
                             path="/brand-admin/complaints"
-                            element={<BrandRequests />}
+                            element={<Navigate to="/brand-admin/tickets" replace />}
                           />
                           <Route
                             path="/brand-admin/complaint-monitoring"
@@ -1226,6 +1241,8 @@ function App() {
                             path="/super-admin/city-change-requests"
                             element={<SuperAdminCityChangeRequests />}
                           />
+                          <Route path="/super-admin/brand-billing" element={<SuperAdminBrandBilling/>}/>
+                          <Route path="/super-admin/brand-rates" element={<SuperAdminBrandRates/>}/>
                           <Route
                             path="/super-admin/brands"
                             element={<SuperAdminBrands />}
@@ -1397,6 +1414,7 @@ function App() {
 
                           <Route path="*" element={<PageHandler />} />
                         </Routes>
+                        </BrandAccessGate>
                         </Suspense>
                       </PanelContainer>
                       <LocationModal />

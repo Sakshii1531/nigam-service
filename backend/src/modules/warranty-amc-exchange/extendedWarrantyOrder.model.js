@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
 import { ID_PREFIXES } from '../../config/constants.js';
+import { Brand } from '../super-admin/brand.model.js';
 
 const extendedWarrantyOrderSchema = new mongoose.Schema(
   {
@@ -8,6 +9,7 @@ const extendedWarrantyOrderSchema = new mongoose.Schema(
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
     applianceCategory: String, // e.g. "AC" — display label, kept even once `appliance` is linked
     brand: String,
+    brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     tierId: String,
     price: { type: Number, required: true },
     fullName: String,
@@ -41,6 +43,13 @@ const extendedWarrantyOrderSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+extendedWarrantyOrderSchema.pre('validate', async function resolveBrandRef() {
+  if (this.brandRef || !this.brand) return;
+  const brand = await Brand.findOne({ name: String(this.brand).trim() })
+    .collation({ locale: 'en', strength: 2 }).select('_id').lean();
+  this.brandRef = brand?._id || null;
+});
 
 applyStandardPlugins(extendedWarrantyOrderSchema, { prefix: ID_PREFIXES.EXTENDED_WARRANTY });
 

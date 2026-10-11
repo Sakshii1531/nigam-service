@@ -32,6 +32,7 @@ const EDITABLE_FIELDS = [
   'supportPhone',
   'website',
   'autoAssignServiceProvider',
+  'partsApprovalThreshold',
   'requireCompletionPhoto',
   'emailNotifications',
   'smsAlerts',

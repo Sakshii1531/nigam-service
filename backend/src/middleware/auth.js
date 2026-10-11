@@ -1,5 +1,6 @@
 import { verifyAccessToken } from '../modules/auth/tokens.js';
 import { ApiError } from './errorHandler.js';
+import { auditContext } from '../modules/shared/auditContext.js';
 
 /** Verifies the JWT access token and attaches { id, role, brand, permissions } to
  * req.user — stateless (no DB hit), so permissions reflect a snapshot from token
@@ -86,5 +87,7 @@ export function requireBrandScope(req, res, next) {
   if (req.user.role !== 'brand_admin') return next(new ApiError(403, 'Brand-admin account required'));
   if (!req.user.brand) return next(new ApiError(403, 'Account is not linked to a brand'));
   if (req.user.mustChangePassword) return next(new ApiError(403, 'Password change required before accessing the brand panel'));
+  const store = auditContext.getStore();
+  if (store) store.brandScope = String(req.user.brand);
   next();
 }

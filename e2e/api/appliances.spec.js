@@ -244,7 +244,7 @@ test.describe('endpoints the consoles depend on exist', () => {
   const AUTHED_PATHS = [
     '/api/v1/service-requests?limit=5',
     '/api/v1/brand/dashboard',
-    '/api/v1/brand/reports',
+    '/api/v1/brand/reports/product',
     '/api/v1/brand/customers',
     '/api/v1/brand/amc-subscriptions',
     '/api/v1/brand/academy/guides',

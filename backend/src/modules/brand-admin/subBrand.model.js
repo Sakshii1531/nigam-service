@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { applyStandardPlugins } from '../shared/plugins.js';
+import { brandScopeGuard } from '../shared/brandScopeGuard.js';
 
 // e.g. Havells (Brand) -> "Havells Lighting" / "Havells Appliances" (SubBrand).
 const subBrandSchema = new mongoose.Schema(
@@ -11,6 +12,7 @@ const subBrandSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+brandScopeGuard(subBrandSchema);
 applyStandardPlugins(subBrandSchema);
 
 export const SubBrand = mongoose.models.SubBrand || mongoose.model('SubBrand', subBrandSchema);

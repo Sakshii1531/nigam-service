@@ -15,7 +15,9 @@ async function clearBookingsAndServiceRequests() {
   const ServiceRequest = mongoose.model('ServiceRequest');
   const Job = mongoose.model('Job');
   const LiveTracking = mongoose.model('LiveTracking');
-  const Invoice = mongoose.model('Invoice');
+  const BrandInvoice = mongoose.model('BrandInvoice');
+  const BrandPayment = mongoose.model('BrandPayment');
+  const BillingLine = mongoose.model('BillingLine');
   const Payment = mongoose.model('Payment');
   const GatewayTransaction = mongoose.model('GatewayTransaction');
   const BillingTransaction = mongoose.model('BillingTransaction');
@@ -47,7 +49,9 @@ async function clearBookingsAndServiceRequests() {
 
   // Delete related operational & tracking data
   const trackingRes = await LiveTracking.deleteMany({});
-  const invoiceRes = await Invoice.deleteMany({});
+  const invoiceRes = await BrandInvoice.deleteMany({});
+  await BrandPayment.deleteMany({});
+  await BillingLine.deleteMany({});
   const paymentRes = await Payment.deleteMany({});
   const gwTxRes = await GatewayTransaction.deleteMany({});
   const billTxRes = await BillingTransaction.deleteMany({});
@@ -92,7 +96,7 @@ async function clearBookingsAndServiceRequests() {
     ID_PREFIXES.BOOKING, // NCC
     ID_PREFIXES.SERVICE_REQUEST, // SR
     ID_PREFIXES.JOB, // JOB
-    ID_PREFIXES.INVOICE, // INV
+    ID_PREFIXES.BRAND_INVOICE, // BINV
     ID_PREFIXES.CLAIM, // NC
     ID_PREFIXES.AMC_RECORD, // AMC
     ID_PREFIXES.EXCHANGE, // EX

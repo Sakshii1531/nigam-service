@@ -1,3 +1,5 @@
+import { WarrantyClaim } from '../partner-warranty/warrantyClaim.model.js';
+import { appendEvent, saveClaim } from '../partner-warranty/claimTimeline.js';
 import { Review } from './review.model.js';
 import { FeaturedReview } from './featuredReview.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
@@ -32,7 +34,7 @@ export async function createReview(userId, { serviceRequest, rating, categoryRat
   const existing = await Review.findOne({ serviceRequest });
   if (existing) throw new ApiError(409, 'This service request has already been reviewed');
 
-  return Review.create({
+  const review = await Review.create({
     serviceRequest,
     user: userId,
     serviceProvider: sr.serviceProvider,
@@ -43,6 +45,8 @@ export async function createReview(userId, { serviceRequest, rating, categoryRat
     tip,
     comment,
   });
+  await syncWarrantyRating(sr, review);
+  return review;
 }
 
 export async function getReview(id) {
@@ -324,6 +328,7 @@ export async function submitServiceRating(userId, { serviceId, bookingId, servic
     status: 'Reviewed',
   });
 
+  if (serviceRequest) await syncWarrantyRating(serviceRequest, newReview);
   return newReview;
 }
 
@@ -446,3 +451,12 @@ export async function createProductReview(userId, { productId, rating, comment, 
   return review.populate('user', 'name profilePicture');
 }
 
+
+async function syncWarrantyRating(sr, review) {
+  if (!sr?.warrantyClaim) return;
+  const claim = await WarrantyClaim.findById(sr.warrantyClaim);
+  if (!claim || String(claim.serviceRequest) !== String(sr._id)) return;
+  claim.closure.rating = review.rating; claim.closure.feedback = review.comment || '';
+  appendEvent(claim, { action: 'RATED', actor: { kind: 'customer', user: review.user }, visibility: 'customer', note: review.comment || undefined, meta: { rating: review.rating } });
+  await saveClaim(claim);
+}

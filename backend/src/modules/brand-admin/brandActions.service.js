@@ -1,6 +1,6 @@
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
-import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
+import { isBrandCustomer } from '../brand-crm/brandCustomer.service.js';
 import { sendAdHocPush } from '../notifications/notification.service.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import mongoose from 'mongoose';
@@ -14,13 +14,13 @@ const asObjectId = (id) => new mongoose.Types.ObjectId(String(id));
 
 /** A brand may only act on customers it has actually served. */
 async function assertBrandCustomer(brandId, userId) {
-  const served = await ServiceRequest.exists({ brand: asObjectId(brandId), user: asObjectId(userId) });
+  const served = await isBrandCustomer(asObjectId(brandId), asObjectId(userId));
   if (!served) throw new ApiError(403, 'This customer has no service history with your brand');
 }
 
 export async function notifyCustomer(brandId, { userId, title, body }) {
   await assertBrandCustomer(brandId, userId);
-  return sendAdHocPush({ recipientId: userId, title, body, type: 'service' });
+  return sendAdHocPush({ recipientId: userId, brand: brandId, title, body, type: 'service' });
 }
 
 /** The subscription must belong to a customer this brand has served. */
@@ -43,6 +43,7 @@ export async function sendRenewalReminder(brandId, subscriptionId) {
 
   const notification = await sendAdHocPush({
     recipientId: subscription.user,
+    brand: brandId,
     title: 'Your AMC is due for renewal',
     body: `Your ${subscription.plan?.name || 'AMC'} plan expires on ${expires}. Renew now to keep your cover unbroken.`,
     type: 'service',
@@ -69,6 +70,7 @@ export async function scheduleVisit(brandId, subscriptionId, { scheduledDate }) 
 
   await sendAdHocPush({
     recipientId: subscription.user,
+    brand: brandId,
     title: 'Maintenance visit scheduled',
     body: `Your AMC maintenance visit is booked for ${new Date(scheduledDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}.`,
     type: 'service',

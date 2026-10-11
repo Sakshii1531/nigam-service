@@ -1,10 +1,12 @@
 import { User } from '../auth/user.model.js';
-import { Role } from '../auth/role.model.js';
 import { RefreshToken } from '../auth/refreshToken.model.js';
 import { Brand } from './brand.model.js';
 import { hashPassword } from '../auth/password.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { ROLES } from '../../config/constants.js';
+import { ensureBrandRoleTemplates } from '../brand-crm/roleTemplates.service.js';
+import { SUPER_ADMIN_TEMPLATE } from '../brand-crm/permissions.js';
+import { invalidateBrandPermissions } from '../brand-crm/brandPermission.middleware.js';
 
 async function findBrand(brandId) {
   const brand = await Brand.findById(brandId);
@@ -12,10 +14,10 @@ async function findBrand(brandId) {
   return brand;
 }
 
+/** The administrator NCC creates for a brand is its owner: Brand Super Admin (docs/brand-crm D9). */
 async function ensureBrandAdminRole(brandId) {
-  let role = await Role.findOne({ name: 'Brand Admin', scope: 'brand', brand: brandId });
-  if (!role) role = await Role.create({ name: 'Brand Admin', scope: 'brand', brand: brandId, permissions: [] });
-  return role;
+  const roles = await ensureBrandRoleTemplates(brandId);
+  return roles[SUPER_ADMIN_TEMPLATE];
 }
 
 async function findAdmin(id) {
@@ -76,6 +78,7 @@ export async function updateBrandAdmin(id, updates) {
     if (updates[field] !== undefined) user[field] = updates[field] || undefined;
   }
   await user.save();
+  invalidateBrandPermissions(user.id);
   if (updates.status === 'Suspended') {
     await RefreshToken.updateMany({ user: user._id, revoked: false }, { revoked: true });
   }
