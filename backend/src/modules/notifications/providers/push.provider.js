@@ -57,7 +57,7 @@ async function getMessaging() {
  * @param {string}   opts.body
  * @param {object}   [opts.data]   Extra key-value pairs forwarded to the app
  * @param {function} [opts.onStaleTokens] Called with stale token strings for pruning
- * @returns {Promise<void>} — never throws; failures are console.error'd
+ * @returns {Promise<boolean|undefined>} — true when the provider accepts a send; failures are logged
  */
 export async function sendPush({ tokens, title, body, data = {}, onStaleTokens }) {
   if (!tokens?.length) return;
@@ -91,6 +91,7 @@ export async function sendPush({ tokens, title, body, data = {}, onStaleTokens }
     if (stale.length && onStaleTokens) {
       onStaleTokens(stale);
     }
+    return response.responses.some(r=>r.success);
   } catch (err) {
     console.error('[push] FCM sendEachForMulticast error:', err.message);
   }

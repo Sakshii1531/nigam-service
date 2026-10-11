@@ -4,6 +4,8 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok } from '../../utils/respond.js';
 import { ROLES } from '../../config/constants.js';
 import { initiateCallSchema, twilioStatusCallbackSchema } from './call.validation.js';
+import { CallLog } from './callLog.model.js';
+import { ApiError } from '../../middleware/errorHandler.js';
 import * as callService from './call.service.js';
 
 export const callRouter = Router();
@@ -40,9 +42,22 @@ callRouter.post(
  * does not send an auth header, so we rely on Twilio's IP allowlisting in prod.
  * In test/dev the endpoint is still reachable for integration testing.
  */
-callRouter.post('/status', validate(twilioStatusCallbackSchema), async (req, res, next) => {
+callRouter.post('/status', async(req,res,next)=>{try{
+  const id=/^[a-f\d]{24}$/i.test(req.query.callLog||'')?req.query.callLog:null;
+  const log=await CallLog.findOne(id?{_id:id,initiatedBy:'brand_user'}:{callSid:req.body.CallSid}).select('initiatedBy');
+  if(log?.initiatedBy==='brand_user'){
+    const {default:Twilio}=await import('twilio');
+    const url=`${(process.env.API_PUBLIC_URL||'').replace(/\/$/,'')}${req.originalUrl}`;
+    if(!process.env.TWILIO_AUTH_TOKEN||!Twilio.validateRequest(process.env.TWILIO_AUTH_TOKEN,req.get('x-twilio-signature')||'',url,req.body))throw new ApiError(403,'Invalid call callback signature');
+  }
+  next();
+}catch(e){next(e);}}, (req,res,next)=>{
+  // Dial action reports the customer's leg; the parent call only tells us the caller answered.
+  if(req.body.DialCallStatus){req.body.CallStatus=req.body.DialCallStatus;if(req.body.DialCallDuration!==undefined)req.body.CallDuration=req.body.DialCallDuration;}
+  next();
+}, validate(twilioStatusCallbackSchema), async (req, res, next) => {
   try {
-    await callService.handleStatusCallback(req.body);
+    await callService.handleStatusCallback(req.body,req.query.callLog);
     // Twilio expects a 200 with an empty TwiML body or plain 200 to acknowledge.
     res.status(200).send('<Response></Response>');
   } catch (err) {

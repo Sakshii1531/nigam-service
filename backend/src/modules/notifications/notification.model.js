@@ -3,8 +3,11 @@ import { applyStandardPlugins } from '../shared/plugins.js';
 
 const notificationSchema = new mongoose.Schema(
   {
+    dedupeKey: {type:String,unique:true,sparse:true},
     // Either a single recipient, or a role-wide broadcast (super-admin's push composer) — not both.
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
+    warrantyClaim: { type: mongoose.Schema.Types.ObjectId, ref: 'WarrantyClaim', default: null },
     broadcastRole: { type: String, enum: ['All', 'ServiceProviders', 'Brands', 'Customers'], default: null, index: true },
 
     type: {
@@ -23,6 +26,7 @@ const notificationSchema = new mongoose.Schema(
 );
 
 notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
+notificationSchema.index({ brand: 1, recipient: 1, createdAt: -1 });
 
 applyStandardPlugins(notificationSchema);
 

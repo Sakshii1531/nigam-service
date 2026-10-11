@@ -1,3 +1,4 @@
+import { recordTicketNotification } from '../brand-crm/ticketNotification.service.js';
 import mongoose from 'mongoose';
 import { Notification } from './notification.model.js';
 import { NotificationPreference } from './notificationPreference.model.js';
@@ -10,6 +11,7 @@ import { BROADCAST_ROLE_FILTER, broadcastAudiencesForRole, ROLES } from '../../c
 import { sendPush } from './providers/push.provider.js';
 import { sendWhatsApp } from './providers/whatsapp.provider.js';
 import { sendSms } from './providers/sms.provider.js';
+import { loadBrandAccess } from '../brand-crm/brandPermission.middleware.js';
 
 // firebase-admin's sendEachForMulticast rejects more than 500 tokens in one
 // call, so a broadcast to the whole customer base is many calls, not one.
@@ -28,6 +30,8 @@ const BROADCAST_USER_PAGE = 500;
 // rather than constructing a Notification doc themselves — one place owns what
 // each event actually says.
 const EVENT_TEMPLATES = {
+  'brand.callback_due': p=>({recipient:p.user,type:'service',title:'Customer callback due',message:`${p.humanId}: ${p.remarks}`,cta:{label:'Open ticket',route:`/brand-admin/tickets/${p.warrantyClaim}`}}),
+  'brand.visit_reschedule': p=>({recipient:p.user||null,type:'service',title:'Visit reschedule request',message:`${p.humanId}: ${p.date}, ${p.slot}. ${p.reason}`,cta:p.cta||{label:'Open request',route:`/super-admin/warranty-claims/${p.warrantyClaim}`}}),
   'booking.created': (p) => ({
     recipient: p.user,
     type: 'created',
@@ -181,6 +185,8 @@ const EVENT_TEMPLATES = {
   // ── Partner warranty claims (docs/partner-warranty) ──
   // The claim routes pass `cta` (from claimLinks) so each app opens its own
   // screen; templates only own the wording.
+  'brand.contact_requested':p=>({recipient:p.user,type:'claims',title:'Customer contact requested',message:`Contact the customer for ${p.humanId}: ${p.reason}`,priority:'Medium',cta:p.cta}),
+  'brand.ticket_assigned': p => ({ recipient:p.user,type:'claims',title:'Ticket assigned to you',message:`You are responsible for ticket ${p.humanId}.`,priority:'Medium',cta:p.cta }),
   'warranty.claim_submitted': (p) => ({
     recipient: p.user,
     type: 'claims',
@@ -481,11 +487,12 @@ async function deliverExternal(notification, template, recipientId) {
     let smsEnabled = prefs?.sms !== false && process.env.NOTIFICATION_SMS_ENABLED !== 'false';
 
     const tasks = [];
+    const delivered = (channel,task) => task.then(async result=>{if(result===true)await recordTicketNotification(notification,channel,template.templateKey||'ad_hoc');return result;});
 
     // ── FCM Push ─────────────────────────────────────────────────────────────
     if (pushEnabled && user.fcmTokens?.length) {
       tasks.push(
-        sendPush({
+        delivered('push',sendPush({
           tokens: user.fcmTokens,
           title: notification.title,
           body: notification.message,
@@ -496,18 +503,18 @@ async function deliverExternal(notification, template, recipientId) {
               { $pull: { fcmTokens: { $in: stale } } },
             ).catch((e) => console.error('[push] stale-token prune failed:', e.message));
           },
-        }),
+        })),
       );
     }
 
     // ── WhatsApp ─────────────────────────────────────────────────────────────
     if (whatsappEnabled && user.phone && template.whatsappBody) {
-      tasks.push(sendWhatsApp({ to: user.phone, body: template.whatsappBody }));
+      tasks.push(delivered('whatsapp',sendWhatsApp({ to: user.phone, body: template.whatsappBody })));
     }
 
     // ── SMS ──────────────────────────────────────────────────────────────────
     if (smsEnabled && user.phone && template.smsBody) {
-      tasks.push(sendSms({ to: user.phone, body: template.smsBody }));
+      tasks.push(delivered('sms',sendSms({ to: user.phone, body: template.smsBody })));
     }
 
     if (tasks.length) {
@@ -660,7 +667,13 @@ export async function emit(event, payload) {
 
   try {
     const data = template(payload);
-    const notification = await Notification.create(data);
+    data.brand = payload.brand || null;
+    data.warrantyClaim = payload.warrantyClaim || payload.meta?.claimId || null;
+    data.templateKey=event;
+    let notification;
+    try{notification=await Notification.create({...data,...(payload.dedupeKey?{dedupeKey:payload.dedupeKey}:{})});}
+    catch(e){if(e.code===11000&&payload.dedupeKey)return Notification.findOne({dedupeKey:payload.dedupeKey});throw e;}
+    await recordTicketNotification(notification,'in_app',event);
 
     // Step 2: in-app Socket.IO
     const io = getIO();
@@ -671,9 +684,7 @@ export async function emit(event, payload) {
     }
 
     // Step 3: external channels — fire-and-forget (non-blocking)
-    deliverExternal(notification, data, data.recipient ? String(data.recipient) : null).catch((err) =>
-      console.error('[notifications] deliverExternal uncaught:', err.message),
-    );
+    trackDelivery(deliverExternal(notification, data, data.recipient ? String(data.recipient) : null));
 
     return notification;
   } catch (err) {
@@ -698,10 +709,39 @@ async function emitToUsers(event, filter, payload) {
   }
 }
 
-/** Notify every user of one partner brand — and nobody from any other brand. */
-export function emitToBrand(event, brandId, payload) {
-  if (!brandId) return Promise.resolve(0);
-  return emitToUsers(event, { role: ROLES.BRAND_ADMIN, brand: brandId }, payload);
+const BRAND_EVENT_PERMISSION = Object.freeze({
+  'brand.warranty_claim': 'tickets:view',
+  'warranty.new_claim_brand': 'tickets:view',
+  'warranty.info_provided': 'tickets:view',
+  'warranty.progress_brand': 'tickets:view',
+  'warranty.claim_cancelled': 'tickets:view',
+  'warranty.claim_reopened': 'tickets:view',
+  'warranty.claim_escalated': 'escalations:view',
+  'warranty.sla_warning_brand': 'escalations:view',
+  'warranty.sla_breach_brand': 'escalations:view',
+});
+
+/** Notify active, authorized users of exactly one partner brand. */
+export async function emitToBrand(event, brandId, payload, { permission = BRAND_EVENT_PERMISSION[event] } = {}) {
+  const value = brandId?._id || brandId;
+  if (!mongoose.isObjectIdOrHexString(value)) {
+    console.error(`[notifications] refused brand fan-out "${event}": brandId must be an ObjectId`);
+    return 0;
+  }
+  const brand = new mongoose.Types.ObjectId(String(value));
+  try {
+    const users = await User.find({ role: ROLES.BRAND_ADMIN, brand, status: 'Active' }).select('_id').lean();
+    const authorized = permission
+      ? (await Promise.all(users.map(async (user) => ({ user, access: await loadBrandAccess(user._id) }))))
+        .filter(({ access }) => access?.brand === String(brand) && access.permissions.has(permission))
+        .map(({ user }) => user)
+      : users;
+    await Promise.all(authorized.map((user) => emit(event, { ...payload, brand, user: user._id })));
+    return authorized.length;
+  } catch (err) {
+    console.error(`[notifications] failed to fan out "${event}":`, err.message);
+    return 0;
+  }
 }
 
 /** Notify every super-admin. */
@@ -722,6 +762,8 @@ export function emitToAdmins(event, payload) {
  */
 export async function sendAdHocPush({
   recipientId,
+  brand,
+  warrantyClaim,
   broadcastRole,
   title,
   body,
@@ -744,6 +786,8 @@ export async function sendAdHocPush({
 
   const notification = await Notification.create({
     recipient: recipientId || null,
+    brand: brand || null,
+    warrantyClaim: warrantyClaim || null,
     broadcastRole: broadcastRole || null,
     type,
     title,
@@ -752,6 +796,7 @@ export async function sendAdHocPush({
     cta,
   });
 
+  await recordTicketNotification(notification,'in_app','ad_hoc');
   const io = getIO();
   if (io) {
     const json = notification.toJSON();

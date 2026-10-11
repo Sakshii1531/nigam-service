@@ -10,7 +10,7 @@ export const twilioStatusCallbackSchema = z
   .object({
     CallSid: z.string(),
     CallStatus: z.string(),
-    CallDuration: z.coerce.number().optional(),
+    CallDuration: z.coerce.number().finite().min(0).max(86400).optional(),
     Timestamp: z.string().optional(),
   })
   .passthrough();

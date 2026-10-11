@@ -12,14 +12,17 @@ const callLogSchema = new mongoose.Schema(
     serviceRequest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ServiceRequest',
-      required: true,
       index: true,
     },
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true },
+    serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider' },
 
+    warrantyClaim:{type:mongoose.Schema.Types.ObjectId,ref:'WarrantyClaim',index:true},
+    brandUser:{type:mongoose.Schema.Types.ObjectId,ref:'User'},
+    brandActor:mongoose.Schema.Types.Mixed,
+    contactLoggedAt:Date,
     // Who pressed "Call" — determines which direction the relay dials first.
-    initiatedBy: { type: String, enum: ['customer', 'service_provider'], required: true },
+    initiatedBy: { type: String, enum: ['customer', 'service_provider', 'brand_user'], required: true },
 
     status: {
       type: String,

@@ -29,7 +29,7 @@ async function getTwilioClient() {
  * @param {object} opts
  * @param {string} opts.to   Recipient phone (E.164 or bare 10-digit Indian number)
  * @param {string} opts.body Message text (max 1600 chars per Twilio limits)
- * @returns {Promise<void>} — never throws; failures are console.error'd
+ * @returns {Promise<boolean|undefined>} — true when the provider accepts a send; failures are logged
  */
 export async function sendWhatsApp({ to, body }) {
   if (!to || !body) return;
@@ -48,6 +48,7 @@ export async function sendWhatsApp({ to, body }) {
       to: `whatsapp:${toNumber}`,
       body,
     });
+    return true;
   } catch (err) {
     console.error(`[whatsapp] Twilio delivery failed for ${toNumber}: ${err.message}`);
   }

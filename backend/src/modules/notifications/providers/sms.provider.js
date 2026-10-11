@@ -66,7 +66,9 @@ export async function sendSms({ to, body, templateId }) {
     const responseBody = await res.text();
     if (/error|invalid|fail/i.test(responseBody)) {
       console.error(`[sms:notification] SMSIndiaHub rejected: ${responseBody.slice(0, 300)}`);
+      return;
     }
+    return true;
   } catch (err) {
     console.error(`[sms:notification] Fetch error: ${err.message}`);
   }

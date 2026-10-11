@@ -27,7 +27,7 @@ import { ROLES } from '../../config/constants.js';
 let _twilioClient = null;
 let _initKey = null;
 
-async function getTwilioClient() {
+export async function getTwilioClient() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !token) return null;
@@ -155,7 +155,7 @@ export async function initiateCall(reqUser, serviceRequestId) {
  *
  * @param {object} payload — Twilio webhook body (CallSid, CallStatus, CallDuration)
  */
-export async function handleStatusCallback(payload) {
+export async function handleStatusCallback(payload, callLogId) {
   const { CallSid, CallStatus, CallDuration } = payload;
 
   // Map Twilio's status string to our enum.
@@ -177,7 +177,11 @@ export async function handleStatusCallback(payload) {
     update.endedAt = new Date();
   }
 
-  await CallLog.findOneAndUpdate({ callSid: CallSid }, update);
+  const key=/^[a-f\d]{24}$/i.test(callLogId||'')
+    ? {_id:callLogId,initiatedBy:'brand_user',$or:[{callSid:null},{callSid:CallSid}]}
+    : {callSid:CallSid};
+  const log=await CallLog.findOneAndUpdate({$and:[key,{$or:[{initiatedBy:{$ne:'brand_user'}},{contactLoggedAt:null}]}]}, {...update,callSid:CallSid},{new:true});
+  if(log?.initiatedBy==='brand_user'&&update.endedAt){const { recordBrandCallResult }=await import('../brand-crm/ticketCall.service.js');await recordBrandCallResult(log._id);}
 }
 
 /**
@@ -225,3 +229,5 @@ function formatCallLog(doc) {
     createdAt: obj.createdAt,
   };
 }
+
+export { initiateBrandCall, brandCallEnabled } from '../brand-crm/ticketCall.service.js';
