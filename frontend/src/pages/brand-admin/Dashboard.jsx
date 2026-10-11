@@ -1,638 +1,142 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ClipboardList, CheckCircle2, Clock, AlertTriangle, IndianRupee, Package, ArrowUpRight, Plus, Truck, BarChart2 } from 'lucide-react';
 import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
-import {
-  ClipboardList, CheckCircle2, Clock, AlertTriangle, IndianRupee,
-  Package, ArrowUpRight, Plus,
-  Search, Truck, ShieldCheck, FileText, BarChart2,
-  PhoneCall
-} from 'lucide-react';
+import { useApiData } from '../../hooks/useApiData';
+import { useBrandPermissions } from '../../hooks/useBrandPermissions';
+import { useBrandDashboardLive } from '../../hooks/useBrandDashboardLive';
 import { apiRequest } from '../../lib/apiClient';
-
-const currency = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
-// "—" while the dashboard is loading, never a made-up figure.
-const money = (v) => (v == null ? '—' : currency.format(v));
-const count = (v) => (v == null ? '—' : Number(v).toLocaleString('en-IN'));
-const number = new Intl.NumberFormat('en-IN');
-
-/* ── KPI Card ── */
-const KPICard = ({ title, value, icon, iconBg, onLink }) => (
-  <div className="bg-white p-4 rounded-2xl border border-[#E2E8F0] hover:shadow-lg transition-all duration-200 cursor-pointer" onClick={onLink}>
-    <div className="flex items-start justify-between mb-3">
-      <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center text-white shrink-0`}>
-        {icon}
-      </div>
-    </div>
-    <p className="text-[11px] font-semibold text-[#64748B] mb-0.5">{title}</p>
-    <p className="text-xl font-black text-[#1E293B]">{value}</p>
-    <button onClick={onLink} className="text-[10px] font-semibold text-[#0D47A1] hover:underline mt-1 flex items-center gap-0.5">
-      View Details <ArrowUpRight size={10} />
-    </button>
-  </div>
-);
-
-
-const Dashboard = () => {
-  const navigate = useNavigate();
-  const [searchCustomer, setSearchCustomer] = useState('');
-  const [tollFreeInput, setTollFreeInput] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-
-  // Graph interaction states
-  const [activeTrendIndex, setActiveTrendIndex] = useState(null);
-  const [activeStatusIndex, setActiveStatusIndex] = useState(null);
-  const [activeProductIndex, setActiveProductIndex] = useState(null);
-
-  const toast = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000); };
-
-  const handleTrendMouseMove = (e) => {
-    if (!trendData.length) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const relativeX = (e.clientX - rect.left) / rect.width;
-    const viewBoxX = relativeX * 500;
-    const step = trendData.length > 1 ? 500 / (trendData.length - 1) : 500;
-    const index = Math.min(trendData.length - 1, Math.max(0, Math.round(viewBoxX / step)));
-    setActiveTrendIndex(index);
-  };
-
-  const handleTrendClick = () => {
-    if (activeTrendIndex !== null && trendData[activeTrendIndex] !== undefined) {
-      toast(`Complaints on ${trendLabels[activeTrendIndex] || ''}: ${(trendData[activeTrendIndex] ?? 0).toLocaleString()}`);
-    }
-  };
-
-  /* ── KPI data ── */
-  const [metrics, setMetrics] = useState(null);
-  const [, setLoading] = useState(true);
-  const [, setError] = useState('');
-
-  const [recent, setRecent] = useState([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadDashboard() {
-      try {
-        const [dash, recent, settings] = await Promise.all([
-          apiRequest('/brand/dashboard', { auth: true }),
-          apiRequest('/service-requests?limit=5&sort=-createdAt', { auth: true }),
-          apiRequest('/brand/settings', { auth: true }),
-        ]);
-        if (cancelled) return;
-        // apiRequest returns the envelope's `data` payload directly — unwrapping
-        // it a second time meant every KPI on this page read zero.
-        setMetrics(dash || null);
-        setRecent((recent || []).map((r) => ({
-          id: r.humanId || r.id,
-          customer: r.user?.name || 'Customer',
-          product: r.category || '—',
-          status: r.status || 'New',
-          date: r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',
-        })));
-        setTollFreeInput(settings?.supportPhone || '');
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    loadDashboard();
-    return () => { cancelled = true; };
-  }, []);
-
-  const saveSupportPhone = async () => {
-    try {
-      await apiRequest('/brand/settings', {
-        method: 'PUT',
-        auth: true,
-        body: { supportPhone: tollFreeInput.trim() },
-      });
-      toast('Support number saved.');
-    } catch (err) {
-      toast(err.message || 'Could not save the support number.');
-    }
-  };
-
-  // The `trend` percentages that sat on each card are gone — nothing stores a
-  // prior-period snapshot, so there is no comparison to compute.
-  const kpis = [
-    { title: 'Total Complaints', value: number.format(metrics?.totalComplaints || 0), icon: <ClipboardList size={18} />, iconBg: 'bg-blue-500', path: '/brand-admin/complaints' },
-    { title: 'Completed Calls', value: number.format(metrics?.completed || 0), icon: <CheckCircle2 size={18} />, iconBg: 'bg-green-500', path: '/brand-admin/complaints' },
-    { title: 'In Progress', value: number.format(metrics?.inProgress || 0), icon: <Clock size={18} />, iconBg: 'bg-orange-500', path: '/brand-admin/complaint-monitoring' },
-    { title: 'Escalations', value: number.format(metrics?.escalations || 0), icon: <AlertTriangle size={18} />, iconBg: 'bg-red-500', path: '/brand-admin/escalations' },
-    { title: 'Total Invoice Value', value: currency.format(metrics?.totalInvoiceValue || 0), icon: <IndianRupee size={18} />, iconBg: 'bg-purple-500', path: '/brand-admin/invoices' },
-    { title: 'FOC Parts Approved', value: number.format(metrics?.focPartsApproved || 0), icon: <Package size={18} />, iconBg: 'bg-teal-500', path: '/brand-admin/warranty-claims' },
-  ];
-
-  /* ── Donut chart segments ── */
-  // "Out of Warranty" was a slice here, but warranty is a property of a request
-  // rather than a status — it can't be a segment of a status breakdown.
-  const statusParts = [
-    { label: 'Completed', value: metrics?.completed || 0, color: '#22C55E' },
-    { label: 'In Progress', value: metrics?.inProgress || 0, color: '#3B82F6' },
-    { label: 'Open', value: metrics?.open || 0, color: '#0EA5E9' },
-    { label: 'Customer Not Available', value: metrics?.customerNotAvailable || 0, color: '#F59E0B' },
-    { label: 'Tomorrow / Reschedule', value: metrics?.reschedule || 0, color: '#8B5CF6' },
-    { label: 'Cancelled', value: metrics?.cancelled || 0, color: '#94A3B8' },
-  ];
-  const statusTotal = statusParts.reduce((sum, p) => sum + p.value, 0);
-  const statusSegments = statusParts.map((p) => ({
-    ...p,
-    pct: statusTotal ? Number(((p.value / statusTotal) * 100).toFixed(1)) : 0,
-  }));
-
-  /* ── Trend line: real requests per day over the last week. This was a fixed
-     seven-point series labelled 15–21 May that never moved. ── */
-  const trend = metrics?.trend || [];
-  const trendData = trend.map((t) => t.count ?? 0);
-  const trendLabels = trend.map((t) => t.date ? new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '');
-  const maxTrend = Math.max(1, ...trendData);
-
-  /* ── Product wise: real category breakdown, previously a fixed five-row
-     table with invented counts and percentages. ── */
-  const PRODUCT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#0EA5E9'];
-  const productWise = (metrics?.byProduct || []).map((p, i) => ({
-    ...p,
-    value: p.value ?? p.count ?? 0,
-    pct: p.pct ?? 0,
-    color: PRODUCT_COLORS[i % PRODUCT_COLORS.length],
-  }));
-
-  /* ── Quick stats ── */
-  // Only the counts the dashboard endpoint really reports. The rows for
-  // "No Invoice / Bill Available", "Document Pending" and "Repeat Calls" had
-  // fixed numbers behind them and nothing tracks those states, so they are gone
-  // rather than shown as fiction.
-  const quickStats = [
-    { label: 'Customer Not Available', value: metrics?.customerNotAvailable || 0, color: 'bg-blue-100', path: '/brand-admin/complaint-monitoring' },
-    { label: 'Call Tomorrow/Reschedule', value: metrics?.reschedule || 0, color: 'bg-yellow-100', path: '/brand-admin/complaint-monitoring' },
-    { label: 'Open Escalations', value: metrics?.escalations || 0, color: 'bg-red-100', path: '/brand-admin/escalations' },
-    { label: 'FOC Parts Approved', value: metrics?.focPartsApproved || 0, color: 'bg-teal-100', path: '/brand-admin/warranty-claims' },
-  ];
-
-  /* ── Recent complaints: the brand's real latest requests. This was five
-     hardcoded tickets with invented customers and May-2025 timestamps. ── */
-  const STATUS_COLORS = {
-    'In Progress': 'bg-blue-100 text-blue-700',
-    Closed: 'bg-green-100 text-green-700',
-    'Customer NA': 'bg-yellow-100 text-yellow-700',
-    Cancelled: 'bg-red-100 text-red-700',
-    Reschedule: 'bg-purple-100 text-purple-700',
-  };
-  const recentComplaints = recent.map((r) => ({
-    ...r,
-    statusColor: STATUS_COLORS[r.status] || 'bg-slate-100 text-slate-700',
-  }));
-
-  /* ── Quick actions ── */
-  const quickActions = [
-    { label: 'Register Complaint', icon: <Plus size={16} />, color: 'bg-blue-600', path: '/brand-admin/requests' },
-    { label: 'Approve FOC Parts', icon: <ShieldCheck size={16} />, color: 'bg-green-600', path: '/brand-admin/warranty-claims' },
-    { label: 'Send Replacement Letter', icon: <FileText size={16} />, color: 'bg-purple-600', path: '/brand-admin/documents' },
-    { label: 'Verify Warranty', icon: <CheckCircle2 size={16} />, color: 'bg-teal-600', path: '/brand-admin/warranty' },
-    { label: 'Escalate Case', icon: <AlertTriangle size={16} />, color: 'bg-red-600', path: '/brand-admin/escalations' },
-    { label: 'Generate Invoice', icon: <IndianRupee size={16} />, color: 'bg-orange-600', path: '/brand-admin/invoices' },
-    { label: 'View Reports', icon: <BarChart2 size={16} />, color: 'bg-indigo-600', path: '/brand-admin/reports' },
-    { label: 'Customer Support', icon: <PhoneCall size={16} />, color: 'bg-slate-600', path: '/brand-admin/chat' },
-  ];
-
-  // Calculate SVG Donut segments dynamically
-  let accumulatedPercent = 0;
-  const statusSegmentsWithSVGProps = statusSegments.map((segment) => {
-    const dashOffset = -accumulatedPercent * 2.512;
-    const dashArray = `${segment.pct * 2.512} 251.2`;
-    accumulatedPercent += segment.pct;
-    return {
-      ...segment,
-      dashArray,
-      dashOffset
-    };
-  });
-
-  return (
-    <div className="min-h-screen bg-[#F1F5F9] flex relative">
-      <Sidebar />
-      <div className="flex-1 ml-64 min-h-screen flex flex-col">
-        <Topbar title="Brand Dashboard" subtitle="Welcome back! Here's your after sales performance overview." />
-
-        <div className="p-5 space-y-5 flex-1">
-
-          {/* ── Row 1: 6 KPI Cards ── */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {kpis.map((k, i) => (
-              <KPICard key={i} {...k} onLink={() => navigate(k.path)} />
-            ))}
-          </div>
-
-          {/* ── Row 2: Complaints Trend & Status Overview ── */}
-          <div className="grid grid-cols-12 gap-4">
-
-            {/* Complaints Trend — line chart */}
-            <div className="col-span-8 bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-xs font-bold text-[#1E293B]">Complaints Trend</h2>
-                <span className="text-[9px] text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-lg">Last 7 Days ▾</span>
-              </div>
-              <div className="relative h-32">
-                <svg 
-                  width="100%" 
-                  height="100%" 
-                  viewBox="0 0 500 100" 
-                  preserveAspectRatio="none"
-                  onMouseMove={handleTrendMouseMove}
-                  onMouseLeave={() => setActiveTrendIndex(null)}
-                  onClick={handleTrendClick}
-                  className="cursor-pointer"
-                >
-                  <defs>
-                    <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.01" />
-                    </linearGradient>
-                  </defs>
-                  {/* Area fill. Skipped when there is no trend yet: an empty
-                      series produced d="M  L -83.3,100 …", which the browser
-                      rejects outright ("attribute d: Expected number"). */}
-                  {trendData.length > 0 && (
-                    <path
-                      d={`M ${trendData.map((v, i) => `${trendData.length > 1 ? i * (500 / (trendData.length - 1)) : 250},${100 - ((v ?? 0) / maxTrend) * 85}`).join(' L ')} L 500,100 L 0,100 Z`}
-                      fill="url(#trendGrad)"
-                    />
-                  )}
-                  {/* Line */}
-                  {trendData.length > 0 && (
-                    <polyline
-                      points={trendData.map((v, i) => `${trendData.length > 1 ? i * (500 / (trendData.length - 1)) : 250},${100 - ((v ?? 0) / maxTrend) * 85}`).join(' ')}
-                      fill="none"
-                      stroke="#3B82F6"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-                  
-                  {/* Node Circles */}
-                  {trendData.map((v, i) => {
-                    const cx = trendData.length > 1 ? i * (500 / (trendData.length - 1)) : 250;
-                    const cy = 100 - ((v ?? 0) / maxTrend) * 85;
-                    return (
-                      <circle 
-                        key={i}
-                        cx={cx} 
-                        cy={cy} 
-                        r={activeTrendIndex === i ? 5 : 3.5} 
-                        fill={activeTrendIndex === i ? '#3B82F6' : '#2563EB'} 
-                        stroke="white"
-                        strokeWidth={activeTrendIndex === i ? 1.5 : 1}
-                        className="transition-all duration-150"
-                      />
-                    );
-                  })}
-
-                  {/* Active Tooltip and Guide */}
-                  {activeTrendIndex !== null && trendData[activeTrendIndex] !== undefined && (() => {
-                    const val = trendData[activeTrendIndex] ?? 0;
-                    const cx = trendData.length > 1 ? activeTrendIndex * (500 / (trendData.length - 1)) : 250;
-                    const cy = 100 - (val / maxTrend) * 85;
-                    const tooltipY = cy > 40 ? cy - 35 : cy + 10;
-                    return (
-                      <>
-                        <line 
-                          x1={cx} 
-                          y1="0" 
-                          x2={cx} 
-                          y2="100" 
-                          stroke="#3B82F6" 
-                          strokeWidth="1" 
-                          strokeDasharray="2 2" 
-                          pointerEvents="none"
-                        />
-                        <g pointerEvents="none">
-                          <rect 
-                            x={Math.max(5, Math.min(415, cx - 40))} 
-                            y={tooltipY} 
-                            width="80" 
-                            height="28" 
-                            rx="4" 
-                            fill="#1E293B" 
-                            opacity="0.9"
-                          />
-                          <text 
-                            x={Math.max(5, Math.min(415, cx - 40)) + 40} 
-                            y={tooltipY + 10} 
-                            textAnchor="middle" 
-                            fill="#94A3B8" 
-                            fontSize="6" 
-                            fontWeight="bold"
-                          >
-                            {trendLabels[activeTrendIndex] || ''}
-                          </text>
-                          <text 
-                            x={Math.max(5, Math.min(415, cx - 40)) + 40} 
-                            y={tooltipY + 21} 
-                            textAnchor="middle" 
-                            fill="#60A5FA" 
-                            fontSize="8" 
-                            fontWeight="extrabold"
-                          >
-                            {val.toLocaleString()}
-                          </text>
-                        </g>
-                      </>
-                    );
-                  })()}
-                </svg>
-              </div>
-              <div className="flex justify-between mt-1">
-                {trendLabels.map((l, i) => (
-                  <span key={i} className="text-[8px] text-[#94A3B8]">{l}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* Complaint Status Overview — donut */}
-            <div className="col-span-4 bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between">
-              <div className="flex justify-between items-center mb-1">
-                <h2 className="text-xs font-bold text-[#1E293B]">Complaint Status Overview</h2>
-                <span className="text-[9px] text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-lg">Last 7 Days ▾</span>
-              </div>
-              <div className="flex items-center gap-6 justify-center flex-1 py-2">
-                <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#F8FAFC" strokeWidth="12" />
-                    {statusSegmentsWithSVGProps.map((s, i) => (
-                      <circle
-                        key={i}
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="transparent"
-                        stroke={s.color}
-                        strokeWidth={activeStatusIndex === i ? 15 : 12}
-                        strokeDasharray={s.dashArray}
-                        strokeDashoffset={s.dashOffset}
-                        className="cursor-pointer transition-all duration-200 hover:opacity-90"
-                        onMouseEnter={() => setActiveStatusIndex(i)}
-                        onMouseLeave={() => setActiveStatusIndex(null)}
-                        onClick={() => {
-                          toast(`Filtering by ${s.label} complaints`);
-                          navigate(`/brand-admin/complaint-monitoring?status=${s.label}`);
-                        }}
-                      />
-                    ))}
-                  </svg>
-                  <div className="absolute flex flex-col items-center justify-center leading-none text-center pointer-events-none">
-                    <span className="text-sm font-black text-[#1E293B] transition-all">
-                      {activeStatusIndex !== null && statusSegments[activeStatusIndex] 
-                        ? (statusSegments[activeStatusIndex].value ?? 0).toLocaleString() 
-                        : (statusTotal ?? 0).toLocaleString()}
-                    </span>
-                    <span className="text-[7px] text-[#64748B] font-bold uppercase mt-0.5 tracking-tight transition-all">
-                      {activeStatusIndex !== null && statusSegments[activeStatusIndex] 
-                        ? statusSegments[activeStatusIndex].label 
-                        : 'Total'}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-1 flex-1">
-                  {statusSegments.map((s, i) => (
-                    <div 
-                      key={i} 
-                      className={`flex items-center justify-between text-[9px] gap-2 p-1 rounded transition-all cursor-pointer ${
-                        activeStatusIndex === i ? 'bg-slate-50 scale-[1.02]' : 'hover:bg-slate-50'
-                      }`}
-                      onMouseEnter={() => setActiveStatusIndex(i)}
-                      onMouseLeave={() => setActiveStatusIndex(null)}
-                      onClick={() => {
-                        toast(`Filtering by ${s.label} complaints`);
-                        navigate(`/brand-admin/complaint-monitoring?status=${s.label}`);
-                      }}
-                    >
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
-                        <span className={`text-[#64748B] font-medium truncate ${activeStatusIndex === i ? 'text-blue-600 font-bold' : ''}`}>{s.label}</span>
-                      </span>
-                      <span className="font-bold text-[#1E293B] shrink-0">{(s.value ?? 0).toLocaleString()} ({s.pct ?? 0}%)</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* ── Row 3: Product Wise Complaints & Complaint Registration ── */}
-          <div className="grid grid-cols-12 gap-4">
-
-            {/* Product Wise Complaints */}
-            <div className="col-span-6 bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col justify-between">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-xs font-bold text-[#1E293B]">Product Wise Complaints</h2>
-                <span className="text-[9px] text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-lg">Last 7 Days ▾</span>
-              </div>
-              <div className="space-y-3 flex-1 flex flex-col justify-center">
-                {productWise.map((p, i) => (
-                  <div 
-                    key={i}
-                    className="cursor-pointer group p-1 rounded-lg hover:bg-slate-50 transition-all duration-200"
-                    onMouseEnter={() => setActiveProductIndex(i)}
-                    onMouseLeave={() => setActiveProductIndex(null)}
-                    onClick={() => {
-                      toast(`Viewing complaints for ${p.name}`);
-                      navigate(`/brand-admin/complaints?product=${p.name}`);
-                    }}
-                  >
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className={`text-[10px] font-semibold transition-colors ${activeProductIndex === i ? 'text-blue-600 font-bold' : 'text-[#64748B]'}`}>{p.name}</span>
-                      <span className="text-[10px] font-bold text-[#1E293B]">{(p.value ?? 0).toLocaleString()} ({p.pct ?? 0}%)</span>
-                    </div>
-                    <div className="w-full bg-[#F1F5F9] rounded-full h-1.5 overflow-hidden">
-                      <div 
-                        className="h-1.5 rounded-full transition-all duration-300 group-hover:scale-y-110" 
-                        style={{ width: `${p.pct}%`, background: p.color }} 
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Complaint Registration panel */}
-            <div className="col-span-6 bg-white rounded-2xl border border-[#E2E8F0] p-4 flex flex-col gap-3 justify-between">
-              <h2 className="text-xs font-bold text-[#1E293B]">Complaint Registration</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[9px] font-semibold text-[#64748B] uppercase block mb-1">Toll Free Number</label>
-                  <div className="flex gap-1">
-                    <input
-                      value={tollFreeInput}
-                      onChange={e => setTollFreeInput(e.target.value)}
-                      className="flex-1 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-[11px] bg-[#F8FAFC] outline-none focus:ring-1 focus:ring-[#0D47A1]"
-                    />
-                    <button onClick={saveSupportPhone} className="bg-[#0D47A1] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-blue-700">Save</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[9px] font-semibold text-[#64748B] uppercase block mb-1">Search Customer</label>
-                  <div className="relative">
-                    <Search size={13} className="absolute left-2.5 top-2.5 text-[#94A3B8]" />
-                    <input
-                      placeholder="Enter Mobile / Ticket / Name"
-                      value={searchCustomer}
-                      onChange={e => setSearchCustomer(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && searchCustomer.trim()) {
-                          navigate(`/brand-admin/customers?search=${encodeURIComponent(searchCustomer.trim())}`);
-                        }
-                      }}
-                      className="w-full pl-7 pr-3 border border-[#E2E8F0] rounded-lg py-1.5 text-[11px] bg-[#F8FAFC] outline-none focus:ring-1 focus:ring-[#0D47A1]"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div>
-                <button
-                  onClick={() => navigate('/brand-admin/requests')}
-                  className="w-full bg-[#0D47A1] hover:bg-blue-700 text-white text-[10px] font-bold py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Plus size={13} /> Register New Complaint
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          {/* ── Row 3: 6 Quick Stat Cards ── */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {quickStats.map((s, i) => (
-              <div
-                key={i}
-                onClick={() => navigate(s.path)}
-                className="bg-white border border-[#E2E8F0] rounded-xl p-3 flex flex-col gap-1 hover:shadow-md cursor-pointer transition-all"
-              >
-                <div className={`w-8 h-8 ${s.color} rounded-xl flex items-center justify-center mb-1`}>
-                  <span className="text-base font-black text-[#1E293B]">{String(s.value)[0]}</span>
-                </div>
-                <p className="text-lg font-black text-[#1E293B]">{s.value}</p>
-                <p className="text-[9px] font-semibold text-[#64748B] leading-tight">{s.label}</p>
-                <button className="text-[10px] font-bold text-[#0D47A1] hover:underline mt-auto text-left">View</button>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Row 4: 3-column bottom section ── */}
-          <div className="grid grid-cols-12 gap-4">
-
-            {/* Recent Complaints */}
-            <div className="col-span-5 bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#E2E8F0] flex justify-between items-center">
-                <h2 className="text-xs font-bold text-[#1E293B]">Recent Complaints</h2>
-                <button onClick={() => navigate('/brand-admin/complaints')} className="text-[10px] font-semibold text-[#0D47A1] hover:underline">View All</button>
-              </div>
-              <table className="w-full text-[10px]">
-                <thead className="bg-[#F8FAFC]">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-[#64748B]">Ticket ID</th>
-                    <th className="px-3 py-2 text-left font-semibold text-[#64748B]">Customer</th>
-                    <th className="px-3 py-2 text-left font-semibold text-[#64748B]">Product</th>
-                    <th className="px-3 py-2 text-left font-semibold text-[#64748B]">Status</th>
-                    <th className="px-3 py-2 text-left font-semibold text-[#64748B]">Raised On</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F1F5F9]">
-                  {recentComplaints.map((c, i) => (
-                    <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
-                      <td className="px-3 py-2 text-[#0D47A1] font-semibold">{c.id}</td>
-                      <td className="px-3 py-2 text-[#1E293B]">{c.customer}</td>
-                      <td className="px-3 py-2 text-[#64748B]">{c.product}</td>
-                      <td className="px-3 py-2">
-                        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${c.statusColor}`}>{c.status}</span>
-                      </td>
-                      <td className="px-3 py-2 text-[#64748B]">{c.date}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Spare Parts Overview */}
-            <div className="col-span-4 bg-white rounded-2xl border border-[#E2E8F0] p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-xs font-bold text-[#1E293B]">Spare Parts Overview</h2>
-                <button onClick={() => navigate('/brand-admin/inventory')} className="text-[10px] font-semibold text-[#0D47A1] hover:underline">View All</button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  // From GET /brand/dashboard → parts (this brand's partners, part orders and FOC claims).
-                  { label: 'Total Inventory', value: count(metrics?.parts?.inventoryOnHand), sub: 'Pcs', icon: <Package size={16} />, bg: 'bg-blue-50', color: 'text-blue-600' },
-                  { label: 'Parts in Transit', value: count(metrics?.parts?.inTransit), sub: 'Pcs', icon: <Truck size={16} />, bg: 'bg-purple-50', color: 'text-purple-600' },
-                  { label: 'FOC Parts Approved', value: count(metrics?.parts?.focPartsApproved), sub: 'Claims', icon: <CheckCircle2 size={16} />, bg: 'bg-green-50', color: 'text-green-600' },
-                  { label: 'Dispatch Today', value: count(metrics?.parts?.dispatchedToday), sub: 'Pcs', icon: <Truck size={16} />, bg: 'bg-orange-50', color: 'text-orange-600' },
-                ].map((s, i) => (
-                  <div key={i} className={`${s.bg} rounded-xl p-3`}>
-                    <div className={`${s.color} mb-1`}>{s.icon}</div>
-                    <p className="text-base font-black text-[#1E293B]">{s.value}</p>
-                    <p className="text-[9px] text-[#64748B] font-semibold">{s.sub}</p>
-                    <p className="text-[9px] text-[#64748B] font-medium leading-tight mt-0.5">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Financial Overview */}
-            <div className="col-span-3 bg-white rounded-2xl border border-[#E2E8F0] p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-xs font-bold text-[#1E293B]">Financial Overview</h2>
-                <button onClick={() => navigate('/brand-admin/invoices')} className="text-[10px] font-semibold text-[#0D47A1] hover:underline">View All</button>
-              </div>
-              <div className="space-y-3">
-                {[
-                  // From GET /brand/dashboard → finance (this brand's invoices).
-                  { label: 'Total Invoice Value', value: money(metrics?.finance?.totalInvoiceValue), valueColor: 'text-[#1E293B]' },
-                  { label: 'Pending Invoice Value', value: money(metrics?.finance?.pendingInvoiceValue), valueColor: 'text-red-500' },
-                  { label: 'Paid Amount', value: money(metrics?.finance?.paidAmount), valueColor: 'text-green-600' },
-                  { label: `Overdue (${metrics?.finance?.overdueDays ?? 30}+ days)`, value: money(metrics?.finance?.overdueAmount), valueColor: 'text-red-500' },
-                ].map((f, i) => (
-                  <div key={i} className="flex justify-between items-center pb-2 border-b border-[#F1F5F9] last:border-0 last:pb-0">
-                    <span className="text-[10px] font-semibold text-[#64748B]">{f.label}</span>
-                    <span className={`text-[11px] font-black ${f.valueColor}`}>{f.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-
-          {/* ── Row 5: Quick Actions bar ── */}
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] p-4">
-            <h2 className="text-xs font-bold text-[#1E293B] mb-3">Quick Actions</h2>
-            <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
-              {quickActions.map((a, i) => (
-                <button
-                  key={i}
-                  onClick={() => navigate(a.path)}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className={`w-10 h-10 ${a.color} rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-sm`}>
-                    {a.icon}
-                  </div>
-                  <span className="text-[9px] font-semibold text-[#64748B] text-center leading-tight group-hover:text-[#0D47A1] transition-colors">{a.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Toast */}
-      {successMsg && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
-          <CheckCircle2 size={14} /> {successMsg}
-        </div>
-      )}
-    </div>
-  );
+const money = v => new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR'
+}).format(v || 0);
+const count = v => Number(v || 0).toLocaleString('en-IN');
+const panel = 'bg-white rounded-2xl border border-[#E2E8F0] p-4';
+const field = 'border rounded-lg px-3 py-2 text-sm bg-white';
+const definitions = [['total', 'Total Complaints', ClipboardList, 'blue'], ['pendingApproval', 'Pending Approval', Clock, 'orange'], ['approved', 'Approved', CheckCircle2, 'green'], ['assigned', 'Assigned', Truck, 'blue'], ['inProgress', 'In Progress', Clock, 'orange'], ['completed', 'Completed', CheckCircle2, 'green'], ['escalated', 'Escalated', AlertTriangle, 'red'], ['slaBreached', 'SLA Breached', AlertTriangle, 'red'], ['totalBilling', 'Total Billing', IndianRupee, 'purple'], ['pendingPayment', 'Pending Payment', IndianRupee, 'red'], ['unbilled', 'Unbilled', Package, 'teal']];
+const colors = {
+  blue: 'bg-blue-500',
+  orange: 'bg-orange-500',
+  green: 'bg-green-500',
+  red: 'bg-red-500',
+  purple: 'bg-purple-500',
+  teal: 'bg-teal-500'
 };
-
-export default Dashboard;
+function Card({
+  name,
+  title,
+  Icon,
+  color,
+  kpi,
+  financial,
+  canOpen
+}) {
+  const body = <><span className={`w-10 h-10 ${colors[color]} rounded-xl flex items-center justify-center text-white mb-3`}><Icon size={18} /></span><span className="block text-[11px] font-semibold text-slate-500">{title}</span><strong data-testid={`dashboard-${name}`} className="block text-xl font-black text-slate-800">{financial ? money(kpi.value) : count(kpi.value)}</strong><span className="block text-xs text-slate-500 mt-2">{kpi.deltaPct == null ? 'No prior baseline' : `${kpi.deltaPct > 0 ? '+' : ''}${kpi.deltaPct}% vs previous period`} · previous {financial ? money(kpi.previous) : count(kpi.previous)}</span>{canOpen && <span className="flex gap-1 items-center text-blue-800 text-[10px] font-semibold mt-2">View details <ArrowUpRight size={10} /></span>}</>;
+  return canOpen ? <Link aria-label={title} to={kpi.link} className={`${panel} hover:shadow-lg transition-shadow`}>{body}</Link> : <div className={panel}>{body}</div>;
+}
+function Bars({
+  title,
+  rows,
+  link
+}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  return <section className={panel} aria-label={title}><h2 className="font-bold text-sm mb-4">{title}</h2>{!rows.length ? <p className="text-sm text-slate-500">No tickets in this range.</p> : <div className="space-y-3">{rows.map((r, i) => <div key={`${r.name}-${i}`}><div className="flex justify-between text-xs mb-1">{link ? <Link className="text-blue-800" to={link(r)}>{r.name.replaceAll('_', ' ')}</Link> : <span>{r.name.replaceAll('_', ' ')}</span>}<span>{count(r.value)}{r.pct != null ? ` (${r.pct}%)` : ''}</span></div><div className="bg-slate-100 rounded h-2"><div className="bg-blue-600 rounded h-2" style={{
+            width: `${r.value / max * 100}%`
+          }} /></div></div>)}</div>}</section>;
+}
+function Trend({
+  rows,
+  unit
+}) {
+  const max = Math.max(1, ...rows.flatMap(r => [r.created, r.closed]));
+  const points = key => rows.map((r, i) => `${rows.length > 1 ? i / (rows.length - 1) * 500 : 250},${90 - r[key] / max * 80}`).join(' ');
+  return <section className={`${panel} lg:col-span-2`} aria-label="Complaints trend"><h2 className="font-bold text-sm">Complaints Trend</h2><p className="text-xs text-slate-500 my-2">Created (blue) · Closed (green) · per {unit} · UTC</p><svg role="img" aria-label="Tickets created and closed" viewBox="0 0 500 100" className="w-full h-36" preserveAspectRatio="none">{rows.length > 0 && <><polyline points={points('created')} fill="none" stroke="#3B82F6" strokeWidth="2" /><polyline points={points('closed')} fill="none" stroke="#16A34A" strokeWidth="2" />{rows.map((r, i) => <g key={r.date}><title>{r.date}: {r.created} created, {r.closed} closed</title><circle cx={rows.length > 1 ? i / (rows.length - 1) * 500 : 250} cy={90 - r.created / max * 80} r="2" fill="#3B82F6" /><circle cx={rows.length > 1 ? i / (rows.length - 1) * 500 : 250} cy={90 - r.closed / max * 80} r="2" fill="#16A34A" /></g>)}</>}</svg><div className="flex justify-between text-xs text-slate-500"><span>{rows[0]?.date}</span><span>{rows.at(-1)?.date}</span></div><details className="text-xs mt-3"><summary className="cursor-pointer text-blue-800">View trend data</summary><div className="max-h-48 overflow-auto"><table className="w-full"><thead><tr><th>Date</th><th>Created</th><th>Closed</th></tr></thead><tbody>{rows.map(r => <tr key={r.date}><th>{r.date}</th><td>{r.created}</td><td>{r.closed}</td></tr>)}</tbody></table></div></details></section>;
+}
+function Sla({
+  snapshot,
+  link
+}) {
+  const segments = [['onTrack', 'On track', '#22C55E'], ['warning', 'Warning', '#F59E0B'], ['breached', 'Breached', '#EF4444']];
+  const total = Object.values(snapshot).reduce((a, b) => a + b, 0);
+  let offset = 0;
+  return <section className={panel} aria-label="SLA snapshot"><h2 className="font-bold text-sm mb-3">SLA Snapshot · Open tickets</h2><div className="flex items-center gap-6"><svg role="img" aria-label={`${total} open tickets`} viewBox="0 0 100 100" className="w-28 h-28 -rotate-90"><circle cx="50" cy="50" r="40" fill="none" stroke="#F1F5F9" strokeWidth="12" />{segments.map(([key, label, color]) => {
+          const length = total ? snapshot[key] / total * 251.327 : 0;
+          const at = offset;
+          offset += length;
+          return <circle key={key} cx="50" cy="50" r="40" fill="none" stroke={color} strokeWidth="12" strokeDasharray={`${length} 251.327`} strokeDashoffset={-at}><title>{label}: {snapshot[key]}</title></circle>;
+        })}</svg><div className="space-y-3 text-xs">{segments.map(([key, label, color]) => <p key={key}><span className="inline-block w-2 h-2 rounded-full mr-2" style={{
+            background: color
+          }} />{label}: <strong>{count(snapshot[key])}</strong></p>)}</div></div>{link && <Link className="block text-xs text-blue-800 mt-3" to={link}>View breached tickets</Link>}</section>;
+}
+export default function Dashboard() {
+  const [params, setParams] = useSearchParams(),
+    [preset, setPreset] = useState('custom');
+  const {
+    can,
+    canOpen
+  } = useBrandPermissions();
+  const query = new URLSearchParams();
+  for (const key of ['from', 'to']) if (params.get(key)) query.set(key, params.get(key));
+  const requestKey = query.toString();
+  const data = useApiData(async () => ({
+    key: requestKey,
+    result: await apiRequest(`/brand/dashboard${requestKey ? `?${requestKey}` : ''}`, {
+      auth: true
+    })
+  }), [requestKey], {
+    initial: null
+  });
+  useBrandDashboardLive(data.reload);
+  const d = data.data?.key === requestKey ? data.data.result : null;
+  const selectPreset = value => {
+    setPreset(value);
+    if (value === 'custom') return;
+    const now = new Date(),
+      to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)),
+      from = new Date(+to - (value === 'today' ? 1 : value === '7' ? 7 : 30) * 86400000);
+    if (value === 'month') from.setUTCFullYear(now.getUTCFullYear(), now.getUTCMonth(), 1);
+    setParams({
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10)
+    });
+  };
+  const date = (key, value) => {
+    setPreset('custom');
+    const next = new URLSearchParams(params);
+    value ? next.set(key, value) : next.delete(key);
+    setParams(next);
+  };
+  const ticketLink = extra => `/brand-admin/tickets?${new URLSearchParams({
+    from: d.period.from.slice(0, 10),
+    to: new Date(new Date(d.period.to) - 1).toISOString().slice(0, 10),
+    ...extra
+  })}`;
+  return <div className="min-h-screen bg-[#F1F5F9] flex"><Sidebar /><main className="ml-64 flex-1 min-w-0"><Topbar title="Brand Dashboard" subtitle="Live complaint, service and billing performance" /><div className="p-5 space-y-5">
+    <div className={`${panel} flex gap-4 flex-wrap items-end`}><label className="text-xs">Date range<select aria-label="Dashboard date range" className={`${field} block mt-1`} value={preset} onChange={e => selectPreset(e.target.value)}><option value="custom">Custom / Default 7 days</option><option value="today">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="month">This month</option></select></label>{['from', 'to'].map(key => <label key={key} className="text-xs">{key === 'from' ? 'From date' : 'Before date (exclusive)'}<input aria-label={key === 'from' ? 'Dashboard from date' : 'Dashboard before date'} type="date" className={`${field} block mt-1`} value={params.get(key) || ''} onChange={e => date(key, e.target.value)} /></label>)}<button className="text-blue-800 text-sm" onClick={data.reload}>Refresh</button>{d && <p className="text-xs text-slate-500">{d.period.from.slice(0, 10)} → {d.period.to.slice(0, 10)} (exclusive, UTC)</p>}</div>
+    {data.error && <p role="alert" className="bg-red-50 text-red-800 p-4 rounded-xl">{data.error.message}</p>}
+    {!d && !data.error && <div role="status" aria-label="Loading dashboard" className="grid grid-cols-3 gap-4 animate-pulse">{definitions.map(([key]) => <div key={key} className="h-36 bg-slate-200 rounded-2xl" />)}</div>}
+    {d && <><div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">{definitions.filter(([name]) => d.kpis[name] && (!['totalBilling', 'pendingPayment', 'unbilled'].includes(name) || can('billing:view'))).map(([name, title, Icon, color]) => <Card key={name} name={name} title={title} Icon={Icon} color={color} kpi={d.kpis[name]} financial={['totalBilling', 'pendingPayment', 'unbilled'].includes(name)} canOpen={!!d.kpis[name].link && canOpen(d.kpis[name].link.split('?')[0])} />)}</div>
+      {d.queues && <section className={`${panel} flex items-center gap-5 flex-wrap`} aria-label="My work"><h2 className="font-bold text-sm">My Work</h2>{Object.entries(d.queues).map(([key, value]) => <Link key={key} className="text-xs text-blue-800" to="/brand-admin/my-work">{{
+                assigned: 'Assigned to me',
+                contacts: 'Contact requests',
+                callbacks: 'Callbacks today',
+                awaitingCustomer: 'Awaiting customer'
+              }[key]}: <strong>{count(value)}</strong></Link>)}</section>}
+      <div className="grid lg:grid-cols-3 gap-4"><Trend rows={d.trend} unit={d.period.unit} /><Sla snapshot={d.slaSnapshot} link={can('tickets:view') ? d.kpis.slaBreached.link : null} /></div>
+      <div className="grid lg:grid-cols-3 gap-4"><Bars title="Complaint Sources" rows={d.bySource} link={can('tickets:view') ? r => ticketLink({
+              source: r.name
+            }) : null} /><Bars title="Product Wise Complaints" rows={d.byProduct} link={can('tickets:view') ? r => ticketLink({
+              categoryKey: r.categoryKey
+            }) : null} /><Bars title="Complaints by State" rows={d.byState} link={can('tickets:view') ? r => ticketLink({
+              state: r.state
+            }) : null} /></div>
+      <div className="grid lg:grid-cols-12 gap-4">{d.recent && <section className={`${panel} ${d.billing ? 'lg:col-span-5' : 'lg:col-span-8'} overflow-x-auto`}><h2 className="font-bold text-sm mb-3">Recent Complaints</h2><table className="w-full text-xs text-left"><thead><tr>{['Ticket', 'Product', 'Status', 'Raised'].map(v => <th className="p-2" key={v}>{v}</th>)}</tr></thead><tbody>{d.recent.map(r => <tr key={r.id} className="border-t"><td className="p-2"><Link className="text-blue-800" to={`/brand-admin/tickets/${r.id}`}>{r.humanId}</Link><p>{r.brandTicketNo}</p></td><td className="p-2">{r.productName || r.categoryKey}</td><td className="p-2">{r.status}</td><td className="p-2">{new Date(r.createdAt).toLocaleString('en-IN')}</td></tr>)}</tbody></table>{!d.recent.length && <p className="text-sm text-slate-500 p-3">No complaints in this range.</p>}</section>}
+        {d.parts && <section className={`${panel} lg:col-span-4`}><h2 className="font-bold text-sm mb-4">Spare Parts Overview</h2>{[['awaitingApproval', 'Awaiting brand approval'], ['inTransit', 'In transit'], ['installed', 'Installed in range']].map(([key, label]) => <p key={key} className="flex justify-between text-xs py-3 border-b"><span>{label}</span><strong>{count(d.parts[key])}</strong></p>)}<Link className="text-xs text-blue-800 block mt-3" to="/brand-admin/part-requests">View parts</Link></section>}
+        {d.billing && can('billing:view') && <section className={`${panel} lg:col-span-3`}><h2 className="font-bold text-sm mb-4">Financial Overview</h2>{[['invoiceValue', 'Invoiced'], ['paid', 'Paid'], ['pending', 'Pending'], ['overdue', 'Overdue'], ['unbilledAmount', 'Unbilled']].map(([key, label]) => <p key={key} className="flex justify-between text-xs py-3 border-b"><span>{label}</span><strong>{money(d.billing[key])}</strong></p>)}</section>}
+      </div>
+      <section className={panel}><h2 className="font-bold text-sm mb-4">Quick Actions</h2><div className="flex gap-4 flex-wrap">{[['tickets:create', '/brand-admin/requests', 'Register Complaint', Plus], ['parts:approve', '/brand-admin/part-requests', 'Review Parts', Package], ['reports:view', '/brand-admin/reports', 'View Reports', BarChart2], ['billing:view', '/brand-admin/invoices', 'View Billing', IndianRupee]].filter(([permission]) => can(permission)).map(([, path, label, Icon]) => <Link key={path} className="flex items-center gap-2 text-xs text-blue-800" to={path}><Icon size={16} />{label}</Link>)}</div></section>
+      <p className="text-xs text-slate-500">{d.note}</p>
+    </>}
+  </div></main></div>;
+}
