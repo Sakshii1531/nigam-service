@@ -9,8 +9,8 @@ done (CI) or a ready-to-run set of steps once the account exists.
 ## What's already built
 
 - **`.github/workflows/backend-ci.yml`** — runs on every PR and push to `main`
-  touching `backend/`, `e2e/`, or the workflow file itself. Two jobs: lint +
-  full Jest suite (against a `mongo:6` service container), then Playwright E2E
+  touching `backend/`, `e2e/`, or the workflow file itself. It runs lint, four
+  Jest shards on isolated `mongo:7.0` replica sets, then Playwright E2E
   (API-only — no browser binaries installed, since every spec uses Playwright's
   `request` fixture, not a real browser). This is CI's job — it does **not**
   deploy anything; deployment is Render's job below, triggered separately by
