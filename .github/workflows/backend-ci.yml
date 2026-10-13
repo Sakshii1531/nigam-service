@@ -87,7 +87,12 @@ jobs:
         env:
           MONGODB_TEST_URI: mongodb://127.0.0.1:27017/nigam_care_test?replicaSet=rs0
           NODE_OPTIONS: --max-old-space-size=4096
-        run: npm test -- --shard=${{ matrix.shard }}/4 --forceExit
+        run: npm test -- --shard=${{ matrix.shard }}/4 --forceExit --json --outputFile=/tmp/jest-results.json
+
+      - name: Report Jest failures
+        if: failure()
+        working-directory: backend
+        run: node ../scripts/report-jest-failures.mjs /tmp/jest-results.json
 
   e2e:
     runs-on: ubuntu-latest
