@@ -3,6 +3,8 @@ import Sidebar from '../../components/brand-admin/Sidebar';
 import Topbar from '../../components/brand-admin/Topbar';
 import { RefreshCcw, Clock, CheckCircle2, X, Search, Download } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import { downloadOperationsFile } from '../../lib/brandOperationsDownloads';
+import { useBrandPermissions } from '../../hooks/useBrandPermissions';
 
 const statusColors = {
   Pending: 'bg-yellow-100 text-yellow-700',
@@ -31,6 +33,8 @@ function shape(approval) {
 }
 
 const ReplacementApprovals = () => {
+  const { can } = useBrandPermissions();
+  const [exporting, setExporting] = useState(false);
   const [data, setData] = useState([]);
   const [searchQ, setSearchQ] = useState('');
   const [, setSelectedItem] = useState(null);
@@ -56,6 +60,14 @@ const ReplacementApprovals = () => {
     loadApprovals();
     return () => { cancelled = true; };
   }, []);
+
+  async function exportReport() {
+    setExporting(true); setError('');
+    try {
+      const query = new URLSearchParams({format:'csv', q:searchQ, ...(filterStatus !== 'All' ? {status:filterStatus} : {})});
+      await downloadOperationsFile(`/brand/replacement-approvals?${query}`, 'brand-replacements.csv');
+    } catch(e) {setError(e.message);} finally {setExporting(false);}
+  }
 
   const updateStatus = async (id, newStatus) => {
     const previous = data;
@@ -118,9 +130,9 @@ const ReplacementApprovals = () => {
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${filterStatus === s ? 'bg-[#0D47A1] text-white border-[#0D47A1]' : 'border-[#E2E8F0] text-[#64748B] hover:bg-[#F8FAFC]'}`}
                 >{s}</button>
               ))}
-              <button onClick={() => toast('Exported as CSV!')} className="flex items-center gap-1.5 border border-[#E2E8F0] px-3 py-1.5 rounded-xl text-xs font-semibold text-[#64748B] hover:bg-[#F8FAFC]">
-                <Download size={13} /> Export
-              </button>
+              {can('reports:export') && <button disabled={exporting} onClick={exportReport} className="flex items-center gap-1.5 border border-[#E2E8F0] px-3 py-1.5 rounded-xl text-xs font-semibold text-[#64748B] hover:bg-[#F8FAFC]">
+                <Download size={13} /> Export CSV
+              </button>}
             </div>
 
             <div className="space-y-3">
@@ -142,7 +154,7 @@ const ReplacementApprovals = () => {
                       <div className="grid grid-cols-2 gap-2 text-xs mb-2">
                         <div><span className="text-[#94A3B8] font-semibold">Customer: </span><span className="text-[#1E293B] font-bold">{r.customer}</span></div>
                         <div><span className="text-[#94A3B8] font-semibold">Product: </span><span className="text-[#1E293B]">{r.product} ({r.model})</span></div>
-                        <div><span className="text-[#94A3B8] font-semibold">ServiceProvider: </span><span className="text-[#1E293B]">{r.provider}</span></div>
+                        <div><span className="text-[#94A3B8] font-semibold">ServiceProvider: </span><span className="text-[#1E293B]">{r.serviceProvider}</span></div>
                         <div><span className="text-[#94A3B8] font-semibold">Date: </span><span className="text-[#1E293B]">{r.date}</span></div>
                       </div>
                       <div className="bg-[#F8FAFC] rounded-lg p-2 text-[10px]">

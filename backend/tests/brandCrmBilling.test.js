@@ -14,6 +14,7 @@ import { BrandPayment } from '../src/modules/brand-crm/brandPayment.model.js';
 import { Brand } from '../src/modules/super-admin/brand.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { DomainEvent } from '../src/modules/partner-warranty/domainEvent.model.js';
+import { Notification } from '../src/modules/notifications/notification.model.js';
 import { PlatformSettings } from '../src/modules/super-admin/platformSettings.model.js';
 import { Permission } from '../src/modules/auth/permission.model.js';
 import { Role } from '../src/modules/auth/role.model.js';
@@ -329,6 +330,33 @@ describe('Phase 13 transactional brand billing', () => {
     expect(await billing.monthlyAutoDraft({
       now: new Date('2026-09-02')
     })).toHaveLength(0);
+  });
+  it('catches up multiple missed months after an outage without drafting periods before their due day or duplicating invoices', async () => {
+    const w = await world();
+    await PlatformSettings.create({ brandInvoiceDay: 2 });
+    await line(w, { closedAt: new Date('2026-07-15') });
+    await line(w); // August
+    await line(w, { closedAt: new Date('2026-09-15') });
+    expect(await billing.monthlyAutoDraft({ now: new Date('2026-10-01') })).toHaveLength(2);
+    expect(await billing.monthlyAutoDraft({ now: new Date('2026-10-01') })).toHaveLength(0);
+    expect(await billing.monthlyAutoDraft({ now: new Date('2026-10-03') })).toHaveLength(1);
+    expect(await billing.monthlyAutoDraft({ now: new Date('2026-10-04') })).toHaveLength(0);
+    const invoices = await BrandInvoice.find().sort({ periodFrom: 1 });
+    expect(invoices.map(i => i.periodFrom.toISOString().slice(0, 10))).toEqual(['2026-07-01', '2026-08-01', '2026-09-01']);
+    expect(await BillingLine.countDocuments({ status: 'billable' })).toBe(0);
+  });
+  it('alerts NCC Finance once about a failed automatic draft and retries it on the next sweep', async () => {
+    const w = await world();
+    await line(w);
+    const create = jest.spyOn(BrandInvoice, 'create').mockRejectedValue(new Error('Simulated drafting outage'));
+    try {
+      for (let i = 0; i < 2; i++) {
+        expect((await billing.monthlyAutoDraft({ now: new Date('2026-09-03') }))[0].error).toBe('Simulated drafting outage');
+      }
+    } finally { create.mockRestore(); }
+    expect(await Notification.countDocuments({ recipient: w.admin.user._id, title: 'Automatic brand invoice needs attention' })).toBe(1);
+    expect(await billing.monthlyAutoDraft({ now: new Date('2026-09-04') })).toHaveLength(1);
+    expect(await BrandInvoice.countDocuments()).toBe(1);
   });
   it('summary excludes draft/cancelled invoices, counts unbilled and ages remaining balances', async () => {
     const w = await world();

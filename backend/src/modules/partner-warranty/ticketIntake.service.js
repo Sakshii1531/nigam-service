@@ -262,7 +262,7 @@ export async function finishTicketCreation(claim, brand, settings) {
  * that needs verification, or is out of warranty, still waits for a person.
  */
 function shouldAutoApprove(claim, settings) {
-  if ([TICKET_SOURCE.WHATSAPP, TICKET_SOURCE.API].includes(claim.source)) return false;
+  if (![TICKET_SOURCE.TOLL_FREE, TICKET_SOURCE.BRAND_MANUAL].includes(claim.source)) return false;
   return Boolean(settings?.autoApproveSources?.includes(claim.source)) && claim.warranty?.status === WARRANTY_STATUS.IN;
 }
 

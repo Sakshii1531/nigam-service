@@ -14,6 +14,8 @@ export const updateStatusSchema = z.object({
 });
 
 export const listQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  format: z.literal('csv').optional(),
   status: z.enum(['Pending', 'Approved', 'Rejected', 'Info Requested']).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),

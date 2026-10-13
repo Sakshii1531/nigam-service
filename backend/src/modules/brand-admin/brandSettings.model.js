@@ -21,7 +21,7 @@ const brandSettingsSchema = new mongoose.Schema(
 
     // Brand CRM (docs/brand-crm README D6): ticket sources approved on
     // creation instead of waiting in Pending Approval. Empty = always review.
-    autoApproveSources: { type: [String], enum: ['ncc_app', 'toll_free', 'brand_manual', 'whatsapp', 'api'], default: [] },
+    autoApproveSources: { type: [String], enum: ['toll_free', 'brand_manual'], default: [] },
     // Who owns a new ticket on the brand side: nobody, the registering user, or round-robin (Phase 9).
     escalationMatrix: {
       warning: { role: { type: String, default: 'brand_manager' }, level: { type: Number, default: 1 } },

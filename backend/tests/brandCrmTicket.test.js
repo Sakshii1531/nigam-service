@@ -218,6 +218,17 @@ describe('Phase 1 — numbering', () => {
 });
 
 describe('Phase 1 — auto-approval by source (README D6)', () => {
+  it('always holds NCC App tickets for approval even with legacy or directly injected auto-approval settings', async () => {
+    const { w, cust } = await scenario();
+    await BrandSettings.collection.insertOne({ brand: w.lg._id, autoApproveSources: ['ncc_app', 'whatsapp', 'api'] });
+    const ticket = await kit.submitClaim(w, cust);
+    const saved = await WarrantyClaim.findById(ticket.id);
+    expect(saved.warranty.status).toBe('In Warranty');
+    expect(saved.status).toBe('Submitted');
+    expect(saved.serviceRequest).toBeFalsy();
+    expect(saved.timeline.some(e => e.action === 'CLAIM_APPROVED')).toBe(false);
+    await expect(new BrandSettings({ brand: w.samsung._id, autoApproveSources: ['ncc_app'] }).validate()).rejects.toThrow();
+  });
   it('approves and creates the NCC job at once for a listed source, when in warranty', async () => {
     const { w, cce, cust } = await scenario();
     await BrandSettings.create({ brand: w.lg._id, autoApproveSources: ['toll_free'] });

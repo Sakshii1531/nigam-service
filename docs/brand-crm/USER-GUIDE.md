@@ -103,3 +103,22 @@ Confirmation → Closed`
 
 The ticket detail page is the reference for the customer, product, warranty,
 approval, NCC job, parts, communication, SLA, billing and closure history.
+## Completion monitoring and documents (13 October 2026)
+
+Service Operations can filter **Service Completion Monitor** by today's India
+date, pending QC, feedback pending or customer/job search, and page through all
+results. Its cards summarize all search matches; changing tabs filters the job
+list. Job changes refresh automatically. Unknown historical completion dates
+remain blank rather than showing the last edit time.
+
+Users with report-export permission can download the complete filtered
+completion or replacement CSV. Export limits require narrowing filters above
+10,000 rows. Users with escalation-management permission can open a completed
+job, enter a Re-QC reason and submit a saved escalation. Resolve the review in
+**Escalations**; its open state appears as pending QC in the completion monitor.
+
+In **Letter & Document Center**, select a job and document type to generate a
+snapshot. Download the document as HTML or use **Print / Save PDF** to open its
+printable version, then choose Print / Save PDF and the browser's PDF destination.
+The preview and downloaded/printed version use the same recorded facts. Older
+documents without a snapshot are explicitly marked as using current job details.

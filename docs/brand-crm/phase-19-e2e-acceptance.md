@@ -129,3 +129,45 @@ The implementation retains the documented defaults until the client answers:
   the remaining cases need NCC approval.
 - **Q5:** a customer-not-available visit uses the configured `visitOnly` rate,
   otherwise ₹0.
+
+## Follow-up: client audit fixes (13 October 2026)
+
+The independent client review identified four gaps after the original Phase 19
+acceptance. The follow-up fixes are:
+
+- Completion and replacement exports now download filtered, tenant-scoped CSVs
+  across all matching pages, with formula protection and an export audit. They
+  require the existing `reports:export` permission.
+- Re-QC now creates a persisted escalation with the operator's reason and actor;
+  open Re-QC escalations appear as pending QC in completion monitoring. The
+  action requires `escalations:manage` and is resolved through Escalations.
+- Generated documents retain a snapshot of actual brand/job/customer/warranty
+  facts. Preview, HTML download and Print / Save PDF now use that same document.
+  The browser's print dialog supplies PDF output, matching the billing screen's
+  existing approach. Foreign job/document references are rejected. Older
+  documents without a snapshot explicitly show that their facts are current.
+- Completion monitoring uses the recorded repair-completion timestamp (job
+  completion, with service-request timeline fallback), India-day filtering,
+  server-side search, complete aggregate KPIs, pagination, partner names and
+  live ticket refresh. Missing historical completion evidence displays as
+  unknown rather than substituting the last edit time.
+- Monthly invoice drafting catches up every due historical month after missed
+  runs, keeps the configured earliest drafting day and disable setting, and
+  remains idempotent. Failed periods stay queued for retry and generate a
+  deduplicated notification to NCC Finance.
+- Automatic approval is allowlisted to Toll-Free/Manual only. NCC App,
+  WhatsApp and API tickets continue to wait for approval even if old or directly
+  injected settings contain those sources.
+
+Validation: seven targeted backend suites / 142 tests passed, including the six
+client journeys and new operations, invoice-recovery and NCC App approval
+regressions. Backend/frontend lint and frontend build passed. Browser checks: **2 passed**
+(`brandCrmOperations.spec.js` and `brandCrmQueue.spec.js`). The operations
+walkthrough verifies live completion without a page reload, CSV downloads, a
+persisted Re-QC escalation, generated-document preview and HTML download, and
+the printable document invoking the browser print function. Operations/RBAC
+were rerun after final permission wiring: **2 suites / 26 tests passed**
+(already included in the 142-test total). `git diff --check` passed.
+
+The business defaults Q1–Q5 still await client confirmation; these fixes do not
+claim that the client has approved them.

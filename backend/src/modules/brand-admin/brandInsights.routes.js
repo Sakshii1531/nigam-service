@@ -6,8 +6,10 @@ import { ok } from '../../utils/respond.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import * as brandInsights from './brandInsights.service.js';
 import { z } from 'zod';
+import { sendOperationsCsv } from './operationsExport.js';
 import {
   listPaginatedQuerySchema,
+  listCompletionsQuerySchema,
   listWarrantyQuerySchema,
   listAmcQuerySchema,
   listClaimsQuerySchema,
@@ -28,9 +30,13 @@ brandInsightsRouter.get('/service-providers', validate(listPaginatedQuerySchema,
   }
 });
 
-brandInsightsRouter.get('/completions', validate(listPaginatedQuerySchema, 'query'), async (req, res, next) => {
+brandInsightsRouter.get('/completions', validate(listCompletionsQuerySchema, 'query'), async (req, res, next) => {
   try {
     const { items, meta } = await brandInsights.listBrandCompletions(req.user.brand, req.query);
+    if (req.query.format) return await sendOperationsCsv(req, res, 'completions', [
+      ['Job ID', 'Customer', 'Product', 'Service Provider', 'Completed At', 'QC Status', 'Feedback', 'Rating'],
+      ...items.map(r => [r.humanId, r.user?.name, r.category, r.serviceProvider?.name, r.completedAt?.toISOString(), r.qcStatus, r.feedbackStatus, r.rating]),
+    ]);
     ok(res, items, meta);
   } catch (err) {
     next(err);

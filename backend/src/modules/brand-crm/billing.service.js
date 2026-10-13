@@ -455,19 +455,20 @@ export async function monthlyAutoDraft({
   now = new Date()
 } = {}) {
   const settings = await PlatformSettings.findOne().lean();
-  if (settings?.brandInvoiceAutoDraft === false || now.getUTCDate() !== (settings?.brandInvoiceDay ?? 1)) return [];
-  const periodTo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const periodFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  const brands = await BillingLine.distinct('brand', {
-    status: 'billable',
-    invoice: null,
-    closedAt: {
-      $gte: periodFrom,
-      $lt: periodTo
-    }
-  });
+  if (settings?.brandInvoiceAutoDraft === false) return [];
+  // Before this month's scheduled day, only older periods are due. Afterwards
+  // include the previous month. Persisted unbilled lines are the recovery queue:
+  // restarting after an outage also picks up every missed historical period.
+  const periodCutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (now.getUTCDate() < (settings?.brandInvoiceDay ?? 1) ? 1 : 0), 1));
+  const periods = await BillingLine.aggregate([
+    { $match: { status: 'billable', invoice: null, closedAt: { $lt: periodCutoff } } },
+    { $group: { _id: { brand: '$brand', year: { $year: '$closedAt' }, month: { $month: '$closedAt' } } } },
+    { $sort: { '_id.year': 1, '_id.month': 1, '_id.brand': 1 } },
+  ]);
   const results = [];
-  for (const brand of brands) {
+  for (const { _id: { brand, year, month } } of periods) {
+    const periodFrom = new Date(Date.UTC(year, month - 1, 1));
+    const periodTo = new Date(Date.UTC(year, month, 1));
     try {
       results.push(await draftInvoice(brand, {
         periodFrom,
@@ -475,6 +476,15 @@ export async function monthlyAutoDraft({
       }));
     } catch (e) {
       console.error(`[brand-billing] auto-draft failed for ${brand}: ${e.message}`);
+      const finance = await User.find({ role: 'super_admin', status: 'Active' }).populate({ path: 'assignedRoles', match: { scope: 'platform' }, populate: { path: 'permissions', match: { scope: 'platform', key: 'billing:manage' } } });
+      for (const user of finance.filter(u => u.assignedRoles.some(r => r.permissions.length))) {
+        await Notification.updateOne({ dedupeKey: `brand-draft-failed:${brand}:${year}-${month}:${user._id}` }, { $setOnInsert: {
+          recipient: user._id, brand, type: 'payment', priority: 'High',
+          title: 'Automatic brand invoice needs attention',
+          message: `The invoice for ${year}-${String(month).padStart(2, '0')} could not be drafted. It will be retried automatically; review Brand Billing.`,
+          cta: { label: 'Review brand billing', route: '/super-admin/brand-billing' },
+        } }, { upsert: true });
+      }
       results.push({
         brand: String(brand),
         error: e.message

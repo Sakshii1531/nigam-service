@@ -13,7 +13,6 @@ import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarranty
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
 import { Claim } from '../warranty-amc-exchange/claim.model.js';
-import { Review } from '../reviews/review.model.js';
 import { PartOrder } from '../service-provider/partOrder.model.js';
 import { ServiceProviderInventoryItem } from '../service-provider/serviceProviderInventoryItem.model.js';
 import { Job } from '../service-provider/job.model.js';
@@ -87,41 +86,7 @@ export async function listBrandServiceProviders(brandId, { page, limit } = {}) {
   return { items: items.slice(skip, skip + lim), meta: paginationMeta({ page: pg, limit: lim, total: items.length }) };
 }
 
-/** Requests that reached a finished state — the QC/completion review queue. */
-export async function listBrandCompletions(brandId, { page, limit, sort } = {}) {
-  const query = { brand: brandId, status: { $in: ['Repair Completed', 'Customer Confirmation', 'Closed'] } };
-  const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
-
-  const [requests, total] = await Promise.all([
-    ServiceRequest.find(query)
-      .populate('user', 'name phone')
-      .populate('serviceProvider', 'name')
-      .sort(sortObj)
-      .skip(skip)
-      .limit(lim)
-      .lean(),
-    ServiceRequest.countDocuments(query),
-  ]);
-
-  // Whether the customer has rated the job yet — one batched lookup rather than
-  // a query per row.
-  const reviews = await Review.find({ serviceRequest: { $in: requests.map((r) => r._id) } })
-    .select('serviceRequest rating')
-    .lean();
-  const reviewBySr = new Map(reviews.map((rv) => [String(rv.serviceRequest), rv]));
-
-  const items = requests.map((r) => {
-    const review = reviewBySr.get(String(r._id));
-    return {
-      ...r,
-      id: String(r._id),
-      rating: review?.rating ?? null,
-      feedbackStatus: review ? 'Received' : 'Pending',
-    };
-  });
-
-  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
-}
+export { listBrandCompletions } from './brandCompletions.service.js';
 
 export async function listBrandWarrantyRegistrations(brandId, { verificationStatus, page, limit, sort } = {}) {
   const query = { brandRef: brandId };

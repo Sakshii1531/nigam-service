@@ -638,3 +638,23 @@ intentional compatibility details:
 
 No unresolved implementation deviation changes tenant isolation, billing
 arithmetic, SLA behavior or the single-ticket workflow.
+
+### Follow-up hardening (13 October 2026)
+
+- Completion monitoring now uses `brandCompletions.service.js` for tenant-scoped
+  aggregation, recorded completion dates, India-day filters, full KPIs,
+  pagination and linked open Re-QC escalation visibility. Re-QC uses the
+  existing audited escalation workflow rather than a second QC request system.
+- Completion/replacement CSVs use the existing `reports:export` permission,
+  export audit and formula-safe cells. They cover every matching page, up to
+  10,000 rows, instead of just the displayed page.
+- `GeneratedDocument.snapshot` freezes the brand, operator, customer, job and
+  warranty facts used at generation. Authenticated `GET /brand/documents/:id`
+  with `format=html` renders the same document for preview, HTML download and
+  browser Print / Save PDF. Legacy rows without snapshots explicitly render
+  current linked facts. No server-side PDF renderer is required.
+- Monthly invoice automation derives pending periods from closed, unbilled
+  lines and catches up all due months, honoring the configured drafting day.
+  Failures stay queued and notify NCC Finance once per brand/period/recipient.
+- `autoApproveSources` accepts only Toll-Free/Manual. Runtime also rejects
+  NCC App/WhatsApp/API automatic approval even with legacy invalid settings.

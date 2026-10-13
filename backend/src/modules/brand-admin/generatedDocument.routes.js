@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireBrandScope } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
+import { z } from 'zod';
 import * as generatedDocumentService from './generatedDocument.service.js';
 import { generateDocumentSchema, listQuerySchema, idParamSchema } from './generatedDocument.validation.js';
 
@@ -25,8 +26,12 @@ generatedDocumentRouter.post('/', validate(generateDocumentSchema), async (req, 
   }
 });
 
-generatedDocumentRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {
+generatedDocumentRouter.get('/:id', validate(idParamSchema, 'params'), validate(z.object({ format: z.literal('html').optional() }).strict(), 'query'), async (req, res, next) => {
   try {
+    if (req.query.format === 'html') {
+      const html = await generatedDocumentService.printableDocument(req.user.brand, req.params.id);
+      return res.type('html').send(html);
+    }
     ok(res, await generatedDocumentService.getDocument(req.user.brand, req.params.id));
   } catch (err) {
     next(err);

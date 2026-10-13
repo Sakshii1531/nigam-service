@@ -19,6 +19,7 @@ const generatedDocumentSchema = new mongoose.Schema(
     serviceRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceRequest', required: true },
     generatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     pdfUrl: String,
+    snapshot: mongoose.Schema.Types.Mixed,
   },
   { timestamps: true },
 );

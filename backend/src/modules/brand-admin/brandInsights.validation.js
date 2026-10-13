@@ -8,6 +8,12 @@ const pagination = {
 
 export const listPaginatedQuerySchema = z.object({ ...pagination });
 
+export const listCompletionsQuerySchema = z.object({
+  ...pagination, q: z.string().trim().max(100).optional(),
+  tab: z.enum(['all', 'today', 'pending_qc', 'feedback_pending']).optional(),
+  format: z.literal('csv').optional(),
+}).strict();
+
 export const listWarrantyQuerySchema = z.object({
   verificationStatus: z.enum(['Pending', 'Approved', 'Rejected']).optional(),
   ...pagination,

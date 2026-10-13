@@ -1,10 +1,18 @@
 import { ReplacementApproval } from './replacementApproval.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { User } from '../auth/user.model.js';
+import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 
-export async function listReplacementApprovals(brandId, { status, page, limit, sort } = {}) {
+export async function listReplacementApprovals(brandId, { status, page, limit, sort, format, q } = {}) {
   const query = { brand: brandId };
   if (status) query.status = status;
+  if (q) {
+    const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const users = await User.find({ name: rx }).distinct('_id');
+    const requests = await ServiceRequest.find({ brand: brandId, user: { $in: users } }).distinct('_id');
+    query.$or = [{ humanId: rx }, { serviceRequest: { $in: requests } }];
+  }
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
@@ -14,10 +22,11 @@ export async function listReplacementApprovals(brandId, { status, page, limit, s
       .populate({ path: 'serviceRequest', select: 'humanId', populate: { path: 'user', select: 'name' } })
       .populate('serviceProvider', 'name')
       .sort(sortObj)
-      .skip(skip)
-      .limit(lim),
+      .skip(format ? 0 : skip)
+      .limit(format ? 10001 : lim),
     ReplacementApproval.countDocuments(query),
   ]);
+  if (format && items.length > 10000) throw new ApiError(400, 'Narrow filters to export at most 10000 replacements');
   return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
