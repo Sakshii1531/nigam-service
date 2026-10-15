@@ -317,14 +317,6 @@ const ActiveJob = () => {
   const [enteredInspection, setEnteredInspection] = useState(false);
   const [inspectionDiagnosed, setInspectionDiagnosed] = useState(false);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState("confirmed"); // 'confirmed', 'different', 'none'
-  // The technician's own on-site warranty check (from a physical warranty
-  // card/invoice), which overrides the system's computed guess everywhere the
-  // job shows a warranty status. Starts unset — never silently defaults to a
-  // status the technician hasn't actually confirmed.
-  const [warrantyCheck, setWarrantyCheck] = useState(null); // 'In Warranty' | 'Out of Warranty' | null
-  useEffect(() => {
-    setWarrantyCheck(activeJob?.diagnosis?.warrantyCheck || null);
-  }, [activeJob?.id, activeJob?.diagnosis?.warrantyCheck]);
   // Starts empty (no stock-photo placeholder) — these boxes verify the
   // technician's own on-site photos, so a fake image here would look like
   // a real one was already taken. An external placeholder URL here also
@@ -1788,14 +1780,6 @@ const ActiveJob = () => {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-500 font-normal">
-                              Warranty Status
-                            </span>
-                            <span className="text-green-600 font-semibold">
-                              {activeJob.warrantyStatus || "Not recorded"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-slate-500 font-normal">
                               Warranty Till
                             </span>
                             <span className="text-[#052355] font-semibold">
@@ -2372,54 +2356,6 @@ const ActiveJob = () => {
                           />
                         </div>
 
-                        {/* Section 1.5: Warranty Check — the technician's own on-site
-                        call (from a physical warranty card/invoice), since the
-                        system only ever has a computed guess for jobs with no
-                        registered appliance / purchase date on file. */}
-                        <div className="flex flex-col gap-1.5 mt-3">
-                          <h3 className="text-sm font-semibold text-[#052355]">
-                            Warranty Status
-                          </h3>
-                          <p className="text-xs text-slate-500 font-normal">
-                            Check the product/invoice and confirm
-                          </p>
-
-                          <div className="flex gap-2.5 mt-2">
-                            <button
-                              type="button"
-                              onClick={() => setWarrantyCheck("In Warranty")}
-                              className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-2xl transition-all text-xs font-semibold ${
-                                warrantyCheck === "In Warranty"
-                                  ? "border-green-500 ring-1 ring-green-500/20 bg-green-50 text-green-700"
-                                  : "border-slate-200 text-slate-600 hover:border-slate-350 bg-white"
-                              }`}>
-                              <ShieldCheckIcon className="w-4 h-4" />
-                              In Warranty
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setWarrantyCheck("Out of Warranty")
-                              }
-                              className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-2xl transition-all text-xs font-semibold ${
-                                warrantyCheck === "Out of Warranty"
-                                  ? "border-red-500 ring-1 ring-red-500/20 bg-red-50 text-red-700"
-                                  : "border-slate-200 text-slate-600 hover:border-slate-350 bg-white"
-                              }`}>
-                              <AlertCircle className="w-4 h-4" />
-                              Out of Warranty
-                            </button>
-                          </div>
-                          {!warrantyCheck &&
-                            jobContext?.appliance?.warrantyStatus && (
-                              <p className="text-[10px] text-slate-400 font-normal mt-0.5">
-                                System default from the registered appliance:{" "}
-                                {jobContext.appliance.warrantyStatus}.
-                                Confirming here overrides it.
-                              </p>
-                            )}
-                        </div>
-
                         {/* Section 2: What did you find? */}
                         <div className="flex flex-col gap-1.5 mt-3">
                           <h3 className="text-sm font-semibold text-[#052355]">
@@ -2556,7 +2492,6 @@ const ActiveJob = () => {
                                       checklistActions: {
                                         [selectedDiagnosis]: true,
                                       },
-                                      warrantyCheck: warrantyCheck || undefined,
                                       photos: buildPhotosPayload(),
                                     },
                                   },
@@ -2786,32 +2721,6 @@ const ActiveJob = () => {
                             // the same data pre-populated from the job list so this doesn't flash
                             // "not recorded" while jobContext is loading.
                             const appliance = jobContext?.appliance;
-                            const installDateRaw =
-                              appliance?.purchaseDate || activeJob.installDate;
-                            const installDateLabel = installDateRaw
-                              ? new Date(installDateRaw).toLocaleDateString(
-                                  "en-IN",
-                                  {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )
-                              : "Not recorded";
-                            // The technician's own on-site check (from Inspection) always wins
-                            // over the system's computed guess — it's the ground truth once a
-                            // human has actually looked at the warranty card/invoice.
-                            const warrantyStatusLabel =
-                              activeJob.diagnosis?.warrantyCheck ||
-                              appliance?.warrantyStatus ||
-                              activeJob.warrantyStatus ||
-                              "Not recorded";
-                            const warrantyStatusStyle =
-                              warrantyStatusLabel === "Not recorded"
-                                ? "bg-slate-100 text-slate-500"
-                                : warrantyStatusLabel === "Out of Warranty"
-                                  ? "bg-red-50 text-red-600"
-                                  : "bg-green-50 text-green-600";
                             const modelLabel =
                               appliance?.model ||
                               activeJob.model ||
@@ -2849,32 +2758,6 @@ const ActiveJob = () => {
                                     </div>
                                   </div>
 
-                                  {/* Divider */}
-                                  <div className="h-0.25 bg-slate-100 w-full"></div>
-
-                                  {/* Installation & Warranty Rows — sourced from the customer's
-                            registered OwnedAppliance record, recomputed live server-side
-                            from their real AMC/Extended Warranty coverage rather than a
-                            fixed "12 Jan 2023 / Out of Warranty" for every job. */}
-                                  <div className="flex flex-col gap-2.5">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-xs text-slate-600 font-normal">
-                                        Installation Date
-                                      </span>
-                                      <span className="text-xs text-[#052355] font-medium">
-                                        {installDateLabel}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-xs text-slate-600 font-normal">
-                                        Warranty Status
-                                      </span>
-                                      <span
-                                        className={`text-xs font-medium px-2.5 py-0.5 rounded-lg ${warrantyStatusStyle}`}>
-                                        {warrantyStatusLabel}
-                                      </span>
-                                    </div>
-                                  </div>
                                 </div>
 
                                 {/* Card 2: Complaint */}

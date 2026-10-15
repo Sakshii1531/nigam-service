@@ -17,7 +17,7 @@ const ONLINE = 'Available';
  * service provider was never a candidate — auto-assignment silently found nobody and
  * the assignment console's shortlist came back empty.
  */
-export async function setAvailability(serviceProviderId, availability) {
+export async function setAvailability(serviceProviderId, availability, { location } = {}) {
   const serviceProvider = await ServiceProvider.findById(serviceProviderId);
   if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
   if (availability === ONLINE && serviceProvider.status !== 'Active') {
@@ -27,8 +27,8 @@ export async function setAvailability(serviceProviderId, availability) {
     );
   }
 
-  const wasOffline = serviceProvider.availability !== ONLINE;
   serviceProvider.availability = availability;
+  if (location) serviceProvider.location = location;
   await serviceProvider.save();
 
   // Coming online is exactly when a request that had no candidate at booking
@@ -39,7 +39,7 @@ export async function setAvailability(serviceProviderId, availability) {
   // explicitly turn it off from Partner App Settings.
   const autoAssignEnabled = autoAssignSetting?.value !== false;
   const autoAssigned =
-    availability === ONLINE && wasOffline && autoAssignEnabled
+    availability === ONLINE && autoAssignEnabled
       ? await autoAssignPendingRequests()
       : { assignedCount: 0, assigned: [] };
 

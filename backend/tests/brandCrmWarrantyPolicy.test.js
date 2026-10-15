@@ -11,6 +11,7 @@ import {WarrantyClaim} from '../src/modules/partner-warranty/warrantyClaim.model
 import {ProductType} from '../src/modules/catalog/productType.model.js';
 import {ProductSerial} from '../src/modules/brand-crm/productSerial.model.js';
 import {AuditLog} from '../src/modules/super-admin/auditLog.model.js';
+import {Brand} from '../src/modules/super-admin/brand.model.js';
 import {evaluateResolvedWarranty,warrantyExpiry} from '../src/modules/brand-crm/warrantyEvaluation.js';
 import {evaluateWarranty,matchesModel} from '../src/modules/brand-crm/warrantyPolicy.service.js';
 import {invalidateBrandPermissions} from '../src/modules/brand-crm/brandPermission.middleware.js';
@@ -24,6 +25,33 @@ const pure=(changes={},p={},registry=null,at=new Date('2026-06-01'))=>evaluateRe
 async function world(){const w=await kit.world();return {...w,owner:await kit.brandAdmin(w.lg),other:await kit.brandAdmin(w.samsung),cce:await kit.brandUser(w.lg,{templates:['cce']}),we:await kit.brandUser(w.lg,{templates:['warranty_executive']}),customer:await kit.customer()};}
 const api=(user,method,path,data)=>kit.api()[method](`/api/v1/brand${path}`).set(kit.bearer(user.token)).send(data);
 const create=(w,body={})=>api(w.owner,'post','/warranty-policies',{...policy,...body});
+it('lets only NCC Super Admin manage each selected brand policy and serial registry with scoped options and audit', async () => {
+ const w=await world(), admin=await kit.superAdmin();
+ const base=`/api/v1/super-admin/brands/${w.lg.id}/warranty-policies`;
+ const call=(method,path,body,user=admin)=>kit.api()[method](`${base}${path}`).set(kit.bearer(user.token)).send(body);
+ await call('get','',undefined,w.owner).expect(403);
+ await call('post','',policy,w.cce).expect(403);
+ const options=(await call('get','/options').expect(200)).body.data;
+ expect(options.categories.map(c=>c.id)).toContain(w.ac.id);
+ const created=(await call('post','',{...policy,name:'NCC managed all products'}).expect(201)).body.data;
+ expect(created.brand).toBe(w.lg.id);
+ await call('get',`/${created.id}`).expect(200);
+ const next=(await call('put',`/${created.id}`,{...policy,warrantyMonths:24}).expect(200)).body.data;
+ expect(next.version).toBe(2);
+ const otherBase=`/api/v1/super-admin/brands/${w.samsung.id}/warranty-policies`;
+ await kit.api().get(`${otherBase}/${next.id}`).set(kit.bearer(admin.token)).expect(404);
+ const csv=`serial,model,category\nNCC-ADMIN-1,AC-18,${w.ac.key}`;
+ await call('post','/serials/import',{csv,dryRun:false}).expect(200);
+ expect((await call('get','/serials?q=NCC-ADMIN-1').expect(200)).body.data).toHaveLength(1);
+ expect((await kit.api().get(`${otherBase}/serials?q=NCC-ADMIN-1`).set(kit.bearer(admin.token)).expect(200)).body.data).toHaveLength(0);
+ const audit=await AuditLog.findOne({action:'warranty_policy.created',entityId:created.id});
+ expect(audit.actor.kind).toBe('admin');
+ expect(String(audit.brand)).toBe(w.lg.id);
+ await call('delete',`/${next.id}`).expect(200);
+ await kit.api().get('/api/v1/super-admin/brands/bad-id/warranty-policies').set(kit.bearer(admin.token)).expect(400);
+ await Brand.updateOne({_id:w.lg._id},{$set:{status:'Pending'}});
+ await call('get','/options').expect(200);
+});
 describe('Pure policy rules',()=>{
  it('clamps month ends and leap years; expiry day is inclusive',()=>{expect(warrantyExpiry('2024-02-29',12).toISOString().slice(0,10)).toBe('2025-02-28');expect(warrantyExpiry('2026-01-31',1).toISOString().slice(0,10)).toBe('2026-02-28');expect(pure({}, {},null,new Date('2027-01-01T23:59:59Z')).status).toBe('In Warranty');expect(pure({}, {},null,new Date('2027-01-02')).reasons).toContain('EXPIRED');});
  it.each([['NO_PURCHASE_DATE',{purchaseDate:null},{}],['NO_INVOICE',{hasInvoice:false},{}],['NO_SERIAL',{serial:''},{}],['SERIAL_NOT_IN_REGISTRY',{}, {requireSerialInRegistry:true}],['PURCHASE_IN_FUTURE',{purchaseDate:'2027-01-01'},{}],['NO_POLICY',{}, {synthetic:true}]])('returns %s with Verification Required',(reason,changes,p)=>{const result=pure(changes,p);expect(result.reasons).toContain(reason);expect(result.status).toBe('Verification Required');});

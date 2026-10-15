@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2, Plus, Save, Trash2, Image as ImageIcon } from 'lucide-react';
 import AdminShell, { Panel } from '../../../components/super-admin/partner-warranty/AdminShell';
 import { useApiData } from '../../../hooks/useApiData';
 import { adminWarrantyApi } from '../../../lib/adminWarrantyApi';
 import { uploadImage } from '../../../lib/uploadImage';
 import { resolveMediaUrl } from '../../../lib/apiClient';
+import WarrantyPolicyPanel from '../../../components/brand-admin/WarrantyPolicyPanel';
 
 // Super Admin → Partner Warranty → Catalogue (docs/partner-warranty Phases 2
 // and 14): what customers pick in Partner Warranty — groups, the issues per
@@ -15,6 +16,7 @@ const TABS = [
   ['groups', 'Groups'],
   ['issues', 'Issues'],
   ['brands', 'Brands'],
+  ['policies', 'Policies & Serials'],
 ];
 const input = 'w-full px-3 py-2 border border-[#E2E8F0] rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#0D47A1] user-invalid:border-red-400';
 const slugify = (s) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -27,6 +29,8 @@ function Msg({ msg }) {
 function CategoryChecks({ categories, value, onChange }) {
   const toggle = (id) => onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
   return (
+    <div>
+    <div className="flex gap-3 mb-2 text-xs"><button type="button" onClick={() => onChange(categories.map(c => c.id))}>Select all products</button><button type="button" onClick={() => onChange([])}>Clear selection</button></div>
     <div className="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto pr-1">
       {categories.map((c) => (
         <label key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border text-[11px] cursor-pointer ${value.includes(c.id) ? 'border-[#0D47A1] bg-[#EEF4FF] font-bold text-[#0D47A1]' : 'border-[#E2E8F0]'}`}>
@@ -34,6 +38,7 @@ function CategoryChecks({ categories, value, onChange }) {
           {c.name}
         </label>
       ))}
+    </div>
     </div>
   );
 }
@@ -264,6 +269,7 @@ function BrandsTab({ categories }) {
               <th className="text-left">Listed</th>
               <th className="text-left">Products</th>
               <th className="text-left">Approval SLA</th>
+              <th className="text-left">Current setup</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F1F5F9]">
@@ -274,6 +280,7 @@ function BrandsTab({ categories }) {
                 <td className={b.warrantyEnabled ? 'text-emerald-700 font-bold' : 'text-[#94A3B8]'}>{b.warrantyEnabled ? 'Yes' : 'No'}</td>
                 <td className="text-[#64748B]">{b.coverage.map((c) => c.name).join(', ') || '—'}</td>
                 <td>{b.warrantySla?.approvalHours ? `${b.warrantySla.approvalHours} h` : 'default'}</td>
+                <td className="text-[#64748B]">{b.setup?.activePolicies || 0} policies · {b.setup?.activeRates || 0} rates</td>
               </tr>
             ))}
           </tbody>
@@ -291,6 +298,7 @@ function BrandsTab({ categories }) {
               <p className="text-xs font-semibold mb-1">Products covered</p>
               <CategoryChecks categories={categories} value={form.coverage} onChange={(v) => setForm({ ...form, coverage: v })} />
             </div>
+            <p className="text-xs text-slate-600">Configure warranty terms in Policies &amp; Serials and charges in <Link className="text-blue-800 underline" to="/super-admin/brand-rates">Brand Rates</Link>. Listing a brand does not configure its policies or prices. Setup counts show current rules, not complete coverage for every location and service.</p>
             <div>
               <p className="text-xs font-semibold mb-1">SLA hours (blank = platform default)</p>
               <div className="grid grid-cols-2 gap-2">
@@ -323,6 +331,18 @@ function BrandsTab({ categories }) {
   );
 }
 
+function PoliciesTab() {
+  const brands = useApiData(() => adminWarrantyApi.brands(), [], { initial: [] });
+  const [brand, setBrand] = useState('');
+  const [tab, setTab] = useState('Policies');
+  return <Panel title="Warranty policies and serial registry">
+    <p className="text-sm text-slate-600 mb-4">Select any brand to configure its warranty terms. A brand-default policy covers all products in that brand’s coverage; category, product type and model policies can override it. Set approved business terms before accepting claims.</p>
+    <label className="block text-sm font-semibold mb-4">Brand<select aria-label="Policy brand" className={input} value={brand} onChange={e => setBrand(e.target.value)}><option value="">Select brand</option>{brands.data.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+    {brands.error && <p role="alert">{brands.error.message}</p>}
+    {brand && <><div className="flex gap-3 mb-4">{['Policies', 'Serial Registry'].map(value => <button type="button" key={value} aria-pressed={tab === value} onClick={() => setTab(value)} className="rounded-lg border px-4 py-2 text-sm">{value}</button>)}</div><WarrantyPolicyPanel key={`${brand}:${tab}`} canEdit tab={tab} base={`/super-admin/brands/${brand}/warranty-policies`} /></>}
+  </Panel>;
+}
+
 export default function WarrantyCatalogue() {
   const [search, setSearch] = useSearchParams();
   const tab = search.get('tab') || 'groups';
@@ -346,6 +366,7 @@ export default function WarrantyCatalogue() {
       {tab === 'groups' && <GroupsTab categories={categories.data} />}
       {tab === 'issues' && <IssuesTab categories={categories.data} />}
       {tab === 'brands' && <BrandsTab categories={categories.data} />}
+      {tab === 'policies' && <PoliciesTab />}
     </AdminShell>
   );
 }

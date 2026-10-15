@@ -5,6 +5,8 @@ import { Brand } from '../super-admin/brand.model.js';
 import { Category } from '../catalog/category.model.js';
 import { ProductType } from '../catalog/productType.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
+import { WarrantyPolicy } from '../brand-crm/warrantyPolicy.model.js';
+import { BrandRate } from '../brand-crm/brandRate.model.js';
 import { logAudit } from '../shared/auditLog.js';
 import { escapeRegex } from '../shared/brandWarranty.js';
 import { ApiError } from '../../middleware/errorHandler.js';
@@ -270,7 +272,18 @@ async function brandSettingsView(brandId) {
 
 export async function adminListBrands() {
   const brands = await Brand.find().sort({ name: 1 }).select('_id').lean();
-  return Promise.all(brands.map((b) => brandSettingsView(b._id)));
+  const now = new Date();
+  return Promise.all(brands.map(async (b) => {
+    const [settings, activePolicies, activeRates] = await Promise.all([
+      brandSettingsView(b._id),
+      WarrantyPolicy.countDocuments({ brand: b._id, isActive: true, $and: [
+        { $or: [{ effectiveFrom: null }, { effectiveFrom: { $lte: now } }] },
+        { $or: [{ effectiveTo: null }, { effectiveTo: { $gte: now } }] },
+      ] }),
+      BrandRate.countDocuments({ brand: b._id, isActive: true, effectiveFrom: { $lte: now }, $or: [{ effectiveTo: null }, { effectiveTo: { $gt: now } }] }),
+    ]);
+    return { ...settings, setup: { activePolicies, activeRates } };
+  }));
 }
 
 export const getBrandSettings = brandSettingsView;

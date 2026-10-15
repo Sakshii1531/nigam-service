@@ -6,6 +6,7 @@ import { Brand } from '../super-admin/brand.model.js';
 import { logAudit } from '../shared/auditLog.js';
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { ApiError } from '../../middleware/errorHandler.js';
+import { runInTransaction } from '../../utils/transaction.js';
 
 // B2B2C (partner warranty) payouts — docs/partner-warranty Phase 11, client #20.
 // A warranty job's payout (separate partner rate, frozen at accept) is not added to
@@ -110,68 +111,75 @@ export async function listPartnerB2b2cJobs(serviceProviderId, { status } = {}) {
 /**
  * Records a manual settlement of `jobIds` for one partner: the jobs become
  * `settled` and one settled Invoice payout carries their total. Jobs are
- * claimed first with a conditional update, so two admins settling the same
- * job at once can never pay it twice.
+ * conditionally claimed in the same transaction as the payout and audit,
+ * so concurrent attempts and failed writes cannot leave a partial settlement.
  */
 export async function settle(actorId, { serviceProviderId, jobIds, reference, note }) {
   const ids = [...new Set(jobIds.map(String))];
   const provider = await ServiceProvider.findById(serviceProviderId).select('name user payoutMethods').lean();
   if (!provider) throw new ApiError(404, 'Service partner not found');
 
-  const jobs = await Job.find({ _id: { $in: ids } }).select('serviceProvider warrantyClaim activeStep settlement billingEstimate payout').lean();
-  if (jobs.length !== ids.length) throw new ApiError(404, 'One or more jobs were not found');
-  for (const job of jobs) {
-    if (String(job.serviceProvider) !== String(serviceProviderId)) throw new ApiError(400, 'Every job must belong to this partner');
-    if (!job.warrantyClaim) throw new ApiError(400, 'Only partner warranty (B2B2C) jobs are settled here');
-    if (job.activeStep !== 'completed') throw new ApiError(400, 'Only completed jobs can be settled');
-    if (job.settlement?.status !== 'unsettled') throw new ApiError(409, 'One or more jobs are already settled');
-  }
+  const result = await runInTransaction(async (session) => {
+    // Re-read on each transaction retry so a concurrent settlement is seen.
+    const jobs = await Job.find({ _id: { $in: ids } })
+      .select('serviceProvider warrantyClaim activeStep settlement billingEstimate payout').session(session).lean();
+    if (jobs.length !== ids.length) throw new ApiError(404, 'One or more jobs were not found');
+    for (const job of jobs) {
+      if (String(job.serviceProvider) !== String(serviceProviderId)) throw new ApiError(400, 'Every job must belong to this partner');
+      if (!job.warrantyClaim) throw new ApiError(400, 'Only partner warranty (B2B2C) jobs are settled here');
+      if (job.activeStep !== 'completed') throw new ApiError(400, 'Only completed jobs can be settled');
+      if (job.settlement?.status !== 'unsettled') throw new ApiError(409, 'One or more jobs are already settled');
+    }
 
-  const settledAt = new Date();
-  // timestamps: false — the history screens read updatedAt as "completed at".
-  const claimed = await Job.updateMany(
-    { _id: { $in: ids.map(oid) }, 'settlement.status': 'unsettled' },
-    { $set: { 'settlement.status': 'settled', 'settlement.settledAt': settledAt, 'settlement.reference': reference } },
-    { timestamps: false },
-  );
-  if (claimed.modifiedCount !== ids.length) {
-    // Someone else settled part of this batch at the same moment — undo ours.
-    await Job.updateMany(
-      { _id: { $in: ids.map(oid) }, 'settlement.settledAt': settledAt },
-      { $set: { 'settlement.status': 'unsettled', 'settlement.settledAt': null, 'settlement.reference': null } },
-      { timestamps: false },
+    const settledAt = new Date();
+    const amount = jobs.reduce((sum, job) => sum + earningOf(job), 0);
+    const method = provider.payoutMethods?.find((m) => m.isPrimary) || provider.payoutMethods?.[0];
+    const [payout] = await Payout.create([{
+      serviceProvider: serviceProviderId,
+      baseAmount: amount,
+      platformFee: 0,
+      netAmount: amount,
+      payoutType: 'Invoice',
+      status: 'Settled',
+      creditedTo: method?.detail || null,
+      transactionId: reference,
+    }], { session });
+
+    // All writes commit together. A partial batch, linkage or audit failure
+    // aborts the payout too; no compensating write can undo a rival's payment.
+    const claimed = await Job.updateMany(
+      { _id: { $in: ids.map(oid) }, 'settlement.status': 'unsettled' },
+      { $set: { 'settlement.status': 'settled', 'settlement.settledAt': settledAt,
+        'settlement.reference': reference, 'settlement.payout': payout._id } },
+      { timestamps: false, session },
     );
-    throw new ApiError(409, 'One or more jobs were settled by someone else just now — reload and try again');
-  }
+    if (claimed.modifiedCount !== ids.length) throw new ApiError(409, 'One or more jobs were settled by someone else just now — reload and try again');
 
-  const amount = jobs.reduce((sum, j) => sum + earningOf(j), 0);
-  const method = provider.payoutMethods?.find((m) => m.isPrimary) || provider.payoutMethods?.[0];
-  const payout = await Payout.create({
-    serviceProvider: serviceProviderId,
-    baseAmount: amount,
-    platformFee: 0,
-    netAmount: amount,
-    payoutType: 'Invoice',
-    status: 'Settled',
-    creditedTo: method?.detail || null,
-    transactionId: reference,
-  });
-  await Job.updateMany({ _id: { $in: ids.map(oid) } }, { $set: { 'settlement.payout': payout._id } }, { timestamps: false });
+    await logAudit({
+      user: actorId,
+      type: 'Finance',
+      entityType: 'Payout',
+      entityId: payout._id,
+      fromStatus: 'unsettled',
+      toStatus: 'settled',
+      reason: note || null,
+      meta: { jobIds: ids, serviceProvider: String(serviceProviderId), amount, reference },
+      action: `B2B2C payout settled for ${provider.name}: ₹${amount} across ${ids.length} job(s), ref ${reference}${note ? ` — ${note}` : ''}`,
+    }, { session });
+    return { payoutId: String(payout._id), serviceProviderId: String(serviceProviderId), jobs: ids.length, amount, reference, settledAt };
+  }, { required: true });
 
-  await logAudit({
-    user: actorId,
-    type: 'Finance',
-    action: `B2B2C payout settled for ${provider.name}: ₹${amount} across ${ids.length} job(s), ref ${reference}${note ? ` — ${note}` : ''}`,
-  });
+  // Notifications happen only after commit and never turn a committed payment
+  // into a failed response that encourages an unsafe retry.
   if (provider.user) {
     await emitNotification('b2b2c.payout_settled', {
       user: provider.user,
-      amount,
+      amount: result.amount,
       jobs: ids.length,
       reference,
       cta: { label: 'View Earnings', route: '/service-provider/earnings?tab=invoice' },
-    });
+    }).catch(error => console.error('[b2b2c] Settlement committed; partner notification failed', error.message));
   }
 
-  return { payoutId: String(payout._id), serviceProviderId: String(serviceProviderId), jobs: ids.length, amount, reference, settledAt };
+  return result;
 }

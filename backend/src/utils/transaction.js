@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ApiError } from '../middleware/errorHandler.js';
 
 /**
  * Multi-document atomicity for the flows that write across collections.
@@ -39,7 +40,7 @@ async function supportsTransactions() {
 
   if (!transactionSupport) {
     console.warn(
-      '[transaction] Standalone MongoDB detected — multi-document writes will run without a transaction. Use a replica set for atomic rollback.',
+      '[transaction] Transactions unavailable — use a replica set for atomic rollback. Required transactional operations will be refused.',
     );
   }
   return transactionSupport;
@@ -47,7 +48,8 @@ async function supportsTransactions() {
 
 /**
  * Runs `fn(session)` inside a transaction when the deployment supports one,
- * otherwise runs `fn(null)` directly.
+ * otherwise runs `fn(null)` directly. Pass `{ required: true }` to refuse the
+ * operation before running the callback when atomicity is mandatory.
  *
  * The callback MUST thread the session it is handed into every write it makes
  * (`Model.create([doc], { session })`, `doc.save({ session })`, …) — a write
@@ -56,8 +58,11 @@ async function supportsTransactions() {
  * out of the callback: a transaction holds locks for its whole duration, and
  * anything already sent to a third party cannot be rolled back with it.
  */
-export async function runInTransaction(fn) {
-  if (!(await supportsTransactions())) return fn(null);
+export async function runInTransaction(fn, { required = false } = {}) {
+  if (!(await supportsTransactions())) {
+    if (required) throw new ApiError(503, 'This operation requires a MongoDB replica set for atomic settlement');
+    return fn(null);
+  }
 
   const session = await mongoose.startSession();
   try {

@@ -23,6 +23,7 @@ export const methodIdParamSchema = z.object({ methodId: z.string().min(1) });
 
 export const setAvailabilitySchema = z.object({
   availability: z.enum(['Available', 'Busy', 'Offline']),
+  location: z.object({ latitude: z.number().finite().min(-90).max(90), longitude: z.number().finite().min(-180).max(180) }).optional(),
 });
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');

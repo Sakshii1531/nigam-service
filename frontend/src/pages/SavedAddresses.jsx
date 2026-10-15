@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Home, Briefcase, Plus, X, Pencil, Trash2, Star, Check, Sparkles, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
+import AddressLocationFields from '../components/booking/AddressLocationFields';
 import { LoadingSection, SkeletonCards } from '../components/common/Skeleton';
 
 const SavedAddresses = () => {
@@ -12,6 +13,7 @@ const SavedAddresses = () => {
   const [addresses, setAddresses] = useState(() => user?.addresses || []);
   const [loading, setLoading] = useState(() => !(user?.addresses && user.addresses.length > 0));
   const [submitting, setSubmitting] = useState(false);
+  const [locationReady, setLocationReady] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
@@ -20,9 +22,9 @@ const SavedAddresses = () => {
     type: 'Home',
     address: '',
     detail: '',
-    city: 'Delhi',
+    city: '',
     state: '',
-    pincode: '110054',
+    pincode: '',
     latitude: null,
     longitude: null,
     isDefault: false
@@ -75,9 +77,9 @@ const SavedAddresses = () => {
       type: 'Home',
       address: '',
       detail: '',
-      city: 'Delhi',
+      city: '',
       state: '',
-      pincode: '110054',
+      pincode: '',
       latitude: null,
       longitude: null,
       isDefault: addresses.length === 0
@@ -91,11 +93,11 @@ const SavedAddresses = () => {
       type: addr.type || 'Home',
       address: addr.house || addr.address || '',
       detail: addr.landmark || addr.detail || '',
-      city: addr.city || 'Delhi',
+      city: addr.city || '',
       state: addr.state || '',
-      pincode: addr.pincode || '110054',
-      latitude: addr.latitude || null,
-      longitude: addr.longitude || null,
+      pincode: addr.pincode || '',
+      latitude: addr.latitude ?? null,
+      longitude: addr.longitude ?? null,
       isDefault: Boolean(addr.isDefault)
     });
     setShowForm(true);
@@ -103,7 +105,7 @@ const SavedAddresses = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.address.trim()) return;
+    if (!form.address.trim() || !locationReady) return;
 
     setSubmitting(true);
     try {
@@ -111,11 +113,11 @@ const SavedAddresses = () => {
         type: form.type,
         house: form.address,
         landmark: form.detail,
-        city: form.city || 'Delhi',
+        city: form.city,
         state: form.state || '',
-        pincode: form.pincode || '110054',
-        latitude: form.latitude ? Number(form.latitude) : undefined,
-        longitude: form.longitude ? Number(form.longitude) : undefined,
+        pincode: form.pincode,
+        latitude: form.latitude != null ? Number(form.latitude) : null,
+        longitude: form.longitude != null ? Number(form.longitude) : null,
         isDefault: form.isDefault
       };
 
@@ -323,7 +325,7 @@ const SavedAddresses = () => {
 
       {/* Add / Edit Address Modal Bottom Sheet */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-xs"
@@ -332,7 +334,7 @@ const SavedAddresses = () => {
           {/* Sheet */}
           <form 
             onSubmit={handleSave} 
-            className="relative w-full max-w-md bg-white rounded-t-[30px] p-6 flex flex-col gap-4 z-10 shadow-2xl animate-in slide-in-from-bottom duration-200"
+            className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-white rounded-t-[30px] sm:rounded-3xl p-6 flex flex-col gap-4 z-10 shadow-2xl animate-in slide-in-from-bottom duration-200"
           >
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-lg font-bold text-text-primary">
@@ -368,10 +370,11 @@ const SavedAddresses = () => {
 
             {/* Address Input */}
             <div className="flex flex-col gap-1 text-left">
-              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+              <label htmlFor="saved-house" className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 House / Flat / Street Address *
               </label>
               <input
+                id="saved-house"
                 type="text"
                 required
                 placeholder="e.g. House No. 42, Civil Lines, Delhi"
@@ -383,10 +386,11 @@ const SavedAddresses = () => {
 
             {/* Landmark / Detail Input */}
             <div className="flex flex-col gap-1 text-left">
-              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+              <label htmlFor="saved-landmark" className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
                 Landmark / Area Detail
               </label>
               <input
+                id="saved-landmark"
                 type="text"
                 placeholder="e.g. Near Metro Station, Block A"
                 value={form.detail}
@@ -395,30 +399,11 @@ const SavedAddresses = () => {
               />
             </div>
 
-            {/* City & Pincode Grid */}
-            <div className="grid grid-cols-2 gap-3 text-left">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">City</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Delhi"
-                  value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-border-color text-sm focus:outline-none focus:border-brand-blue"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wide">Pincode</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 110054"
-                  value={form.pincode}
-                  onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-border-color text-sm focus:outline-none focus:border-brand-blue"
-                />
-              </div>
-            </div>
+            <AddressLocationFields
+              onValidityChange={setLocationReady}
+              value={{ house: form.address, landmark: form.detail, city: form.city, state: form.state, pincode: form.pincode, latitude: form.latitude, longitude: form.longitude }}
+              onChange={next => setForm(previous => ({ ...previous, address: next.house, detail: next.landmark, city: next.city, state: next.state, pincode: next.pincode, latitude: next.latitude, longitude: next.longitude }))}
+            />
 
             {/* Checkbox: Default address */}
             <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer pt-1">
@@ -434,7 +419,7 @@ const SavedAddresses = () => {
             {/* Save Button */}
             <button
               type="submit"
-              disabled={!form.address.trim() || submitting}
+              disabled={!form.address.trim() || submitting || !locationReady}
               className="w-full bg-brand-blue text-white font-bold py-3.5 rounded-2xl text-sm hover:bg-blue-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 mt-2"
             >
               {submitting ? (

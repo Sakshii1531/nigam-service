@@ -57,6 +57,18 @@ beforeEach(async () => {
 });
 
 describe('login -> OTP verify -> protected route', () => {
+  it('preserves saved address GPS including zero coordinates on edit, and clears a removed pin', async () => {
+    const user = await createUser({ role: ROLES.CUSTOMER, phone: '9000000099', password: 'password123' });
+    const session = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: user.phone, password: 'password123' });
+    const auth = { Authorization: `Bearer ${session.accessToken}` };
+    const created = await request(app).post('/api/v1/auth/addresses').set(auth).send({ house: 'Exact street', city: 'Indore', state: 'Madhya Pradesh', pincode: '452001', latitude: 22.72, longitude: 75.86 }).expect(200);
+    const id = created.body.data[0].id || created.body.data[0]._id;
+    const updated = await request(app).put(`/api/v1/auth/addresses/${id}`).set(auth).send({ latitude: 0, longitude: 0 }).expect(200);
+    expect(updated.body.data[0]).toMatchObject({ latitude: 0, longitude: 0 });
+    const cleared = await request(app).put(`/api/v1/auth/addresses/${id}`).set(auth).send({ latitude: null, longitude: null }).expect(200);
+    expect(cleared.body.data[0].latitude).toBeUndefined();
+    expect(cleared.body.data[0].longitude).toBeUndefined();
+  });
   it('issues a working access token after the full flow', async () => {
     await createUser({ role: ROLES.CUSTOMER, phone: '9000000010', password: 'password123' });
 

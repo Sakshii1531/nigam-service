@@ -4,6 +4,7 @@ import { FileText, CreditCard, Camera, MapPin, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { WarrantyHeader, DocumentTile, AddDocumentButton, DocumentChip, ErrorNote } from '../components/partner-warranty/ui';
 import VideoUploads from '../components/partner-warranty/VideoUploads';
+import AddressLocationFields from '../components/booking/AddressLocationFields';
 import { warrantyApi } from '../lib/partnerWarrantyApi';
 
 // The customer's warranty claim form (docs/partner-warranty Phase 12) — the
@@ -70,9 +71,10 @@ const RaiseWarrantyRequest = () => {
   useEffect(()=>{if(!user)return;let cancelled=false;warrantyApi.intakeOptions().then(o=>{if(!cancelled)setIntake(o);}).catch(()=>{});return()=>{cancelled=true;};},[user]);
   const [form, setForm] = useState({ modelNumber: '', serialNumber: '', purchaseDate: '', remarks: '' });
   const [addressId, setAddressId] = useState(defaultAddress ? String(defaultAddress._id || defaultAddress.id) : 'new');
-  const [newAddress, setNewAddress] = useState({ house: '', landmark: '', city: '', state: '', pincode: '' });
+  const [newAddress, setNewAddress] = useState({ house: '', landmark: '', city: '', state: '', pincode: '', latitude: null, longitude: null });
   const [tried, setTried] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [locationReady, setLocationReady] = useState(false);
   const [error, setError] = useState(null);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -112,6 +114,7 @@ const RaiseWarrantyRequest = () => {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (addressId === 'new' && !locationReady) { setError({ message: 'Wait for location lookup and choose a serviceable state and city.' }); return; }
     setTried(true);
     setError(null);
     if (!docs.invoice) {
@@ -134,7 +137,7 @@ const RaiseWarrantyRequest = () => {
       documents,
       ...(visit.date ? {preferredVisit:visit} : {}),
       ...(addressId === 'new'
-        ? { address: Object.fromEntries(Object.entries(newAddress).map(([k, v]) => [k, v.trim() || undefined])) }
+        ? { address: Object.fromEntries(Object.entries(newAddress).map(([k, v]) => [k, typeof v === 'string' ? v.trim() || undefined : v ?? undefined])) }
         : { addressId }),
     };
     setSubmitting(true);
@@ -232,14 +235,16 @@ const RaiseWarrantyRequest = () => {
                     </span>
                     <span className="block text-slate-600">{addressLine(a)}</span>
                     <span className="block text-slate-500 text-xs">Pincode {a.pincode || '—'}</span>
+                    <span className="block text-slate-500 text-xs">{a.latitude != null && a.longitude != null ? `Visit pin: ${Number(a.latitude).toFixed(6)}, ${Number(a.longitude).toFixed(6)}` : 'No map pin saved — edit this address to help your technician navigate.'}</span>
                   </span>
                 </label>
               );
             })}
             <label className={`flex items-center gap-3 p-3 rounded-2xl border cursor-pointer ${addressId === 'new' ? 'border-brand-blue bg-blue-50/60' : 'border-slate-200'}`}>
               <input type="radio" name="pw-address" value="new" checked={addressId === 'new'} onChange={() => setAddressId('new')} className="accent-brand-navy" />
-              <span className="text-sm font-bold text-brand-navy">{savedAddresses.length ? 'Use a different address' : 'Enter the service address'}</span>
+              <span className="text-sm font-bold text-brand-navy">{savedAddresses.length ? 'Add a new service address' : 'Enter the service address'}</span>
             </label>
+            <Link to="/saved-addresses" className="text-sm text-blue-800 underline">Add or edit saved addresses</Link>
             {addressId === 'new' && (
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="col-span-2">
@@ -252,27 +257,7 @@ const RaiseWarrantyRequest = () => {
                     <input id="pw-landmark" maxLength={200} value={newAddress.landmark} onChange={setAddr('landmark')} className={inputClass} />
                   </Field>
                 </div>
-                <Field id="pw-city" label="City" required error="Required">
-                  <input id="pw-city" required maxLength={80} value={newAddress.city} onChange={setAddr('city')} aria-errormessage="pw-city-error" className={inputClass} />
-                </Field>
-                <Field id="pw-pincode" label="Pincode" required error="6 digits">
-                  <input
-                    id="pw-pincode"
-                    required
-                    inputMode="numeric"
-                    pattern="\d{6}"
-                    maxLength={6}
-                    value={newAddress.pincode}
-                    onChange={setAddr('pincode')}
-                    aria-errormessage="pw-pincode-error"
-                    className={inputClass}
-                  />
-                </Field>
-                <div className="col-span-2">
-                  <Field id="pw-state" label="State">
-                    <input id="pw-state" maxLength={80} value={newAddress.state} onChange={setAddr('state')} className={inputClass} />
-                  </Field>
-                </div>
+                <div className="col-span-2"><AddressLocationFields idPrefix="pw" value={newAddress} onChange={setNewAddress} onValidityChange={setLocationReady}/></div>
               </div>
             )}
           </div>

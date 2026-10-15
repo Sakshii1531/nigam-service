@@ -10,6 +10,7 @@ import {
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 import { apiRequest, getStoredTokens } from "../lib/apiClient";
+import { currentCoordinates } from '../lib/googleMaps';
 
 /** "Split AC · 1.5 Ton · Installation × 2" from a booking's catalogue snapshot (docs/master-catalogue). */
 function serviceLineOf(booking) {
@@ -722,6 +723,10 @@ export const ServiceProviderProvider = ({ children }) => {
 
   useEffect(() => {
     fetchAvailability();
+    const refresh = () => { if (!document.hidden) fetchAvailability(); };
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
   }, [fetchAvailability]);
 
   /**
@@ -733,19 +738,26 @@ export const ServiceProviderProvider = ({ children }) => {
     async (next) => {
       setAvailabilityBusy(true);
       try {
+        let location;
+        let locationWarning;
+        if (next === 'Available') {
+          try { location = await currentCoordinates(); }
+          catch (error) { locationWarning = error.message; }
+        }
         // serviceProviderRouter is mounted at /service-provider/profile (app.js), so its own
         // '/availability' route lives under that prefix — same shape as the
         // sibling '/service-provider/profile/payout-methods' calls.
         const res = await apiRequest("/service-provider/profile/availability", {
           method: "PATCH",
           auth: true,
-          body: { availability: next },
+          body: { availability: next, ...(location ? { location } : {}) },
         });
         setAvailabilityState(res?.serviceProvider?.availability || next);
         await fetchRealJobs();
         return {
           ok: true,
           assignedCount: res?.autoAssigned?.assignedCount || 0,
+          locationWarning,
         };
       } catch (err) {
         console.error("Failed to change availability:", err.message);

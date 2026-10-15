@@ -499,8 +499,8 @@ export async function updateAddress(userId, addressId, updateData) {
   if (updateData.state !== undefined) addr.state = updateData.state;
   if (updateData.pincode !== undefined) addr.pincode = updateData.pincode;
   if (updateData.name !== undefined) addr.name = updateData.name;
-  if (updateData.latitude !== undefined) addr.latitude = updateData.latitude ? Number(updateData.latitude) : undefined;
-  if (updateData.longitude !== undefined) addr.longitude = updateData.longitude ? Number(updateData.longitude) : undefined;
+  if (updateData.latitude !== undefined) addr.latitude = updateData.latitude == null || updateData.latitude === '' ? undefined : Number(updateData.latitude);
+  if (updateData.longitude !== undefined) addr.longitude = updateData.longitude == null || updateData.longitude === '' ? undefined : Number(updateData.longitude);
   if (updateData.isDefault !== undefined) addr.isDefault = updateData.isDefault;
 
   if (addr.isDefault) {

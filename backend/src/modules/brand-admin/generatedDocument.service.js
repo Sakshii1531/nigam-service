@@ -9,7 +9,8 @@ import { User } from '../auth/user.model.js';
 import mongoose from 'mongoose';
 
 export async function listDocuments(brandId, { type, page, limit, sort } = {}) {
-  const query = { brand: brandId };
+  const ownedJobs = await ServiceRequest.find({ brand: brandId }).distinct('_id');
+  const query = { brand: brandId, serviceRequest: { $in: ownedJobs } };
   if (type) query.type = type;
 
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
@@ -19,10 +20,11 @@ export async function listDocuments(brandId, { type, page, limit, sort } = {}) {
     GeneratedDocument.find(query)
       .populate({
         path: 'serviceRequest',
+        match: { brand: brandId },
         select: 'humanId category',
         populate: { path: 'user', select: 'name' },
       })
-      .populate('generatedBy', 'name')
+      .populate({ path: 'generatedBy', select: 'name', match: { brand: brandId } })
       .sort(sortObj)
       .skip(skip)
       .limit(lim),
@@ -34,6 +36,7 @@ export async function listDocuments(brandId, { type, page, limit, sort } = {}) {
 export async function getDocument(brandId, id) {
   const doc = await GeneratedDocument.findOne({ _id: id, brand: brandId });
   if (!doc) throw new ApiError(404, 'Document not found');
+  if (!await ServiceRequest.exists({ _id: doc.serviceRequest, brand: brandId })) throw new ApiError(404, 'Document not found');
   return doc;
 }
 

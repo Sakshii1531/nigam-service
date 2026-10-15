@@ -51,7 +51,7 @@ const Dashboard = () => {
     respondToReschedule,
   } = useTech();
 
-  const isOnline = availability === "Available";
+  const isOnline = availability === "Available" || availability === "Busy";
   // null until the server answers — the pill must not claim "Offline" before we
   // actually know, and tapping it in that window would send the wrong target.
   const availabilityKnown = availability !== null;
@@ -78,7 +78,7 @@ const Dashboard = () => {
         `You're online — ${res.assignedCount} waiting job(s) assigned to you.`,
       );
     } else {
-      setDutyMessage("You're now online and accepting new jobs.");
+      setDutyMessage(res.locationWarning ? `You're online. ${res.locationWarning} Your approved service area still applies.` : "You're now online and accepting new jobs.");
     }
   };
 
@@ -835,7 +835,7 @@ const Dashboard = () => {
                 ? "Checking status…"
                 : availabilityBusy
                   ? "Updating…"
-                  : isOnline
+                  : availability === 'Busy' ? 'Online · Busy' : isOnline
                     ? "Online · Accepting jobs"
                     : "Offline · Tap to go online"}
             </button>
@@ -860,6 +860,13 @@ const Dashboard = () => {
       )}
 
       <div className="flex-1 px-4 pt-4 pb-2 md:px-6 md:py-6 xl:px-8 flex flex-col gap-4 md:gap-5 max-w-screen-xl mx-auto w-full">
+        <div className="hidden lg:flex items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-4">
+          <div><p className="font-bold text-[#052355]">Job availability</p><p className="text-sm text-slate-500">Go online to receive eligible offers in your approved service area.</p></div>
+          <button type="button" role="switch" aria-label="Online availability" aria-checked={isOnline} onClick={handleToggleDuty} disabled={availabilityBusy || !availabilityKnown} className={`rounded-full px-5 py-3 font-semibold disabled:opacity-60 ${isOnline ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-700'}`}>
+            {!availabilityKnown ? 'Checking status…' : availabilityBusy ? 'Updating…' : availability === 'Busy' ? 'Online · Busy' : isOnline ? 'Online · Ready for offers' : 'Offline · Go online'}
+          </button>
+        </div>
+        {dutyMessage && <p role="status" className="hidden lg:block text-sm text-slate-700">{dutyMessage}</p>}
         {/* VIEW 1: HOME DASHBOARD */}
         {!showAllJobs && (
           <>

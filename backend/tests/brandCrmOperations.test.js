@@ -15,6 +15,8 @@ import { User } from '../src/modules/auth/user.model.js';
 import { Escalation } from '../src/modules/super-admin/escalation.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { ReplacementApproval } from '../src/modules/brand-admin/replacementApproval.model.js';
+import { ReverseLogisticsReturn } from '../src/modules/brand-admin/reverseLogisticsReturn.model.js';
+import { GeneratedDocument } from '../src/modules/brand-admin/generatedDocument.model.js';
 import { listBrandCompletions } from '../src/modules/brand-admin/brandCompletions.service.js';
 
 let server;
@@ -108,4 +110,60 @@ it('renders downloadable, escaped, snapshotted documents and rejects foreign job
   expect(html.text).toContain(sr.humanId);
   await api('post', '/documents', w.foreign, { serviceRequest: sr.id, type: 'Warranty Certificate' }).expect(404);
   await api('get', `/documents/${document.id}?format=html`, w.foreign).expect(404);
+});
+
+it('rejects foreign replacement jobs and unrelated partners, and hides inconsistent legacy references in reads and exports', async () => {
+  const w = await world();
+  const own = await job(w, new Date());
+  const foreignCustomer = await kit.customer();
+  foreignCustomer.user.name = 'Private Brand B customer';
+  await foreignCustomer.user.save();
+  const foreign = await job(w, new Date(), { brand: w.samsung._id, user: foreignCustomer.user._id });
+  const otherPartner = await kit.flow.partner(['AC'], 'Private foreign partner');
+  await api('post', '/replacement-approvals', w.owner, { serviceRequest: foreign.id }).expect(404);
+  await api('post', '/replacement-approvals', w.owner, { serviceRequest: new mongoose.Types.ObjectId().toString() }).expect(404);
+  await api('post', '/replacement-approvals', w.owner, { serviceRequest: 'bad-id' }).expect(400);
+  await api('post', '/replacement-approvals', w.owner, { serviceRequest: own.id, serviceProvider: otherPartner.serviceProvider.id }).expect(400);
+  const valid = (await api('post', '/replacement-approvals', w.owner, { serviceRequest: own.id }).expect(201)).body.data;
+  await api('patch', `/replacement-approvals/${valid.id}/status`, w.owner, { status: 'Approved' }).expect(200);
+  await api('get', `/replacement-approvals/${valid.id}`, w.foreign).expect(404);
+  const corrupt = await ReplacementApproval.create({ brand: w.lg._id, serviceRequest: foreign._id });
+  const corruptPartner = await ReplacementApproval.create({ brand: w.lg._id, serviceRequest: own._id, serviceProvider: otherPartner.serviceProvider._id });
+  for (const row of [corrupt, corruptPartner]) {
+    await api('get', `/replacement-approvals/${row.id}`, w.owner).expect(404);
+    await api('patch', `/replacement-approvals/${row.id}/status`, w.owner, { status: 'Approved' }).expect(404);
+  }
+  const list = (await api('get', '/replacement-approvals', w.owner).expect(200)).body;
+  expect(list.data.map(row => row.id)).not.toContain(corrupt.id);
+  expect(list.meta.total).toBe(2);
+  expect(list.data.find(row => row.id === corruptPartner.id).serviceProvider).toBeNull();
+  const csv = await api('get', '/replacement-approvals?format=csv', w.owner).expect(200);
+  for (const privateValue of [foreign.humanId, foreignCustomer.user.name, 'Private foreign partner']) {
+    expect(JSON.stringify(list)).not.toContain(privateValue);
+    expect(csv.text).not.toContain(privateValue);
+  }
+  // A later NCC reassignment must not erase a legitimate partner's history.
+  await ServiceRequest.updateOne({ _id: own._id }, { $set: { serviceProvider: otherPartner.serviceProvider._id } });
+  await api('get', `/replacement-approvals/${valid.id}`, w.owner).expect(200);
+  const reassigned = (await api('get', '/replacement-approvals', w.owner).expect(200)).body.data.find(row => row.id === valid.id);
+  expect(reassigned.serviceProvider.name).toBe('Completion Partner');
+});
+
+it('protects return and historical-document linked references as well as the parent brand', async () => {
+  const w = await world();
+  const own = await job(w, new Date());
+  const foreign = await job(w, new Date(), { brand: w.samsung._id });
+  const partner = await kit.flow.partner(['AC'], 'Foreign returns partner');
+  await api('post', '/returns', w.owner, { serviceRequest: foreign.id, serviceProvider: partner.serviceProvider.id, partName: 'Foreign' }).expect(404);
+  await api('post', '/returns', w.owner, { serviceRequest: own.id, serviceProvider: partner.serviceProvider.id, partName: 'Wrong partner' }).expect(400);
+  await api('post', '/returns', w.owner, { serviceProvider: partner.serviceProvider.id, partName: 'No relationship' }).expect(404);
+  await api('post', '/returns', w.owner, { serviceRequest: own.id, serviceProvider: w.partner.serviceProvider.id, partName: 'Valid' }).expect(201);
+  const corrupt = await ReverseLogisticsReturn.create({ brand: w.lg._id, serviceRequest: foreign._id, serviceProvider: partner.serviceProvider._id, partName: 'Private part' });
+  expect((await api('get', '/returns', w.owner).expect(200)).body.data.map(row => row.id)).not.toContain(corrupt.id);
+  await api('get', `/returns/${corrupt.id}`, w.owner).expect(404);
+  await api('patch', `/returns/${corrupt.id}`, w.owner, { status: 'Verified & Scrapped' }).expect(404);
+  const doc = await GeneratedDocument.create({ brand: w.lg._id, serviceRequest: foreign._id, generatedBy: w.foreign.user._id, type: 'Warranty Certificate', snapshot: { customer: 'Private legacy snapshot' } });
+  expect((await api('get', '/documents', w.owner).expect(200)).body.data.map(row => row.id)).not.toContain(doc.id);
+  await api('get', `/documents/${doc.id}`, w.owner).expect(404);
+  await api('get', `/documents/${doc.id}?format=html`, w.owner).expect(404);
 });

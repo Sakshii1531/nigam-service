@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { reverseGeocodeCoordinates } from '../lib/googleMaps';
 import { getActiveCities, isCityServiceable } from "../utils/serviceableCities";
 
 const LocationContext = createContext(null);
@@ -96,14 +97,14 @@ export const LocationProvider = ({ children }) => {
   useEffect(() => {
     if (user && user.role === "customer") {
       const defaultAddr =
-        user.addresses?.find((a) => a?.isDefault) || user.addresses?.[0];
+        user.addresses?.find(a => String(a.id || a._id) === currentLocation.addressId) || user.addresses?.find((a) => a?.isDefault) || user.addresses?.[0];
       const userCity = user.city || defaultAddr?.city;
       if (
         userCity &&
-        (!currentLocation.city || currentLocation.city === "Delhi")
+        (!currentLocation.city || currentLocation.city === "Delhi" || currentLocation.addressId === String(defaultAddr?.id || defaultAddr?._id) || (!currentLocation.addressId && currentLocation.latitude == null && currentLocation.fullAddress === currentLocation.city))
       ) {
         const fullAddr = defaultAddr?.house
-          ? `${defaultAddr.house}, ${userCity}`
+          ? [defaultAddr.house, defaultAddr.landmark, userCity, defaultAddr.state, defaultAddr.pincode].filter(Boolean).join(", ")
           : defaultAddr?.landmark
             ? `${defaultAddr.landmark}, ${userCity}`
             : `${userCity}${defaultAddr?.state ? ", " + defaultAddr.state : ""}`;
@@ -115,8 +116,9 @@ export const LocationProvider = ({ children }) => {
           area: defaultAddr?.landmark || defaultAddr?.house || "",
           fullAddress: fullAddr,
           isServiceable: serviceable,
-          latitude: defaultAddr?.latitude || null,
-          longitude: defaultAddr?.longitude || null,
+          latitude: defaultAddr?.latitude ?? null,
+          longitude: defaultAddr?.longitude ?? null,
+          addressId: defaultAddr?.id || defaultAddr?._id ? String(defaultAddr.id || defaultAddr._id) : null,
         };
         setCurrentLocation(updated);
         localStorage.setItem("ncc_customer_location", JSON.stringify(updated));
@@ -136,31 +138,11 @@ export const LocationProvider = ({ children }) => {
     const gKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (gKey) {
       try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${gKey}`,
-        );
-        const data = await res.json();
-        if (data.status === "OK" && data.results?.[0]) {
-          const result = data.results[0];
-          resolvedAddress = result.formatted_address || "";
-          for (const comp of result.address_components) {
-            if (
-              comp.types.includes("sublocality") ||
-              comp.types.includes("neighborhood")
-            ) {
-              resolvedArea = comp.long_name;
-            }
-            if (
-              comp.types.includes("locality") ||
-              comp.types.includes("administrative_area_level_2")
-            ) {
-              if (!resolvedCity) resolvedCity = comp.long_name;
-            }
-            if (comp.types.includes("administrative_area_level_1")) {
-              resolvedState = comp.long_name;
-            }
-          }
-        }
+        const details = await reverseGeocodeCoordinates(lat, lon);
+        resolvedAddress = details.formattedAddress;
+        resolvedCity = details.city;
+        resolvedState = details.state;
+        resolvedArea = details.area;
       } catch (err) {
         console.warn("[geocode:google] Failed:", err);
       }
@@ -209,7 +191,7 @@ export const LocationProvider = ({ children }) => {
    * Select a city directly (from list or search)
    */
   const selectCity = useCallback(
-    async (cityInput, stateInput = "", customArea = "") => {
+    async (cityInput, stateInput = "", customArea = "", preciseAddress = null) => {
       setLocationError("");
       const cityName =
         typeof cityInput === "string"
@@ -237,10 +219,11 @@ export const LocationProvider = ({ children }) => {
         city: cityName,
         state: stateName,
         area: areaText,
-        fullAddress: fullText,
+        fullAddress: preciseAddress?.fullAddress || fullText,
         isServiceable: serviceable,
-        latitude: null,
-        longitude: null,
+        latitude: preciseAddress?.latitude ?? null,
+        longitude: preciseAddress?.longitude ?? null,
+        addressId: preciseAddress?.addressId || null,
       };
 
       setCurrentLocation(updated);
@@ -280,7 +263,11 @@ export const LocationProvider = ({ children }) => {
     async (address) => {
       if (!address || !address.city) return;
       const customArea = address.landmark || address.house || "";
-      return selectCity(address.city, address.state || "", customArea);
+      return selectCity(address.city, address.state || "", customArea, {
+        fullAddress: [address.house, address.landmark, address.city, address.state, address.pincode].filter(Boolean).join(", "),
+        latitude: address.latitude, longitude: address.longitude,
+        addressId: String(address.id || address._id),
+      });
     },
     [selectCity],
   );
@@ -311,9 +298,7 @@ export const LocationProvider = ({ children }) => {
               city: geocoded.city,
               state: geocoded.state,
               area: geocoded.area,
-              fullAddress: geocoded.area
-                ? `${geocoded.area}, ${geocoded.city}`
-                : geocoded.city,
+              fullAddress: geocoded.fullAddress,
               isServiceable: serviceable,
               latitude,
               longitude,

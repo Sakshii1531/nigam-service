@@ -17,6 +17,7 @@ import { Notification } from '../src/modules/notifications/notification.model.js
 import { Team } from '../src/modules/brand-admin/team.model.js';
 import { ROLE_TEMPLATES, BRAND_PERMISSION_KEYS, SUPER_ADMIN_TEMPLATE } from '../src/modules/brand-crm/permissions.js';
 import { ensureBrandRoleTemplates, backfillRolelessBrandUsers } from '../src/modules/brand-crm/roleTemplates.service.js';
+import { repairLegacyBrandAdmin } from '../scripts/repairLegacyBrandAdmin.js';
 import { BRAND_ROUTE_RULES, ruleFor } from '../src/modules/brand-crm/brandAccess.js';
 import { testDbUri } from './helpers/testDb.js';
 import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
@@ -334,6 +335,24 @@ describe('Phase 2 — audit and departments', () => {
 });
 
 describe('Phase 2 — existing accounts keep working', () => {
+  it('targeted legacy-owner repair previews, audits, is idempotent and refuses restricted or roleless staff', async () => {
+    const w = await kit.world();
+    const legacy = await Role.create({ name: 'Brand Admin', scope: 'brand', brand: w.lg._id, permissions: [] });
+    const old = await kit.brandUser(w.lg, { employeeId: 'LG-LEGACY' });
+    await User.updateOne({ _id: old.user._id }, { assignedRoles: [legacy._id] });
+    const cce = await kit.brandUser(w.lg, { employeeId: 'LG-CCE-REPAIR', templates: ['cce'] });
+    const roleless = await kit.brandUser(w.lg, { employeeId: 'LG-INTENTIONALLY-EMPTY' });
+    const options = { email: old.user.email, brandId: w.lg._id };
+    expect(await repairLegacyBrandAdmin(options)).toMatchObject({ applied: false, effectivePermissionCount: 0 });
+    expect((await User.findById(old.user._id)).assignedRoles.map(String)).toEqual([legacy.id]);
+    for (const user of [cce, roleless]) await expect(repairLegacyBrandAdmin({ email: user.user.email, brandId: w.lg._id, apply: true })).rejects.toThrow('Not a legacy owner');
+    await expect(repairLegacyBrandAdmin({ ...options, brandId: w.samsung._id, apply: true })).rejects.toThrow('No active Brand Admin');
+    expect(await repairLegacyBrandAdmin({ ...options, apply: true })).toMatchObject({ applied: true, alreadyOwner: false });
+    await get(old, '/brand/billing/invoices').expect(200);
+    await get(cce, '/brand/billing/invoices').expect(403);
+    expect(await repairLegacyBrandAdmin({ ...options, apply: true })).toMatchObject({ applied: true, alreadyOwner: true });
+    expect(await AuditLog.countDocuments({ entityId: old.user._id, action: 'auth.roles_changed', reason: 'Restore pre-CRM owner access after verified legacy permission migration' })).toBe(1);
+  });
   it('the backfill gives Brand Super Admin to users whose roles grant nothing, and only to them', async () => {
     const w = await kit.world();
     const legacy = await Role.create({ name: 'Brand Admin', scope: 'brand', brand: w.lg._id, permissions: [] });

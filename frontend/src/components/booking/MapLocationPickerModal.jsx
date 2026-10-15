@@ -1,34 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Navigation, Search, Check, X, Loader2, AlertCircle } from 'lucide-react';
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-
-// Singleton loader for Google Maps JS API
-let googleMapsPromise = null;
-function loadGoogleMapsScript() {
-  if (!GOOGLE_MAPS_API_KEY) return Promise.reject(new Error('No Google Maps API Key found'));
-  if (window.google?.maps) return Promise.resolve(window.google.maps);
-  if (!googleMapsPromise) {
-    googleMapsPromise = new Promise((resolve, reject) => {
-      const cbName = `__gmaps_cb_${Date.now()}`;
-      window[cbName] = () => {
-        delete window[cbName];
-        resolve(window.google.maps);
-      };
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=${cbName}&loading=async`;
-      script.async = true;
-      script.defer = true;
-      script.onerror = () => {
-        googleMapsPromise = null;
-        delete window[cbName];
-        reject(new Error('Failed to load Google Maps script'));
-      };
-      document.head.appendChild(script);
-    });
-  }
-  return googleMapsPromise;
-}
+import { loadGoogleMaps, googleAddress, currentCoordinates } from '../../lib/googleMaps';
 
 const DEFAULT_CENTER = { lat: 28.6139, lng: 77.2090 }; // New Delhi default
 
@@ -51,35 +24,29 @@ const MapLocationPickerModal = ({
   const [selectedCoords, setSelectedCoords] = useState(initialCoordinates || DEFAULT_CENTER);
   const [detectedAddress, setDetectedAddress] = useState('');
   const [geocodedDetails, setGeocodedDetails] = useState(null);
+  const [hasSelection, setHasSelection] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [locationError, setLocationError] = useState('');
+  const geocodeSequence = useRef(0);
 
   // Reverse geocode lat/lng to readable address
   const reverseGeocode = useCallback((lat, lng) => {
+    const sequence = ++geocodeSequence.current;
+    setGeocodedDetails(null);
+    setDetectedAddress('');
     if (!geocoderRef.current) return;
+    setGeocoding(true);
     geocoderRef.current.geocode({ location: { lat, lng } }, (results, status) => {
+      if (sequence !== geocodeSequence.current) return;
+      setGeocoding(false);
       if (status === 'OK' && results?.[0]) {
-        const res = results[0];
-        setDetectedAddress(res.formatted_address);
-
-        // Extract components
-        const comps = res.address_components || [];
-        const findComp = (type) => comps.find((c) => c.types.includes(type))?.long_name || '';
-
-        const house = findComp('street_number') || findComp('premise') || findComp('subpremise') || '';
-        const area = findComp('sublocality_level_1') || findComp('sublocality') || findComp('neighborhood') || findComp('route') || '';
-        const city = findComp('locality') || findComp('administrative_area_level_2') || '';
-        const state = findComp('administrative_area_level_1') || '';
-        const pincode = findComp('postal_code') || '';
-
-        setGeocodedDetails({
-          formattedAddress: res.formatted_address,
-          house,
-          area,
-          city,
-          state,
-          pincode,
-        });
+        const details = googleAddress(results[0]);
+        setDetectedAddress(details.formattedAddress);
+        setGeocodedDetails(details);
+        setLocationError('');
       } else {
         setDetectedAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        setLocationError('Address lookup failed. Coordinates are captured; check the address fields manually.');
       }
     });
   }, []);
@@ -87,6 +54,7 @@ const MapLocationPickerModal = ({
   // Update pin position and geocode
   const updatePin = useCallback((lat, lng, panTo = true) => {
     setSelectedCoords({ lat, lng });
+    setHasSelection(true);
     if (markerRef.current) {
       markerRef.current.setPosition({ lat, lng });
     }
@@ -97,28 +65,14 @@ const MapLocationPickerModal = ({
   }, [reverseGeocode]);
 
   // Request GPS coordinates
-  const handleUseCurrentGps = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
-    setDetectingGps(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        updatePin(latitude, longitude, true);
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setZoom(17);
-        }
-        setDetectingGps(false);
-      },
-      (err) => {
-        console.warn('[MapPicker] GPS error:', err.message);
-        alert('Could not access current location. Please select your pin manually on the map.');
-        setDetectingGps(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+  const handleUseCurrentGps = async () => {
+    setDetectingGps(true); setLocationError('');
+    try {
+      const { latitude, longitude } = await currentCoordinates();
+      updatePin(latitude, longitude, true);
+      mapInstanceRef.current?.setZoom(17);
+    } catch (error) { setLocationError(error.message); }
+    finally { setDetectingGps(false); }
   };
 
   // Initialize Map
@@ -128,14 +82,15 @@ const MapLocationPickerModal = ({
     let isMounted = true;
     setLoadingMap(true);
     setMapError(false);
+    setHasSelection(false); setGeocoding(false); setGeocodedDetails(null); setDetectedAddress(''); setLocationError('');
 
-    loadGoogleMapsScript()
+    loadGoogleMaps()
       .then((gMaps) => {
         if (!isMounted || !mapContainerRef.current) return;
 
         geocoderRef.current = new gMaps.Geocoder();
 
-        const startPos = initialCoordinates?.lat && initialCoordinates?.lng
+        const startPos = initialCoordinates?.lat != null && initialCoordinates?.lng != null
           ? { lat: Number(initialCoordinates.lat), lng: Number(initialCoordinates.lng) }
           : DEFAULT_CENTER;
 
@@ -158,8 +113,14 @@ const MapLocationPickerModal = ({
         });
         markerRef.current = marker;
 
-        // Geocode initial position
-        reverseGeocode(startPos.lat, startPos.lng);
+        setSelectedCoords(startPos);
+        if (initialCoordinates?.lat != null && initialCoordinates?.lng != null) {
+          setHasSelection(true); reverseGeocode(startPos.lat, startPos.lng);
+        } else if (initialCity) {
+          geocoderRef.current.geocode({ address: `${initialCity}, India` }, (results, status) => {
+            if (isMounted && status === 'OK' && results?.[0]?.geometry?.location) map.setCenter(results[0].geometry.location);
+          });
+        }
 
         // Marker drag end listener
         marker.addListener('dragend', () => {
@@ -205,15 +166,20 @@ const MapLocationPickerModal = ({
       });
 
     return () => {
-      isMounted = false;
+      isMounted = false; ++geocodeSequence.current;
+      if (window.google?.maps?.event) {
+        if (markerRef.current) window.google.maps.event.clearInstanceListeners(markerRef.current);
+        if (mapInstanceRef.current) window.google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+      }
       mapInstanceRef.current = null;
       markerRef.current = null;
     };
-  }, [isOpen, initialCoordinates, reverseGeocode, updatePin]);
+  }, [isOpen, initialCoordinates, initialCity, reverseGeocode, updatePin]);
 
   if (!isOpen) return null;
 
   const handleConfirm = () => {
+    if (!hasSelection || geocoding || detectingGps) return;
     onSelectLocation({
       latitude: selectedCoords.lat,
       longitude: selectedCoords.lng,
@@ -322,6 +288,7 @@ const MapLocationPickerModal = ({
           )}
         </div>
 
+        {locationError && <p role="alert" className="px-4 py-2 text-xs text-red-700">{locationError}</p>}
         {/* Footer Summary & Confirm */}
         <div className="p-4 sm:p-5 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
           <div className="flex-1 min-w-0">
@@ -347,10 +314,11 @@ const MapLocationPickerModal = ({
             <button
               type="button"
               onClick={handleConfirm}
+              disabled={!hasSelection || geocoding || detectingGps || loadingMap}
               className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-brand-blue hover:bg-[#083679] text-white text-xs font-extrabold flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors"
             >
               <Check className="w-4 h-4" />
-              Confirm & Pin Location
+              {geocoding ? 'Resolving address…' : 'Confirm & Pin Location'}
             </button>
           </div>
         </div>

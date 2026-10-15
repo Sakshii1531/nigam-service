@@ -1,6 +1,6 @@
 # Phase 19: End-to-end verification and client acceptance
 
-**Status:** ✅ Done · **Layer:** All · **Delivers:** sign-off on all 22 requirements · **Depends on:** Phases 1–18
+**Status:** ✅ Implemented and regression-tested · **Layer:** All · **Client sign-off:** pending actual brand configuration and business-default confirmation · **Depends on:** Phases 1–18
 
 ## Goal
 Prove the client's final flow end to end, across the Customer App, Brand
@@ -171,3 +171,64 @@ were rerun after final permission wiring: **2 suites / 26 tests passed**
 
 The business defaults Q1–Q5 still await client confirmation; these fixes do not
 claim that the client has approved them.
+
+## Follow-up: four-panel client flow fixes (15 October 2026)
+
+The review against both the 20-item Partner Warranty brief and the 22-item
+Brand CRM brief identified two additional defects. Both are corrected:
+
+- Replacement creation validates the linked job's brand and the supplied
+  partner's current or historical assignment to that job. Listing, CSV export,
+  individual reads and decisions protect linked references as well as the
+  replacement's own brand. Inconsistent legacy foreign-job rows are hidden;
+  unrelated legacy partner references are not disclosed. The same reference
+  protection now covers returns and historical generated documents. Valid
+  replacement partner history remains available after reassignment.
+- Manual B2B2C settlement now writes the Invoice payout, every job's settlement
+  and linkage, and a structured actor/status audit in one MongoDB transaction.
+  Payout, job-update and audit failures roll back the whole batch and permit
+  retry. Concurrent overlapping batches cannot partially settle the losing
+  batch. Settlement refuses to proceed without transaction support. Partner
+  notification occurs after commit and cannot invalidate a committed payout.
+  Completion timestamps and withdrawable balances remain correct.
+- NCC Super Admin → Warranty Catalogue now includes **Policies & Serials**.
+  Select any brand to create/version/deactivate policies, evaluate coverage and
+  import/search serials. A brand-default policy covers that brand's selected
+  products, with more-specific product/type/model overrides. NCC can prepare
+  Pending brands before activation. Brand users cannot use these platform
+  endpoints; their own existing permission checks remain in effect.
+- The catalogue coverage picker includes **Select all products** and **Clear
+  selection**. The Brands table shows current policy/rate counts, and links
+  setup to Brand Rates. Counts indicate missing setup, not complete matching
+  coverage for every product, service, effective date or location.
+- [WALKTHROUGH.md](WALKTHROUGH.md#super-admin-setup-for-all-brands-and-products)
+  documents where to manage catalogue visibility, all-product coverage, policy,
+  proof/serial rules, rates/payouts, GST/billing, partner eligibility and access.
+
+Verification: all **10 targeted backend suites** passed across the focused
+runs: `brandAdmin`, `brandCrmAudit`, `brandCrmOperations`,
+`brandCrmWarrantyPolicy`, `partnerWarrantyCatalog`, `partnerWarrantyPayout`,
+`brandCrmBilling`, `brandCrmJourney`, `partnerWarrantyJourney` and
+`brandCrmRegistration`. The final financial/journey group passed **5 suites /
+43 tests**; the pending-brand options/registration group passed **2 suites /
+30 tests**. These counts overlap the 10 suites and must not be added together
+as unique test totals. Targeted lint, frontend production build and malware
+scan passed. The historical walkthrough screenshots were restored after the
+browser runs.
+
+Browser verification: **6 selected scenarios passed across focused runs**:
+the existing `adminWarranty`, `brandCrmJourney`, `brandCrmOperations`,
+`partnerAppWarranty` and `warrantyJourney` scenarios, plus the new Super Admin
+all-product coverage → listing → policy creation/versioning → serial import
+scenario in `adminWarranty.spec.js`. The new test initially used the wrong
+portal-session key, then expected an unnormalised serial; both test-harness
+issues were corrected and the complete new scenario passed. As before, some
+onsite/finance transitions in the existing journeys use HTTP calls.
+
+Real-account readiness: the earlier read-only review found the two reported
+brands disabled for customer warranty and without active policies/rates.
+This fix changes application behavior and management controls; it does not
+invent commercial warranty durations, rate/payout amounts, GST or service-area
+commitments. Enter the approved values and enable each intended brand/product
+through the setup walkthrough. Q1–Q5 still need client confirmation. Client
+sign-off is therefore separate from the passing implementation checks.

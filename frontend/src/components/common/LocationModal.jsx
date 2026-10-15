@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { isCityServiceable } from '../../utils/serviceableCities';
 
 export const LocationModal = () => {
+  const navigate = useNavigate();
   const { 
     isModalOpen, 
     closeLocationModal, 
@@ -142,6 +144,7 @@ export const LocationModal = () => {
               </div>
             )}
 
+            {user?.role === 'customer' && <button type="button" onClick={() => { closeLocationModal(); navigate('/saved-addresses'); }} className="w-full rounded-xl border border-blue-200 px-4 py-3 text-blue-800 font-semibold text-sm">Add new address / edit saved addresses</button>}
             {/* Search Input */}
             <div className="relative">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />

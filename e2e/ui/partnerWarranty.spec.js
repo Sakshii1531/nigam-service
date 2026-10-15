@@ -47,6 +47,7 @@ test('a customer raises, answers, tracks and closes a Partner Warranty claim', a
   const adminEmail = `pw-admin-${tag}@e2e.test`;
   await request.post(`${API}/_dev/test-user`, { data: { role: 'super_admin', email: adminEmail, password: 'password123' } });
   const admin = (await session(request, 'super_admin', adminEmail)).accessToken;
+  await call(request, 'post', '/super-admin/cities', admin, { name: `Indore${tag}`, state: 'Madhya Pradesh', status: 'Active' });
   const brand = await call(request, 'post', '/super-admin/brands', admin, { name: `E2E Cool ${tag}`, status: 'Active' });
   const ac = (await call(request, 'get', '/super-admin/catalogue/categories', admin)).find((c) => c.key === 'AC');
   await call(request, 'put', `/super-admin/warranty-catalog/brands/${brand.id}`, admin, { warrantyEnabled: true, coverage: [ac.id] });
@@ -88,7 +89,8 @@ test('a customer raises, answers, tracks and closes a Partner Warranty claim', a
   await page.getByLabel(/Purchase Date/).fill(new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10));
   await page.getByLabel(/Description of Issue/).fill('Blows warm air since Monday');
   await page.getByLabel(/House \/ Street/).fill('12 MG Road');
-  await page.getByLabel(/^City/).fill(`Indore${tag}`);
+  await page.getByLabel('State', { exact: true }).selectOption('Madhya Pradesh');
+  await page.getByLabel(/^City/).selectOption(`Indore${tag}`);
   await page.getByLabel(/Pincode/).fill('452001');
   await page.getByLabel(/I confirm this is the location/).check();
   await page.getByRole('button', { name: 'Raise Ticket' }).click();

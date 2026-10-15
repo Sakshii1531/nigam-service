@@ -178,3 +178,54 @@ test('Super Admin runs a stuck warranty claim to settlement', async ({ browser, 
   await expect(page.getByRole('heading', { name: 'Brand Webhook Log' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Parts Claims' })).toBeVisible(); // renamed from "NCC Shield (Warranty)"
 });
+
+// NCC can configure warranty terms for every brand without a brand-admin login.
+test('Super Admin configures all-product warranty terms and serials for a selected brand', async ({ browser, request }) => {
+  test.setTimeout(120_000);
+  const tag = randomUUID().slice(0, 6);
+  const email = `policy-admin-${tag}@e2e.test`;
+  await request.post(`${API}/_dev/test-user`, { data: { role: 'super_admin', email, password: 'password123' } });
+  const admin = await session(request, 'super_admin', email);
+  const categories = await call(request, 'get', '/super-admin/warranty-catalog/coverage-options', admin.accessToken);
+  const ac = categories.find(c => c.key === 'AC');
+  const brand = await call(request, 'post', '/super-admin/brands', admin.accessToken, { name: `All Products ${tag}`, status: 'Active' });
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await signIn(page, admin, 'super_admin');
+  try {
+    await page.goto('/super-admin/partner-warranty/catalogue?tab=brands');
+    await page.getByRole('cell', { name: brand.name, exact: true }).click();
+    await page.getByRole('button', { name: 'Select all products', exact: true }).click();
+    await page.getByRole('checkbox', { name: /List this brand/ }).check();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
+    const configured = (await call(request, 'get', '/super-admin/warranty-catalog/brands', admin.accessToken)).find(b => b.id === brand.id);
+    expect(configured.coverage).toHaveLength(categories.length);
+    expect(configured.warrantyEnabled).toBe(true);
+    expect(configured.setup).toEqual({ activePolicies: 0, activeRates: 0 });
+
+    await page.getByRole('tab', { name: 'Policies & Serials', exact: true }).click();
+    await page.getByLabel('Policy brand').selectOption(brand.id);
+    await page.getByRole('button', { name: 'New policy', exact: true }).click();
+    await page.getByLabel('Policy name', { exact: true }).fill(`All product coverage ${tag}`);
+    await page.getByLabel('Warranty months', { exact: true }).fill('18');
+    await page.getByRole('button', { name: 'Save policy', exact: true }).click();
+    await expect(page.getByRole('cell', { name: `All product coverage ${tag}`, exact: true })).toBeVisible();
+    const base = `/super-admin/brands/${brand.id}/warranty-policies`;
+    const policies = await call(request, 'get', base, admin.accessToken);
+    expect(policies[0].appliesTo.category).toBeNull();
+    expect(policies[0].warrantyMonths).toBe(18);
+    await page.getByRole('button', { name: 'New version', exact: true }).click();
+    await page.getByLabel('Warranty months', { exact: true }).fill('24');
+    await page.getByRole('button', { name: 'Save policy', exact: true }).click();
+    await expect(page.getByRole('cell', { name: 'v2', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Serial Registry', exact: true }).click();
+    await page.getByLabel('Serial CSV', { exact: true }).fill(`serial,model,category\nALL-${tag},AC-18,${ac.key}`);
+    await page.getByRole('button', { name: 'Preview import', exact: true }).click();
+    await expect(page.getByText('1 valid · 0 errors · 0 imported')).toBeVisible();
+    await page.getByRole('button', { name: 'Import valid serials', exact: true }).click();
+    await expect(page.getByRole('cell', { name: `ALL-${tag}`.toUpperCase(), exact: true })).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});

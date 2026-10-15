@@ -52,7 +52,7 @@ import { brandSettingsRouter } from './modules/brand-admin/brandSettings.routes.
 import { brandAcademyRouter } from './modules/brand-admin/brandAcademy.routes.js';
 import { brandRouter } from './modules/super-admin/brand.routes.js';
 import { brandAccessControl } from './modules/brand-crm/brandAccess.js';
-import { warrantyPolicyRouter } from './modules/brand-crm/warrantyPolicy.routes.js';
+import { warrantyPolicyRouter, adminWarrantyPolicyRouter } from './modules/brand-crm/warrantyPolicy.routes.js';
 import { ticketCommRouter } from './modules/brand-crm/ticketComm.routes.js';
 import { brandTicketRouter } from './modules/brand-crm/brandTicket.routes.js';
 import { registrationRouter } from './modules/brand-crm/registration.routes.js';
@@ -217,6 +217,7 @@ export function createApp() {
   app.use('/api/v1/brand/tickets', registrationRouter);
   app.use('/api/v1/brand/tickets',brandTicketRouter);
   app.use('/api/v1/brand/warranty-policies', warrantyPolicyRouter);
+  app.use('/api/v1/super-admin/brands/:brandId/warranty-policies', adminWarrantyPolicyRouter);
   app.use('/api/v1/brand/permissions', brandPermissionRouter);
   app.use('/api/v1/brand/reports', brandReportsRouter);
   app.use('/api/v1/brand/billing', brandBillingRouter);

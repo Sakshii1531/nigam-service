@@ -1,12 +1,13 @@
 import { z } from 'zod';
+const objectId = z.string().regex(/^[a-fA-F0-9]{24}$/, 'Invalid ID');
 
 export const createReplacementApprovalSchema = z.object({
-  serviceRequest: z.string().min(1),
+  serviceRequest: objectId,
   product: z.string().optional(),
   model: z.string().optional(),
   reason: z.string().optional(),
   serviceProviderNotes: z.string().optional(),
-  serviceProvider: z.string().optional(),
+  serviceProvider: objectId.optional(),
 });
 
 export const updateStatusSchema = z.object({
@@ -22,4 +23,4 @@ export const listQuerySchema = z.object({
   sort: z.string().optional(),
 });
 
-export const idParamSchema = z.object({ id: z.string().min(1) });
+export const idParamSchema = z.object({ id: objectId });

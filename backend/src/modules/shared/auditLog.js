@@ -3,8 +3,8 @@ import { AuditLog } from '../super-admin/auditLog.model.js';
 
 // Shared append-only audit writer. Request tracking and secret redaction are
 // enforced by the AuditLog schema for both this helper and direct writers.
-export async function logAudit({ user, action, type, entityType, entityId, fromStatus, toStatus, reason, brand, actor, meta }) {
-  await AuditLog.create({
+export async function logAudit({ user, action, type, entityType, entityId, fromStatus, toStatus, reason, brand, actor, meta }, { session } = {}) {
+  await AuditLog.create([{
     user: user || actor?.user || null,
     action,
     type,
@@ -16,7 +16,7 @@ export async function logAudit({ user, action, type, entityType, entityId, fromS
     brand: brand === undefined ? auditContext.getStore()?.req?.user?.brand || null : brand,
     actor: actor || null,
     meta: meta || null,
-  });
+  }], { session });
 }
 
 /**

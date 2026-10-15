@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals';
 import mongoose from 'mongoose';
 import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
@@ -21,12 +21,15 @@ import { Notification } from '../src/modules/notifications/notification.model.js
 import { testDbUri } from './helpers/testDb.js';
 import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { partnerWarrantyKit } from './helpers/partnerWarranty.js';
+import { settle as settleB2b2c } from '../src/modules/partner-warranty/b2b2cPayout.service.js';
+import { resetTransactionSupportCache } from '../src/utils/transaction.js';
 
 const TEST_DB_URI = testDbUri('partnerWarrantyPayout');
 
 let app;
 const kit = partnerWarrantyKit(() => app, { phoneStart: 9311100000 });
 const { api, bearer } = kit;
+afterEach(() => jest.restoreAllMocks());
 
 beforeAll(async () => {
   await mongoose.connect(TEST_DB_URI);
@@ -137,6 +140,57 @@ describe('Phase 11 — B2B2C earnings stay out of the withdrawable balance', () 
 });
 
 describe('Phase 11 — manual settlement by Super Admin', () => {
+  it('refuses settlement without transaction support before writing money or job state', async () => {
+    const s = await setup(), a = await completedWarrantyJob(s);
+    resetTransactionSupportCache();
+    const probe = jest.spyOn(mongoose.connection.db, 'admin').mockReturnValue({ command: async () => ({ isWritablePrimary: true }) });
+    try {
+      await expect(settleB2b2c(s.admin.user._id, { serviceProviderId: s.spId, jobIds: [a.jobId], reference: 'NO-TRANSACTION' })).rejects.toMatchObject({ statusCode: 503 });
+    } finally { probe.mockRestore(); resetTransactionSupportCache(); }
+    expect(await Payout.countDocuments()).toBe(0);
+    expect((await Job.findById(a.jobId)).settlement.status).toBe('unsettled');
+  });
+
+  it('keeps a committed settlement successful when the partner notification fails', async () => {
+    const s = await setup(), a = await completedWarrantyJob(s);
+    const notify = jest.spyOn(Notification, 'create').mockRejectedValueOnce(new Error('Notification storage unavailable'));
+    const result = await settleB2b2c(s.admin.user._id, { serviceProviderId: s.spId, jobIds: [a.jobId], reference: 'COMMITTED' });
+    notify.mockRestore();
+    expect(result.amount).toBe(450);
+    expect(await Payout.countDocuments()).toBe(1);
+    expect((await Job.findById(a.jobId)).settlement.status).toBe('settled');
+  });
+
+  it.each(['payout', 'job linkage', 'audit'])('rolls back the entire batch after a %s write failure and permits a clean retry', async (boundary) => {
+    const s = await setup();
+    const a = await completedWarrantyJob(s);
+    const b = await completedWarrantyJob(s, samsungFridge(s));
+    const model = boundary === 'payout' ? Payout : boundary === 'job linkage' ? Job : AuditLog;
+    const method = boundary === 'job linkage' ? 'updateMany' : 'create';
+    const original = model[method].bind(model);
+    const spy = jest.spyOn(model, method).mockImplementationOnce(async (...args) => {
+      // Throw after the actual write, testing rollback of persisted data too.
+      await original(...args);
+      throw new Error(`Injected ${boundary} failure`);
+    });
+    const body = { serviceProviderId: s.spId, jobIds: [a.jobId, b.jobId], reference: 'UTR-RETRY' };
+    await expect(settleB2b2c(s.admin.user._id, body)).rejects.toThrow(`Injected ${boundary} failure`);
+    spy.mockRestore();
+    expect(await Payout.countDocuments()).toBe(0);
+    expect(await AuditLog.countDocuments({ action: /B2B2C payout settled/ })).toBe(0);
+    expect(await Notification.countDocuments({ title: 'Warranty Job Payout Settled' })).toBe(0);
+    const jobs = await Job.find({ _id: { $in: body.jobIds } }).lean();
+    for (const job of jobs) {
+      expect(job.settlement.status).toBe('unsettled');
+      expect(job.settlement.payout || null).toBeNull();
+      expect(job.settlement.reference || null).toBeNull();
+    }
+    await api().post('/api/v1/super-admin/b2b2c-payouts/settle').set(bearer(s.admin.token)).send(body).expect(200);
+    expect(await Payout.countDocuments()).toBe(1);
+    expect(await AuditLog.countDocuments({ action: /B2B2C payout settled/ })).toBe(1);
+    expect(await Job.countDocuments({ _id: { $in: body.jobIds }, 'settlement.status': 'settled' })).toBe(2);
+  });
+
   it('lists what is owed per partner, settles a batch as one Invoice payout, and tells the partner', async () => {
     const s = await setup();
     const a = await completedWarrantyJob(s);
@@ -213,5 +267,17 @@ describe('Phase 11 — manual settlement by Super Admin', () => {
     ]);
     expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
     expect(await Payout.countDocuments()).toBe(1);
+  });
+
+  it('concurrent overlapping batches commit one whole batch and leave the losing batch unpaid', async () => {
+    const s = await setup();
+    const a = await completedWarrantyJob(s), b = await completedWarrantyJob(s, { overrides: { serialNumber: 'OVERLAP-2' } }), c = await completedWarrantyJob(s, samsungFridge(s));
+    const post = (jobIds, reference) => api().post('/api/v1/super-admin/b2b2c-payouts/settle').set(bearer(s.admin.token)).send({ serviceProviderId: s.spId, jobIds, reference });
+    const results = await Promise.all([post([a.jobId, b.jobId], 'OVERLAP-A'), post([b.jobId, c.jobId], 'OVERLAP-B')]);
+    expect(results.map(r => r.status).sort()).toEqual([200, 409]);
+    expect(await Payout.countDocuments()).toBe(1);
+    expect(await Job.countDocuments({ 'settlement.status': 'settled' })).toBe(2);
+    expect(await Job.countDocuments({ 'settlement.status': 'unsettled' })).toBe(1);
+    expect(await AuditLog.countDocuments({ action: /B2B2C payout settled/ })).toBe(1);
   });
 });

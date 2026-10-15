@@ -312,6 +312,7 @@ describe('reverse logistics returns', () => {
   it('creates and updates transit/verification status', async () => {
     const brandA = await seedBrandWithAdmin('Brand A');
     const serviceProvider = await seedServiceProvider();
+    await ServiceProvider.updateOne({ _id: serviceProvider._id }, { $addToSet: { authorizedBrands: brandA.brand._id } });
 
     const createRes = await request(app)
       .post('/api/v1/brand/returns')

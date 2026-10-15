@@ -36,7 +36,7 @@ serviceProviderRouter.put('/profile', validate(updateProfileSchema), async (req,
 
 serviceProviderRouter.patch('/availability', validate(setAvailabilitySchema), async (req, res, next) => {
   try {
-    ok(res, await serviceProviderService.setAvailability(req.serviceProvider.id, req.body.availability));
+    ok(res, await serviceProviderService.setAvailability(req.serviceProvider.id, req.body.availability, { location: req.body.location }));
   } catch (err) {
     next(err);
   }

@@ -25,7 +25,7 @@ const CACHE_TTL_MS = 60 * 1000; // 1 minute cache
 /**
  * Fetch the active operational cities from the public endpoint
  */
-export async function getActiveCities() {
+export async function getActiveCities({ allowFallback = true } = {}) {
   const now = Date.now();
   if (cachedCities && now - lastFetchTime < CACHE_TTL_MS) {
     return cachedCities;
@@ -50,7 +50,7 @@ export async function getActiveCities() {
   }
 
   // Fallback
-  return DEFAULT_SERVICEABLE_CITIES.map(name => ({ name, state: '' }));
+  return allowFallback ? DEFAULT_SERVICEABLE_CITIES.map(name => ({ name, state: '' })) : [];
 }
 
 /**

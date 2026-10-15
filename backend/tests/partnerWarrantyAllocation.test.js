@@ -85,6 +85,43 @@ const assignedTo = async (srId) => {
 };
 
 describe('Phase 6 — who is eligible for a warranty job', () => {
+  it('uses zero latitude/longitude as real GPS for warranty distance matching', async () => {
+    const s = await scenario();
+    await WarrantyClaim.updateOne({ _id: s.claim.id }, { $set: { 'address.latitude': 0, 'address.longitude': 0 } });
+    const eligible = await partner({ at: null, city: 'Bhopal' });
+    await ServiceProvider.updateOne({ _id: eligible.id }, { $set: { location: { latitude: 0, longitude: 0 }, serviceRadiusKm: 10 } });
+    const { sr } = await approve(s);
+    expect(sr.customerLocation).toMatchObject({ latitude: 0, longitude: 0 });
+    expect(await assignedTo(sr._id)).toBe(eligible.id);
+  });
+
+  it.each(['AC Repair', ' ac repair ', 'Air Conditioning'])('matches the exact catalogue display skill %s to its warranty category key', async (skill) => {
+    const s = await scenario();
+    await Category.updateOne({ _id: s.w.ac._id }, { $set: { name: 'Air Conditioning' } });
+    await partner({ specs: ['AC Spare Sales', 'Electrician'], at: 0.1 });
+    const eligible = await partner({ specs: [skill], at: 2 });
+    const { sr } = await approve(s);
+    expect(await assignedTo(sr._id)).toBe(eligible.id);
+  });
+
+  it('refreshing online duty saves real GPS, retries queued warranty work and is visible to NCC', async () => {
+    const s = await scenario();
+    const { sr } = await approve(s);
+    expect(sr.serviceProvider).toBeNull();
+    const eligible = await partner({ specs: ['AC Repair'], at: null, availability: 'Available' });
+    const location = near(1);
+    const result = await api().patch('/api/v1/service-provider/profile/availability').set(bearer(eligible.token))
+      .send({ availability: 'Available', location }).expect(200);
+    expect(result.body.data.autoAssigned.assignedCount).toBe(1);
+    expect(result.body.data.serviceProvider.location).toMatchObject(location);
+    expect(result.body.data.serviceProvider.serviceCityName).toBe('Indore');
+    expect(await assignedTo(sr._id)).toBe(eligible.id);
+    const admin = await api().get('/api/v1/super-admin/service-providers?availability=Available').set(bearer(s.admin.token)).expect(200);
+    expect(admin.body.data.map(provider => provider.id)).toContain(eligible.id);
+    await api().patch('/api/v1/service-provider/profile/availability').set(bearer(eligible.token))
+      .send({ availability: 'Available', location: { latitude: 100, longitude: 75 } }).expect(400);
+  });
+
   it('skill is a hard filter (a non-warranty booking would still take a generalist)', async () => {
     const s = await scenario();
     await partner({ specs: ['Refrigerator'], at: 1 });

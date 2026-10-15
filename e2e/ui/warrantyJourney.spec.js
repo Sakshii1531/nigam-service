@@ -61,6 +61,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   await request.post(`${API}/_dev/test-user`, { data: { role: 'super_admin', email: adminEmail, password: 'password123' } });
   const adminSession = await session(request, 'super_admin', adminEmail);
   const admin = adminSession.accessToken;
+  await call(request, 'post', '/super-admin/cities', admin, { name: city, state: 'Rajasthan', status: 'Active' });
   const ac = (await call(request, 'get', '/super-admin/catalogue/categories', admin)).find((c) => c.key === 'AC');
   const brand = await call(request, 'post', '/super-admin/brands', admin, { name: `E2E Journey ${tag}`, status: 'Active' });
   await call(request, 'put', `/super-admin/warranty-catalog/brands/${brand.id}`, admin, { warrantyEnabled: true, coverage: [ac.id] });
@@ -75,7 +76,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   const brandSession = await session(request, 'brand_admin', brandEmail);
 
   const partnerPhone = uniquePhone();
-  await request.post(`${API}/_dev/test-serviceProvider`, { data: { phone: partnerPhone, password: 'password123', specs: ['AC'], serviceCityName: city, availability: 'Available' } });
+  await request.post(`${API}/_dev/test-serviceProvider`, { data: { phone: partnerPhone, password: 'password123', specs: ['AC Repair'], serviceCityName: city, availability: 'Available' } });
   const partnerSession = await session(request, 'service_provider', partnerPhone);
 
   const customerPhone = uniquePhone();
@@ -105,7 +106,8 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   await customer.getByLabel(/Purchase Date/).fill(new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10));
   await customer.getByLabel(/Description of Issue/).fill('Cooling stops after an hour');
   await customer.getByLabel(/House \/ Street/).fill('4 Civil Lines');
-  await customer.getByLabel(/^City/).fill(city);
+  await customer.getByLabel('State', { exact: true }).selectOption('Rajasthan');
+  await customer.getByLabel(/^City/).selectOption(city);
   await customer.getByLabel(/Pincode/).fill('302001');
   await customer.locator('input[type=file]').first().setInputFiles({ name: 'invoice.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(customer.getByRole('button', { name: 'Remove Bill / Invoice' })).toBeVisible();

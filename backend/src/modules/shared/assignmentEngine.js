@@ -1,7 +1,19 @@
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { AssignmentWeighting } from '../super-admin/assignmentWeighting.model.js';
-import { City } from '../super-admin/city.model.js';
+import { Category } from '../catalog/category.model.js';
+
+// Registration historically stored display names ("AC Repair"), while jobs
+// store catalogue keys ("AC"). Match exact normalized catalogue labels, never
+// arbitrary substring/generalist matches for warranty jobs.
+const normalizedSkill = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+async function skillLabelsFor(category) {
+  const escaped = String(category || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const row = await Category.findOne({ $or: [{ key: new RegExp(`^${escaped}$`, 'i') }, { name: new RegExp(`^${escaped}$`, 'i') }] }).select('key name').lean();
+  const labels = [category, row?.key, row?.name].filter(Boolean);
+  // A legacy skill adds "Repair" to the exact category key/name.
+  return new Set(labels.flatMap(label => [normalizedSkill(label), normalizedSkill(`${label} Repair`)]));
+}
 
 function clamp0to100(n) {
   return Math.max(0, Math.min(100, n));
@@ -121,11 +133,13 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
 
   let candidates = await ServiceProvider.find(filter).populate('city');
   if (candidates.length === 0) return [];
+  const skillLabels = await skillLabelsFor(category);
+  const hasSkill = provider => (provider.specs || []).some(spec => skillLabels.has(normalizedSkill(spec)));
 
   let brandRequiresAuthorization = false;
   if (warranty) {
     // A warranty job is never offered to someone who doesn't service the product.
-    candidates = candidates.filter((provider) => (provider.specs || []).includes(category));
+    candidates = candidates.filter(hasSkill);
     if (warranty.brand) {
       brandRequiresAuthorization = Boolean(await ServiceProvider.exists({ status: 'Active', authorizedBrands: warranty.brand }));
     }
@@ -171,7 +185,7 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
       proximity = serviceProviderCity === city.trim().toLowerCase() ? 100 : 0;
     }
 
-    const skill = provider.specs.includes(category) ? 100 : 40;
+    const skill = hasSkill(provider) ? 100 : 40;
     const rating = clamp0to100((provider.rating / 5) * 100);
     const load = provider.activeJobsCount + (pending.get(String(provider._id)) || 0);
     const workload = clamp0to100(100 - load * 20);

@@ -19,13 +19,13 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { registrationSchema } from './registration.validation.js';
 import { SERVICE_TYPES, STAFF_SOURCES, TICKET_PRIORITIES, VISIT_SLOTS, MAX_TICKET_VIDEOS } from '../partner-warranty/ticketConstants.js';
 import { visitDateRange } from '../shared/preferredVisit.js';
-async function brandFor(id) {
-  const brand = await Brand.findOne({_id:id,status:'Active'}).lean();
+async function brandFor(id, { includeInactive = false } = {}) {
+  const brand = await Brand.findOne({_id:id,...(includeInactive ? {} : {status:'Active'})}).lean();
   if (!brand) throw new ApiError(404,'Brand not found');
   return brand;
 }
-export async function formOptions(brandId) {
-  const brand = await brandFor(brandId);
+export async function formOptions(brandId, options = {}) {
+  const brand = await brandFor(brandId, options);
   const categories = await Category.find({_id:{$in:brand.coverage},isActive:true}).sort({sortOrder:1,name:1}).lean();
   const ids = categories.map(c=>c._id);
   const [types,issues] = await Promise.all([ProductType.find({category:{$in:ids},isActive:true}).sort({sortOrder:1,name:1}).lean(), WarrantyIssue.find({category:{$in:ids},isActive:true}).sort({sortOrder:1,name:1}).lean()]);

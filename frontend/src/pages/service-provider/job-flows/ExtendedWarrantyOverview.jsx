@@ -53,10 +53,6 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
         <div className="h-0.25 bg-slate-100 w-full" />
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs text-slate-600 font-normal">Installation Date</span>
-            <span className="text-xs text-[#052355] font-medium">{job?.installDate}</span>
-          </div>
-          <div className="flex justify-between items-center">
             <span className="text-xs text-slate-600 font-normal">Coverage Status</span>
             <span className="text-xs font-medium bg-purple-50 text-purple-600 px-2.5 py-0.5 rounded-lg">
               Extended Warranty

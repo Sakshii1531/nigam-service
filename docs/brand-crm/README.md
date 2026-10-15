@@ -17,6 +17,10 @@ conversation that produced it**. Start with [§6 How to resume](#6-how-to-resume
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Target data model, ticket and job-stage machines, permissions catalogue, SLA, billing, intake API, events |
 | [CLIENT-ACCEPTANCE.md](CLIENT-ACCEPTANCE.md) | The client's 22 requirements mapped to phases, with pass/fail status and evidence |
 | [USER-GUIDE.md](USER-GUIDE.md) | Role-by-role operating guide for the Brand Panel and connected NCC/Partner workflows |
+| [WALKTHROUGH.md](WALKTHROUGH.md) | Detailed click-by-click registration → approval → partner → parts → closure → billing → payment walkthrough, including legacy-login troubleshooting |
+| [MANUAL-TEST-CHECKLIST.md](MANUAL-TEST-CHECKLIST.md) | Manual acceptance scenarios, expected results and automated verification commands |
+| [PROVIDER-LOCATION-FIXES-2026-10-15.md](PROVIDER-LOCATION-FIXES-2026-10-15.md) | Desktop provider availability, NCC status refresh, customer GPS/address/map-pin capture and warranty skill matching |
+| [FOUR-PANEL-CLIENT-REVIEW-2026-10-15.md](FOUR-PANEL-CLIENT-REVIEW-2026-10-15.md) | Review against both client briefs: four-panel journeys, confirmed defects, actual brand readiness and acceptance matrix |
 | `phase-N-*.md` | One file per phase: context, scope, tasks, API examples, acceptance, and an **Implementation Log** filled in when the phase is done |
 
 Related: [`docs/partner-warranty/`](../partner-warranty/README.md) is the B2B2C

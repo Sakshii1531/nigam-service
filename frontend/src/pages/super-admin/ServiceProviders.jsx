@@ -121,15 +121,24 @@ const ServiceProviders = () => {
 
   const [serviceProviders, setServiceProviders] = useState([]);
   const [loadError, setLoadError] = useState("");
+  const providerFetchBusy = React.useRef(false);
 
   // Applications submitted from /service provider/apply land here as Pending
   // service providers — the console is where they get approved or rejected.
   const fetchTechs = React.useCallback(async () => {
+    if (providerFetchBusy.current) return;
+    providerFetchBusy.current = true;
     try {
-      const res = await apiRequest("/super-admin/service-providers?limit=200", {
-        auth: true,
+      const first = await apiRequest("/super-admin/service-providers?limit=100&page=1", {
+        auth: true, envelope: true,
       });
-      const items = Array.isArray(res) ? res : [];
+      const items = Array.isArray(first?.data) ? [...first.data] : [];
+      // The API caps a page at 100. A client-side search/filter must include
+      // later pages, otherwise older online providers disappear from this view.
+      for (let page = 2; page <= (first.meta?.totalPages || 1); page++) {
+        const next = await apiRequest(`/super-admin/service-providers?limit=100&page=${page}`, { auth: true, envelope: true });
+        if (Array.isArray(next?.data)) items.push(...next.data);
+      }
       setServiceProviders(
         items.map((item) => ({
           id: item.id,
@@ -173,14 +182,25 @@ const ServiceProviders = () => {
             : "—",
         })),
       );
+      setSelectedTechProfile(current => {
+        if (!current) return current;
+        const saved = items.find(item => item.id === current.id);
+        return saved ? { ...current, availability: saved.availability, status: saved.status, activeJobs: saved.activeJobsCount || 0 } : current;
+      });
       setLoadError("");
     } catch (err) {
       setLoadError(err.message || "Could not load serviceProviders.");
+    } finally {
+      providerFetchBusy.current = false;
     }
   }, []);
 
   useEffect(() => {
     fetchTechs();
+    const refresh = () => { if (!document.hidden) fetchTechs(); };
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
   }, [fetchTechs]);
 
   useEffect(() => {
@@ -410,7 +430,7 @@ const ServiceProviders = () => {
   const filteredTechs = serviceProviders.filter((t) => {
     const matchesSearch =
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.ref || "").toLowerCase().includes(searchQuery.toLowerCase());
+      [t.ref, t.phone, t.email, ...t.specs].some(value => String(value || '').toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesSkill =
       selectedSkill === "All Skills" || t.specs.includes(selectedSkill);
     const matchesStatus =
