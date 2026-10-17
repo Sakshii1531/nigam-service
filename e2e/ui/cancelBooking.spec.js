@@ -147,3 +147,52 @@ test.describe('Customer Booking Cancellation', () => {
     await expect(page.getByRole('button', { name: /^Cancel Booking$/i })).not.toBeVisible();
   });
 });
+
+for (const providerView of ['dashboard', 'active-job']) {
+  test(`customer cancellation removes the provider's job live from ${providerView} and creates a notification`, async ({ browser, request }) => {
+    const city = `Cancel City ${uniquePhone()}`;
+    const providerPhone = uniquePhone();
+    await request.post(`${API}/_dev/test-serviceProvider`, { data: { phone: providerPhone, password: 'password123', specs: ['AC'], availability: 'Available', serviceCityName: city } });
+    const provider = await verifyOtp(request, 'service_provider', providerPhone);
+    const customer = await signedInCustomer(request);
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    await signIn(page, provider);
+    await page.goto('/service-provider/dashboard');
+    await expect(page.getByText(/Online · Accepting jobs/)).toBeVisible();
+    const created = await request.post(`${API}/bookings`, {
+      headers: { Authorization: `Bearer ${customer.accessToken}` },
+      data: await offeringBookingBody(request, { api: API, offeringCode: 'AC-WINDOW-REPAIR', address: { house: 'Cancellation test', city, pincode: '452001' }, fullName: 'Customer Cancellation Test' }),
+    });
+    expect(created.status()).toBe(201);
+    const { booking } = (await created.json()).data;
+    const offer = page.getByRole('dialog');
+    await expect(offer).toBeVisible();
+    await offer.getByRole('button', { name: /Accept job/i }).click();
+    await expect(page.getByRole('button', { name: '1 Active jobs' })).toBeVisible();
+    if (providerView === 'active-job') {
+      await page.getByRole('button', { name: 'Start Job' }).click();
+      await expect(page).toHaveURL(/\/service-provider\/active-job/);
+    }
+    // The customer uses the real cancellation modal in a separate session.
+    const customerPage = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+    await signIn(customerPage, customer);
+    await customerPage.goto(`/bookings/${booking.humanId}`);
+    await customerPage.getByRole('button', { name: /^Cancel Booking$/i }).click();
+    await customerPage.getByRole('button', { name: /Changed my mind/i }).click();
+    await customerPage.getByRole('button', { name: /Yes, Cancel Booking/i }).click();
+    await expect(customerPage.getByText(/Booking cancelled successfully/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/service-provider\/dashboard$/);
+    await expect(page.getByRole('button', { name: '0 Active jobs' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start Job', exact: true })).toHaveCount(0);
+    await expect(page.getByText(/Customer cancelled this job|Customer Cancelled Booking/).first()).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('ncc_service_provider_active_job'))).toBeNull();
+    const headers = { Authorization: `Bearer ${provider.accessToken}` };
+    const active = await request.get(`${API}/service-provider/jobs/active`, { headers });
+    expect((await active.json()).data).toEqual([]);
+    const notifications = (await (await request.get(`${API}/notifications`, { headers })).json()).data;
+    expect(notifications.some(item => item.title === 'Job cancelled by customer' && item.message.includes(booking.humanId))).toBe(true);
+    await page.reload();
+    await expect(page.getByRole('button', { name: '0 Active jobs' })).toBeVisible();
+  });
+}

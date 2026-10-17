@@ -603,7 +603,7 @@ const Buy = () => {
                         </svg>
                       </div>
                     ),
-                    onClick: () => navigate("/buy/amc"),
+                    onClick: () => navigate("/buy/amc/select-appliance"),
                   },
                   {
                     name: "Buy\nNew",
@@ -743,7 +743,7 @@ const Buy = () => {
                 {/* Banner 3: NCC AMC Plans */}
                 <div className="w-full shrink-0 px-0.5">
                   <div
-                    onClick={() => navigate("/buy/amc")}
+                    onClick={() => navigate("/buy/amc/select-appliance")}
                     className="bg-linear-to-br from-[#E6F4EA] to-[#C9EAD2] rounded-2xl p-3.5 sm:p-4 border border-emerald-100 shadow-2xs flex items-center gap-3 sm:gap-4 relative overflow-hidden cursor-pointer hover:shadow-md transition-all text-left min-h-33.75 sm:min-h-35.5">
                     <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-300/20 rounded-full blur-2xl"></div>
 
@@ -774,7 +774,7 @@ const Buy = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate("/buy/amc");
+                          navigate("/buy/amc/select-appliance");
                         }}
                         className="bg-[#059669] hover:bg-emerald-700 text-white text-[8.5px] sm:text-[9px] font-black px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer">
                         Explore AMC

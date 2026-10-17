@@ -445,7 +445,7 @@ export async function getBooking(userId, id) {
  * informed after the fact, never actually asked.
  */
 export async function respondToPartRequest(userId, bookingId, { approve }) {
-  const booking = await findOwnedOr404(userId, bookingId);
+  let booking = await findOwnedOr404(userId, bookingId);
   if (!booking.partApproval || booking.partApproval.status !== 'Pending') {
     throw new ApiError(400, 'There is no spare part request awaiting your approval on this booking.');
   }
@@ -470,7 +470,6 @@ export async function respondToPartRequest(userId, bookingId, { approve }) {
         const rejectedNames = booking.partApproval.partNames?.join(', ') || 'the requested spare part';
         job.revisit = job.revisit || {};
         job.revisit.notes = `Customer declined the spare part request (${rejectedNames}) — service cancelled.`;
-        job.activeStep = 'cancelled';
         await job.save();
 
         // A declined cost ends the job outright — reuses the same
@@ -478,7 +477,7 @@ export async function respondToPartRequest(userId, bookingId, { approve }) {
         // other cancellation (see closeBooking), rather than leaving the job
         // silently parked at completed_pending with no way for the customer
         // or service provider to know it's over.
-        await closeBooking(booking, {
+        booking = await closeBooking(booking, {
           reason: `Customer declined the spare part request (${rejectedNames})`,
           timelineDescription: `Service cancelled — customer declined the spare part request (${rejectedNames})`,
         });
@@ -640,65 +639,83 @@ export async function cancelBooking(userId, id, reason) {
   return closeBooking(booking, {
     reason: reason || 'Cancelled by customer',
     timelineDescription: reason ? `Cancelled by customer: ${reason}` : 'Cancelled by customer',
+    notifyProvider: true,
   });
 }
 
 /** Cancels the booking and its service request, and tells everyone watching. */
-async function closeBooking(booking, { reason, timelineDescription, searchEndReason = null }) {
-  booking.status = 'Cancelled';
-  if (booking.isInstant) {
-    booking.instantStatus = 'CANCELLED';
-  }
-  booking.cancellationReason = reason;
-  booking.cancelledAt = new Date();
-  if (searchEndReason) booking.searchEndReason = searchEndReason;
-  await booking.save();
-
-  if (booking.serviceRequest) {
-    try {
-      const srId = typeof booking.serviceRequest === 'object' ? booking.serviceRequest._id : booking.serviceRequest;
-      const sr = await ServiceRequest.findById(srId);
-      if (sr && sr.status !== 'Cancelled' && sr.status !== 'Closed' && sr.status !== 'Completed') {
-        sr.status = 'Cancelled';
-        if (sr.isInstant) sr.instantStatus = 'CANCELLED';
-        sr.cancellationReason = reason;
-        sr.cancelledAt = new Date();
-        if (searchEndReason) sr.searchEndReason = searchEndReason;
-        sr.timeline.push({
-          stepLabel: 'Cancelled',
-          done: true,
-          timestamp: new Date(),
-          description: timelineDescription,
-        });
-        await sr.save();
-      }
-    } catch (e) {
-      console.error('[booking.cancel] error transitioning service request:', e.message);
+async function closeBooking(booking, { reason, timelineDescription, searchEndReason = null, notifyProvider = false }) {
+  const result = await runInTransaction(async (session) => {
+    const updated = await Booking.findOneAndUpdate(
+      { _id: booking._id, status: { $nin: ['Cancelled', 'Completed'] } },
+      { $set: { status: 'Cancelled', cancellationReason: reason, cancelledAt: new Date(),
+        ...(booking.isInstant ? { instantStatus: 'CANCELLED' } : {}),
+        ...(searchEndReason ? { searchEndReason } : {}),
+      } },
+      { new: true, session },
+    );
+    if (!updated) {
+      const current = await Booking.findById(booking._id).session(session);
+      if (current?.status === 'Completed') throw new ApiError(400, 'Cannot cancel a completed booking');
+      return { booking: current || booking, changed: false };
     }
+
+    const srId = updated.serviceRequest?._id || updated.serviceRequest;
+    const sr = srId ? await ServiceRequest.findById(srId).session(session) : null;
+    if (sr && !['Cancelled', 'Closed', 'Completed'].includes(sr.status)) {
+      sr.status = 'Cancelled';
+      if (sr.isInstant) sr.instantStatus = 'CANCELLED';
+      sr.cancellationReason = reason;
+      sr.cancelledAt = updated.cancelledAt;
+      if (searchEndReason) sr.searchEndReason = searchEndReason;
+      sr.timeline.push({ stepLabel: 'Cancelled', done: true, timestamp: updated.cancelledAt, description: timelineDescription });
+      await sr.save(session ? { session } : undefined);
+    }
+
+    const job = srId ? await Job.findOneAndUpdate(
+      { serviceRequest: srId, activeStep: { $nin: ['completed', 'cancelled'] } },
+      { $set: { activeStep: 'cancelled' } }, { new: true, session },
+    ) : null;
+    if (job) {
+      await ServiceProvider.updateOne(
+        { _id: job.serviceProvider, activeJobsCount: { $gt: 0 } },
+        { $inc: { activeJobsCount: -1 } }, { session },
+      );
+    }
+    const providerId = job?.serviceProvider || sr?.serviceProvider || updated.serviceProvider;
+    const provider = providerId ? await ServiceProvider.findById(providerId).select('user').session(session).lean() : null;
+    return { booking: updated, changed: true, jobId: job?._id || null, providerId, providerUser: provider?.user };
+  });
+  if (!result.changed) return result.booking;
+  booking = result.booking;
+
+  if (notifyProvider && result.providerUser) {
+    await emitNotification('job.cancelled', {
+      user: result.providerUser, category: booking.category, reason,
+      bookingId: booking.id, humanId: booking.humanId,
+      dedupeKey: `booking-cancelled:${booking.id}:${booking.serviceRequest || booking.cancelledAt.toISOString()}`,
+    });
   }
 
-  // Real-time socket broadcast
-  try {
-    const io = getIO();
-    const payload = {
-      bookingId: booking._id,
-      serviceRequestId: booking.serviceRequest?._id || booking.serviceRequest,
-      status: 'Cancelled',
-      instantStatus: 'CANCELLED',
-      reason: booking.cancellationReason,
-      searchEndReason: booking.searchEndReason || null,
-    };
+  const payload = {
+    bookingId: booking._id, humanId: booking.humanId, jobId: result.jobId,
+    serviceRequestId: booking.serviceRequest?._id || booking.serviceRequest,
+    status: 'Cancelled', instantStatus: 'CANCELLED', reason,
+    searchEndReason: booking.searchEndReason || null,
+  };
+  const io = getIO();
+  if (io) {
     io.to(`user:${booking.user}`).emit('booking:cancelled', payload);
     io.to(`user:${booking.user}`).emit('instant:status_update', payload);
     io.to(INSTANT_ROOM).emit('instant:status_update', payload);
-    if (booking.serviceProvider) {
-      const spId = typeof booking.serviceProvider === 'object' ? booking.serviceProvider._id : booking.serviceProvider;
-      io.to(`service-provider:${spId}`).emit('job:cancelled', payload);
+    if (result.providerId) {
+      // The user's room is joined even when the provider is offline and has
+      // not subscribed to new offers. Socket.IO unions rooms without duplicates.
+      let recipients = io.to(`service-provider:${result.providerId}`);
+      if (result.providerUser) recipients = recipients.to(`user:${result.providerUser}`);
+      recipients.emit('job:cancelled', payload);
     }
-  } catch (_e) {
-    // ignore socket errors
   }
-
   return booking;
 }
 

@@ -8,6 +8,7 @@ import {
   useMemo,
 } from "react";
 import { io } from "socket.io-client";
+import { useToast } from "./ToastContext";
 import { useAuth } from "./AuthContext";
 import { apiRequest, getStoredTokens } from "../lib/apiClient";
 import { currentCoordinates } from '../lib/googleMaps';
@@ -91,6 +92,7 @@ export const useTech = () => {
 };
 
 export const ServiceProviderProvider = ({ children }) => {
+  const { info: showCancellationNotice } = useToast();
   const { user } = useAuth();
   const [jobs, setJobs] = useState([]);
   // Distinguishes "no jobs" from "jobs not loaded yet". Without it the stat
@@ -504,15 +506,14 @@ export const ServiceProviderProvider = ({ children }) => {
    * reload. Joining the service providers' room and refetching on each event is what
    * makes "right now" actually mean right now.
    *
-   * Only while online: an offline service provider should not be pulled into a job,
-   * which is also why the socket is torn down when they go offline.
+   * Keep cancellation updates connected while offline too. Only online
+   * providers join the feed for new offers.
    */
   const socketRef = useRef(null);
   useEffect(() => {
     if (
       !user ||
-      user.role !== "service_provider" ||
-      availability !== "Available"
+      user.role !== "service_provider"
     )
       return undefined;
 
@@ -526,7 +527,7 @@ export const ServiceProviderProvider = ({ children }) => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      socket.emit("join-instant-feed", {});
+      if (availability === "Available") socket.emit("join-instant-feed", {});
     });
 
     const handleIncomingJobDispatch = (payload) => {
@@ -550,6 +551,9 @@ export const ServiceProviderProvider = ({ children }) => {
     };
 
     const handleJobCancelled = (payload) => {
+      const ids = new Set([payload?.jobId, payload?.bookingId, payload?.serviceRequestId].filter(Boolean).map(String));
+      setJobs(current => current.filter(job => ![job.id, job.bookingId, job.serviceRequestId].some(id => id && ids.has(String(id)))));
+      showCancellationNotice(`Customer cancelled this job.${payload?.reason ? ` Reason: ${payload.reason}` : ''}`);
       fetchRealJobs();
       if (typeof window !== "undefined") {
         window.dispatchEvent(
@@ -639,7 +643,7 @@ export const ServiceProviderProvider = ({ children }) => {
     // so the server moves this socket into the new city's broadcast room, and
     // reload jobs — offers from the old city no longer apply.
     socket.on("serviceProvider:city_changed", () => {
-      socket.emit("join-instant-feed", {});
+      if (availability === "Available") socket.emit("join-instant-feed", {});
       fetchRealJobs();
     });
     socket.on("connect_error", (err) =>
@@ -650,7 +654,7 @@ export const ServiceProviderProvider = ({ children }) => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [user, availability, fetchRealJobs]);
+  }, [user, availability, fetchRealJobs, showCancellationNotice]);
 
   // Active fast polling fallback:
   // When service provider is Online / Available, refresh jobs every 4 seconds
@@ -839,6 +843,18 @@ export const ServiceProviderProvider = ({ children }) => {
   ]);
 
   const activeJob = jobs.find((j) => j.id === activeJobId) || null;
+  useEffect(() => {
+    const clearCancelledJob = ({ detail: payload }) => {
+      const ids = new Set([payload?.jobId, payload?.bookingId, payload?.serviceRequestId].filter(Boolean).map(String));
+      if ([activeJobId, activeJob?.bookingId, activeJob?.serviceRequestId].some(id => id && ids.has(String(id)))) {
+        setActiveJobId(null);
+        setActiveStep("idle");
+      }
+    };
+    window.addEventListener("service-provider:job_cancelled", clearCancelledJob);
+    return () => window.removeEventListener("service-provider:job_cancelled", clearCancelledJob);
+  }, [activeJobId, activeJob, setActiveJobId]);
+
 
   // Live tracking GPS broadcast for active job to Super Admin and ASM live tracking.
   // Moved below activeJobId/activeStep/activeJob's declarations — it referenced

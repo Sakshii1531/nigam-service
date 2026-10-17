@@ -2021,8 +2021,7 @@ const Dashboard = () => {
                 )}
               </p>
               <p className="text-[11px] text-slate-500">
-                This booking has been removed from your active schedule and
-                returned to available queue.
+                This booking has been removed from your active schedule.
               </p>
 
               <button

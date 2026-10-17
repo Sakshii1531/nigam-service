@@ -79,7 +79,12 @@ test('AMC Silver checkout uses admin AC brands, handles cancelled payment, shows
   const { admin, customer, tag, brand, fridgeBrand } = await setup(page, request);
   const name = `AC Silver ${tag}`;
   await call(request, 'post', '/super-admin/plans/amc', admin.accessToken, { name, tier: 'Silver', applianceCategory: 'AC', price: 999, visitsTotal: 2, durationMonths: 6, benefits: ['Two covered visits'] });
-  await page.goto('/buy/amc/plans/AC');
+  await page.goto('/buy');
+  await page.getByText('NCC AMC Plans', { exact: true }).click();
+  await expect(page).toHaveURL(/\/buy\/amc\/select-appliance$/);
+  await expect(page.getByText('Select an appliance for AMC plan')).toBeVisible();
+  await page.getByRole('heading', { name: 'AC', exact: true }).click();
+  await expect(page).toHaveURL(/\/buy\/amc\/plans\/AC$/);
   await page.getByText(name, { exact: true }).click();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.locator('select').first().locator('option').filter({ hasText: brand })).toHaveCount(1);
@@ -106,11 +111,16 @@ test('AMC Silver checkout uses admin AC brands, handles cancelled payment, shows
   await page.goto('/profile');
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
   await expect(page.getByText('GOLD PLAN', { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'View Benefits', exact: true }).click();
+  await page.getByRole('button', { name: `View ${name} benefits`, exact: true }).click();
   const benefits = page.getByRole('dialog', { name });
   await expect(benefits.getByText('Two covered visits')).toBeVisible();
   await expect(benefits.getByText('2 of 2 visits remaining')).toBeVisible();
   await benefits.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole('button', { name: `View ${name} benefits`, exact: true }).click();
+  await expect(benefits.getByText('Two covered visits')).toBeVisible();
+  await benefits.getByRole('button', { name: 'Close', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
   await coveredBooking(page, brand);
 });
 

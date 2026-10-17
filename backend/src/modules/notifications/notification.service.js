@@ -41,6 +41,14 @@ const EVENT_TEMPLATES = {
     smsBody: `Your ${p.category} service booking is confirmed. Track via Nigam Care app.`,
     whatsappBody: `✅ *Booking Confirmed!*\n\nYour *${p.category}* service has been booked successfully.\n\nOpen the Nigam Care app to track your booking.`,
   }),
+  'job.cancelled': (p) => ({
+    recipient: p.user,
+    type: 'jobs',
+    title: 'Job cancelled by customer',
+    message: `The customer cancelled ${p.humanId || p.category || 'their service booking'}.${p.reason ? ` Reason: ${p.reason}` : ''}`,
+    priority: 'High',
+    cta: { label: 'View jobs', route: '/service-provider/history' },
+  }),
   'booking.search_expired': (p) => ({
     recipient: p.user,
     type: 'service',

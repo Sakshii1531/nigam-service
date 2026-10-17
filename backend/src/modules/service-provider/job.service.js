@@ -89,6 +89,7 @@ async function findOwnedJob(serviceProviderId, jobId) {
   const job = await Job.findById(jobId).populate({ path: 'serviceRequest', populate: { path: 'user booking appliance' } });
   if (!job) throw new ApiError(404, 'Job not found');
   if (String(job.serviceProvider) !== serviceProviderId) throw new ApiError(403, 'Not authorized to access this job');
+  if (job.serviceRequest?.status === 'Cancelled' || job.serviceRequest?.booking?.status === 'Cancelled') job.activeStep = 'cancelled';
   if (job.serviceRequest?.booking?.completionOtp && !job.serviceRequest.completionOtp) {
     job.serviceRequest.completionOtp = job.serviceRequest.booking.completionOtp;
   }
@@ -286,7 +287,7 @@ export async function getJobSummary(serviceProviderId) {
           totalJobs: { $sum: 1 },
           completedJobs: { $sum: { $cond: [{ $eq: ['$activeStep', 'completed'] }, 1, 0] } },
           inProgressJobs: {
-            $sum: { $cond: [{ $in: ['$activeStep', ['completed', 'idle']] }, 0, 1] },
+            $sum: { $cond: [{ $in: ['$activeStep', ['completed', 'idle', 'cancelled']] }, 0, 1] },
           },
           completedToday: {
             $sum: {
@@ -333,9 +334,12 @@ export async function getJobSummary(serviceProviderId) {
 }
 
 export async function listActiveJobs(serviceProviderId) {
-  const jobs = await Job.find({ serviceProvider: serviceProviderId, activeStep: { $ne: 'completed' } })
+  const candidates = await Job.find({ serviceProvider: serviceProviderId, activeStep: { $nin: ['completed', 'idle', 'cancelled'] } })
     .populate({ path: 'serviceRequest', populate: { path: 'user booking appliance' } })
     .sort({ createdAt: -1 });
+  // Also hide legacy jobs whose parent was cancelled before Job cancellation
+  // was synchronized, so an already-cancelled booking cannot remain active.
+  const jobs = candidates.filter(job => job.serviceRequest?.status !== 'Cancelled' && job.serviceRequest?.booking?.status !== 'Cancelled');
 
   await Promise.all(
     jobs.map(async (j) => {
@@ -656,6 +660,9 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
 export async function acceptJob(serviceProviderId, serviceRequestId, { type, amcSubscriptionId, extendedWarrantyOrderId } = {}) {
   let serviceRequest = await ServiceRequest.findById(serviceRequestId);
   if (!serviceRequest) throw new ApiError(404, 'Service request not found');
+  if (['Cancelled', 'Closed', 'Completed', 'Customer Confirmation'].includes(serviceRequest.status)) {
+    throw new ApiError(409, 'This service request is no longer available');
+  }
 
   // Open offers — requests nobody is assigned to — are broadcast to every
   // service provider in the city and listed in their feed, but accepting one
@@ -686,6 +693,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   if (existing) throw new ApiError(400, 'A job already exists for this service request');
 
   const booking = serviceRequest.booking ? await Booking.findById(serviceRequest.booking) : null;
+  if (booking?.status === 'Cancelled') throw new ApiError(409, 'This booking has been cancelled');
 
   // Auto-infer AMC/EW references and job type from serviceRequest if not explicitly passed
   const resolvedAmcSubId = amcSubscriptionId || serviceRequest.amcSubscription;

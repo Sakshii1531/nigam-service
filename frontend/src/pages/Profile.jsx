@@ -95,6 +95,11 @@ const Profile = () => {
     }
   }, [user]);
 
+  const handleAmcPlanClick = () => {
+    if (hasMembership && membershipDetails) setShowMembershipDetails(true);
+    else navigate('/buy/amc/select-appliance');
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
       
@@ -294,7 +299,16 @@ const Profile = () => {
 
                 {/* AMC plan (membership merged into AMC, docs/master-catalogue Phase 12) */}
                 <div 
-                  onClick={() => navigate('/buy/amc')}
+                  onClick={handleAmcPlanClick}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={hasMembership ? `View ${membershipName} benefits` : 'Buy an AMC plan'}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleAmcPlanClick();
+                    }
+                  }}
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
@@ -603,7 +617,7 @@ const Profile = () => {
               </div>
             ) : (
               <div 
-                onClick={() => navigate('/buy/amc')}
+                onClick={handleAmcPlanClick}
                 className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3.5">
@@ -752,7 +766,16 @@ const Profile = () => {
 
               <div className="flex flex-col gap-2">
                 <div 
-                  onClick={() => navigate('/buy/amc')}
+                  onClick={handleAmcPlanClick}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={hasMembership ? `View ${membershipName} benefits` : 'Buy an AMC plan'}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleAmcPlanClick();
+                    }
+                  }}
                   className="p-3.5 bg-slate-50 hover:bg-[#EAF4FF]/60 rounded-2xl border border-slate-100 flex items-center justify-between cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3">

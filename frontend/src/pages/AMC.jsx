@@ -423,14 +423,7 @@ const AMC = () => {
                       </svg>
                     </div>
                   ),
-                  // Already on the AMC home page — jump straight to the
-                  // category picker below instead of re-navigating into the
-                  // "Select Appliance" step, which just reloads this same
-                  // page and drops the categories/plans info already on screen.
-                  onClick: () =>
-                    document
-                      .getElementById("amc-categories")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  onClick: () => navigate("/buy/amc/select-appliance"),
                 },
 
                 {

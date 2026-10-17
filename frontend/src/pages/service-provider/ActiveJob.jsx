@@ -600,10 +600,25 @@ const ActiveJob = () => {
     ]);
   }, [activeJob?.id, jobContext]);
 
+  useEffect(() => {
+    const handleCancellation = ({ detail: payload }) => {
+      const ids = new Set([payload?.jobId, payload?.bookingId, payload?.serviceRequestId].filter(Boolean).map(String));
+      if (activeJob && [activeJob.id, activeJob.bookingId, activeJob.serviceRequestId].some(id => id && ids.has(String(id)))) {
+        setActiveJobId(null);
+        setActiveStep("idle");
+        navigate("/service-provider/dashboard", { replace: true });
+      }
+    };
+    window.addEventListener("service-provider:job_cancelled", handleCancellation);
+    return () => window.removeEventListener("service-provider:job_cancelled", handleCancellation);
+  }, [activeJob, navigate, setActiveJobId, setActiveStep]);
+
   // Synchronize activeStep with the real job step if opened on an active job
   useEffect(() => {
     if (activeJob) {
       if (
+        activeJob.activeStep === "cancelled" ||
+        activeJob.status === "Cancelled" ||
         activeJob.activeStep === "completed" ||
         activeJob.status === "Completed" ||
         activeJob.status === "Customer Confirmation" ||
