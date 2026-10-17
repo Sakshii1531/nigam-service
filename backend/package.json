@@ -7,8 +7,8 @@
     "node": ">=20.0.0 <25.0.0"
   },
   "scripts": {
-    "dev": "node api.js && nodemon src/server.js",
-    "start": "node api.js && node src/server.js",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
     "seed": "node scripts/seed.js",
     "seed:demo": "node scripts/seedDemoItems.js",
     "seed:catalogue": "node scripts/seedMasterCatalogue.js",
