@@ -27,6 +27,14 @@ async function notify(c,providerId,approvalOnly=false){
  const provider=await ServiceProvider.findById(providerId).select('user');
  if(provider?.user){getIO()?.to(`user:${provider.user}`).emit('job:updated',{warrantyClaim:String(c._id)});if(!approvalOnly)await sendAdHocPush({recipientId:provider.user,brand:c.brand,warrantyClaim:c._id,title:'Part request updated',body:`Parts for ${c.humanId} have been updated`,cta:{label:'View job',route:'/service-provider/active-job'}}).catch(()=>{});}
 }
+// Parts actions already save their claim and synchronize its stage after the
+// action commits. The generic Job hook must not update that same claim midway
+// through the action on standalone MongoDB, where there is no session to defer it.
+async function savePartsJob(job, session) {
+ job.$locals.deferWarrantyStageSync = true;
+ try { await job.save(session ? { session } : undefined); }
+ finally { delete job.$locals.deferWarrantyStageSync; }
+}
 export async function requestWarrantyParts(providerId,jobId,input){
  const provider=await ServiceProvider.findById(providerId).select('user');const actor=await actorFromUser(provider.user,'partner');let c,job,orders;
  await runInTransaction(async session=>{
@@ -47,7 +55,7 @@ export async function requestWarrantyParts(providerId,jobId,input){
    const [p]=await PartOrder.create([{serviceProvider:providerId,job:job._id,warrantyClaim:c._id,serviceRequest:sr._id,brand:c.brand,partName:i.name.trim(),sku,partNumber:catalog?.code||sku,price,qty,orderSource:input.orderSource||'NCC Warehouse',fulfillmentType:input.fulfillmentType||(input.orderSource==='Partner Brand'||input.orderSource==='Nearby Store'?'procurement':'in_stock'),payer,approval:{required,brand:{status:required.includes('brand')?'Pending':'Not Required'},ncc:{status:'Pending'}},customerApprovalStatus:payer==='brand'?'Approved':'Pending',statusHistory:[{status:'Pending',at:new Date(),actor}]}],session?{session}:{});
    orders.push(p);event(c,p,'PART_REQUESTED',actor,input.notes||`Requested ${p.partName}`);
   }
-  job.spareParts=orders.map(p=>({name:p.partName,sku:p.sku,price:p.price,checked:true,source:'manual'}));job.activeStep='completed_pending';job.revisit={status:'Pending Approval',partOrderId:orders[0]._id,notes:input.notes};await job.save(session?{session}:undefined);
+  job.spareParts=orders.map(p=>({name:p.partName,sku:p.sku,price:p.price,checked:true,source:'manual'}));job.activeStep='completed_pending';job.revisit={status:'Pending Approval',partOrderId:orders[0]._id,notes:input.notes};await savePartsJob(job,session);
   sr.status='Spare Ordered';sr.timeline.push({stepLabel:'Spare Ordered',done:true,timestamp:new Date(),description:'Parts awaiting required approvals'});await sr.save(session?{session}:undefined);
   await persistClaim(c,{session});
  });await flushAudit(c);await syncClaimFromJob(c.serviceRequest);await notify(c,providerId,true);
@@ -59,7 +67,7 @@ async function resumeAfterRejection(p,session){
  if(open)return;
  const job=await Job.findById(p.job).session(session||null);
  if(job?.activeStep!=='completed_pending')return;
- job.activeStep='spareapproval';job.spareParts.forEach(x=>{x.checked=false;});job.revisit={};await job.save(session?{session}:undefined);
+ job.activeStep='spareapproval';job.spareParts.forEach(x=>{x.checked=false;});job.revisit={};await savePartsJob(job,session);
  const sr=await ServiceRequest.findById(p.serviceRequest).session(session||null);sr.status='Diagnosis Done';sr.timeline.push({stepLabel:'Parts Rejected',done:true,timestamp:new Date(),description:'All requested parts rejected; technician may revise diagnosis or request a replacement'});await sr.save(session?{session}:undefined);
 }
 export async function changePart({id,brand,providerId,jobId,actor,status,remarks,photoUrl}){
@@ -99,7 +107,7 @@ export async function changePart({id,brand,providerId,jobId,actor,status,remarks
   // Only actual receipt releases the revisit. Approval/dispatch keep PARTS_REQUIRED.
   if(['Received','Handed Over'].includes(status)&&!brand&&job.activeStep==='completed_pending'){
    const remaining=await PartOrder.countDocuments({brand:p.brand,job:job._id,status:{$nin:['Received','Installed','Rejected','Handed Over']}}).session(session||null);
-   if(!remaining){job.activeStep='revisit_scheduled';job.revisit={...job.revisit?.toObject(),status:'Scheduled',scheduledDate:job.revisit?.scheduledDate||new Date(Date.now()+86400000),timeSlot:job.revisit?.timeSlot||'10:00 AM - 01:00 PM',partReceivedAt:new Date()};await job.save(session?{session}:undefined);const sr=await ServiceRequest.findById(p.serviceRequest).session(session||null);sr.status='Spare Received';sr.timeline.push({stepLabel:'Spare Received',done:true,timestamp:new Date(),description:'All requested parts received'});await sr.save(session?{session}:undefined);}
+   if(!remaining){job.activeStep='revisit_scheduled';job.revisit={...job.revisit?.toObject(),status:'Scheduled',scheduledDate:job.revisit?.scheduledDate||new Date(Date.now()+86400000),timeSlot:job.revisit?.timeSlot||'10:00 AM - 01:00 PM',partReceivedAt:new Date()};await savePartsJob(job,session);const sr=await ServiceRequest.findById(p.serviceRequest).session(session||null);sr.status='Spare Received';sr.timeline.push({stepLabel:'Spare Received',done:true,timestamp:new Date(),description:'All requested parts received'});await sr.save(session?{session}:undefined);}
   }
   await persistClaim(c,{session});
  });await flushAudit(c);await syncClaimFromJob(c.serviceRequest);await notify(c,p.serviceProvider);return p;

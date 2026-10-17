@@ -2,6 +2,7 @@ import express from 'express';
 import { ExtendedWarrantyOrder } from './extendedWarrantyOrder.model.js';
 import { AMCSubscription } from './amcSubscription.model.js';
 import { AMCPlan } from './amcPlan.model.js';
+import { ProductType } from '../catalog/productType.model.js';
 import { Category } from '../catalog/category.model.js';
 import { ExtendedWarrantyPlan } from './extendedWarrantyPlan.model.js';
 import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
@@ -34,7 +35,7 @@ async function startPayment({ userId, targetType, targetId, amount, receipt, met
 /** Shared verify path — the Razorpay order id always comes from the server's
  * own Pending Payment, never from the client. */
 async function confirmPayment({ userId, targetType, targetId, razorpayPaymentId, razorpaySignature }) {
-  const pendingPayment = await Payment.findOne({ targetType, targetId, status: 'Pending' });
+  const pendingPayment = await Payment.findOne({ targetType, targetId, status: { $in: ['Pending', 'Success'] } }).sort({ createdAt: -1 });
   if (!pendingPayment) {
     const err = new Error('No pending payment found');
     err.statusCode = 400;
@@ -55,6 +56,15 @@ async function confirmPayment({ userId, targetType, targetId, razorpayPaymentId,
     const err = new Error('Payment signature verification failed');
     err.statusCode = 400;
     throw err;
+  }
+
+  if (pendingPayment.status === 'Success') {
+    if (pendingPayment.razorpayPaymentId !== razorpayPaymentId) {
+      const err = new Error('This purchase was already paid with a different payment');
+      err.statusCode = 400;
+      throw err;
+    }
+    return pendingPayment;
   }
 
   pendingPayment.status = 'Success';
@@ -96,7 +106,11 @@ router.get('/amc/appliances', async (req, res) => {
     const plans = await AMCPlan.find({ isActive: true }).select('applianceCategory price').lean();
     const generic = plans.filter((p) => !p.applianceCategory);
     const keys = [...new Set(plans.map((p) => p.applianceCategory).filter(Boolean))];
-    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder imageUrl').lean();
+    const applianceCategories = generic.length ? await ProductType.find({ isActive: true }).distinct('category') : [];
+    const categories = await Category.find({ isActive: true, $or: [{ key: { $in: keys } }, { _id: { $in: applianceCategories } }] }).select('key name sortOrder imageUrl').lean();
+    // An any-appliance plan must remain discoverable even when the admin has
+    // not created a separate appliance-specific plan for that category.
+    if (generic.length) keys.push(...categories.map(c => c.key).filter(key => !keys.includes(key)));
     const nameOf = new Map(categories.map((c) => [c.key, c]));
     const data = keys
       .map((key) => {
@@ -141,7 +155,11 @@ router.get('/extended-warranty/appliances', async (req, res) => {
     const plans = await ExtendedWarrantyPlan.find({ isActive: true }).select('applianceCategory price').lean();
     const generic = plans.filter((p) => !p.applianceCategory);
     const keys = [...new Set(plans.map((p) => p.applianceCategory).filter(Boolean))];
-    const categories = await Category.find({ key: { $in: keys } }).select('key name sortOrder imageUrl').lean();
+    const applianceCategories = generic.length ? await ProductType.find({ isActive: true }).distinct('category') : [];
+    const categories = await Category.find({ isActive: true, $or: [{ key: { $in: keys } }, { _id: { $in: applianceCategories } }] }).select('key name sortOrder imageUrl').lean();
+    // An any-appliance plan must remain discoverable even when the admin has
+    // not created a separate appliance-specific plan for that category.
+    if (generic.length) keys.push(...categories.map(c => c.key).filter(key => !keys.includes(key)));
     const byKey = new Map(categories.map((c) => [c.key, c]));
     const data = keys
       .map((key) => {
@@ -206,6 +224,10 @@ router.post('/extended-warranty/orders', async (req, res) => {
       return res.status(404).json({ error: { message: 'Extended warranty plan not found' } });
     }
 
+    if (!category || (ewPlan.applianceCategory && ewPlan.applianceCategory !== category)) {
+      return res.status(400).json({ error: { message: 'Plan does not cover this appliance category' } });
+    }
+
     const validTill = new Date();
     validTill.setFullYear(validTill.getFullYear() + ewPlan.durationYears);
 
@@ -215,6 +237,7 @@ router.post('/extended-warranty/orders', async (req, res) => {
     if (appliance) {
       const owned = await OwnedAppliance.findOne({ _id: appliance, user: req.user.id });
       if (!owned) return res.status(404).json({ error: { message: 'Appliance not found' } });
+      if (owned.category !== category || owned.brand !== brand) return res.status(400).json({ error: { message: 'Appliance does not match this purchase' } });
       applianceId = owned._id;
     }
 
@@ -232,8 +255,11 @@ router.post('/extended-warranty/orders', async (req, res) => {
       invoiceFileUrl,
       validTill,
       tierId: ewPlan.id,
+      planName: ewPlan.name,
       price: ewPlan.price,
       status: 'Active',
+      paid: ewPlan.price === 0,
+      coverage: ewPlan.features,
       claimsTotal: ewPlan.claimsTotal,
       claimsRemaining: ewPlan.claimsTotal,
     });
@@ -264,7 +290,7 @@ router.post('/extended-warranty/orders', async (req, res) => {
  */
 router.post('/amc/subscriptions', async (req, res) => {
   try {
-    const { plan, planName, brand, model } = req.body;
+    const { plan, planName, brand, model, appliance, category, installationDate, pincode, invoiceFileUrl } = req.body;
 
     // A subscription must reference a real AMCPlan — the plan is what defines
     // how many visits it carries. Accept an id, or resolve the plan by name for
@@ -281,6 +307,17 @@ router.post('/amc/subscriptions', async (req, res) => {
       return res.status(404).json({ error: { message: 'AMC plan not found' } });
     }
 
+    const applianceCategory = category || amcPlan.applianceCategory;
+    if (!applianceCategory || (amcPlan.applianceCategory && amcPlan.applianceCategory !== applianceCategory)) {
+      return res.status(400).json({ error: { message: 'Plan does not cover this appliance category' } });
+    }
+    let applianceId = null;
+    if (appliance) {
+      const owned = await OwnedAppliance.findOne({ _id: appliance, user: req.user.id, category: applianceCategory });
+      if (!owned || owned.brand !== brand) return res.status(400).json({ error: { message: 'Appliance does not match this purchase' } });
+      applianceId = owned._id;
+    }
+
     // Validity comes from the plan (admin-set), not a fixed year.
     const expiryDate = new Date();
     expiryDate.setMonth(expiryDate.getMonth() + (amcPlan.durationMonths || 12));
@@ -288,8 +325,14 @@ router.post('/amc/subscriptions', async (req, res) => {
     const subscription = await AMCSubscription.create({
       user: req.user.id,
       plan: amcPlan._id,
+      appliance: applianceId,
+      applianceCategory,
+      paid: amcPlan.price === 0,
       brand,
       model,
+      installationDate,
+      pincode,
+      invoiceFileUrl,
       expiryDate,
       status: 'Active',
       // Visit allowance comes from the plan, not from a hardcoded constant.
@@ -330,7 +373,7 @@ router.get('/extended-warranty/orders', async (req, res) => {
  */
 router.get('/amc/subscriptions', async (req, res) => {
   try {
-    const subscriptions = await AMCSubscription.find({ user: req.user.id }).populate('plan');
+    const subscriptions = await AMCSubscription.find({ user: req.user.id }).populate('plan').sort({ createdAt: -1 });
     return res.json({ data: subscriptions });
   } catch (err) {
     return res.status(500).json({ error: { message: err.message } });

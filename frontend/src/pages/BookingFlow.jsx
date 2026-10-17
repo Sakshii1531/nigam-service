@@ -312,6 +312,7 @@ function quoteLoading0(quoteKey, quoteState) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const BookingFlow = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { category } = useParams();
@@ -383,6 +384,17 @@ const BookingFlow = () => {
   // Step 3
   const [brand, setBrand] = useState(() => resumeBooking?.brand || "");
 
+  const [ownedAppliances, setOwnedAppliances] = useState([]);
+  const [selectedApplianceId, setSelectedApplianceId] = useState(() => resumeBooking?.applianceId || "");
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    apiRequest(`/appliances?category=${encodeURIComponent(category)}`, { auth: true })
+      .then((items) => alive && setOwnedAppliances(items || []))
+      .catch(() => alive && setOwnedAppliances([]));
+    return () => { alive = false; };
+  }, [user, category]);
+
   // Step 4
   const [selectedDate, setSelectedDate] = useState(
     () => resumeBooking?.date || "",
@@ -453,7 +465,6 @@ const BookingFlow = () => {
     }
   }, [location.state]);
 
-  const { user } = useAuth();
   const { currentLocation } = useLocationContext();
 
   // Prefill user data if available from session
@@ -571,6 +582,9 @@ const BookingFlow = () => {
   // Only a product-linked booking asks which brand the appliance is
   // (docs/master-catalogue Phase 19) — a standalone service never carries one.
   const bookingBrand = isStandalone ? "" : brand;
+  const brandAppliances = isStandalone ? [] : ownedAppliances.filter((a) => a.category === category && a.brand?.toLowerCase() === brand.toLowerCase());
+  const bookingApplianceId = brandAppliances.find((a) => a.id === selectedApplianceId)?.id
+    || (brandAppliances.length === 1 ? brandAppliances[0].id : undefined);
   const serviceChoices = selectedPT ? servicesFor(tree, { productTypeId, variantId: variantId || null }) : [];
   const serviceId =
     chosenServiceId ||
@@ -628,7 +642,7 @@ const BookingFlow = () => {
         // The appliance's brand lets the server detect warranty / AMC / EW
         // coverage for a signed-in customer — the same check the booking
         // runs — so a covered visit shows ₹0 here before confirming.
-        warranty: signedIn && bookingBrand ? { brand: bookingBrand } : undefined,
+        warranty: signedIn && bookingBrand ? { brand: bookingBrand, applianceId: bookingApplianceId } : undefined,
       })
     : "";
 
@@ -977,6 +991,7 @@ const BookingFlow = () => {
     couponCode: quote.couponCode || null,
     useCoins: quote.coinsApplied > 0,
     brand: bookingBrand,
+    applianceId: bookingApplianceId,
     date: selectedDate,
     timeGroup,
     isInstant: isExpress,
@@ -1100,7 +1115,7 @@ const BookingFlow = () => {
   const step2Valid = Boolean(primaryOffering && quote && !quoteError);
   const hasBrands = Boolean(data.brands && data.brands.length > 0);
   const timeSlotValid = Boolean(timeGroup) && (timeGroup !== "ASAP" || expressAvailable);
-  const step3Valid = (!hasBrands || !!brand) && !!selectedDate && timeSlotValid && Boolean(quote);
+  const step3Valid = (brandAppliances.length < 2 || !!bookingApplianceId) && (!hasBrands || !!brand) && !!selectedDate && timeSlotValid && Boolean(quote);
 
   const isMobileValid = !!mobile?.trim() && /^\d{10}$/.test(mobile.trim());
   const isPincodeValid =
@@ -1614,6 +1629,16 @@ const BookingFlow = () => {
                       </p>
                     )}
                   </div>
+                )}
+
+                {brandAppliances.length > 1 && (
+                  <label className="bg-white border border-slate-200 rounded-2xl p-4 text-xs font-bold">
+                    Select your appliance to apply AMC or warranty coverage
+                    <select value={selectedApplianceId} onChange={(e) => setSelectedApplianceId(e.target.value)} className="w-full mt-2 p-3 bg-slate-50 rounded-xl">
+                      <option value="">Choose registered appliance</option>
+                      {brandAppliances.map((a) => <option key={a.id} value={a.id}>{[a.brand, a.modelNumber || a.model, a.serialNumber].filter(Boolean).join(' · ')}</option>)}
+                    </select>
+                  </label>
                 )}
 
                 {/* Date picker */}

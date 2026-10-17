@@ -5,6 +5,7 @@ import { createApp } from '../src/app.js';
 import { registerAllModels } from '../src/config/registerModels.js';
 import { ensureIndexes } from '../src/config/db.js';
 import { User } from '../src/modules/auth/user.model.js';
+import { ProductType } from '../src/modules/catalog/productType.model.js';
 import { Category } from '../src/modules/catalog/category.model.js';
 import { AMCPlan } from '../src/modules/warranty-amc-exchange/amcPlan.model.js';
 import { AMCSubscription } from '../src/modules/warranty-amc-exchange/amcSubscription.model.js';
@@ -15,6 +16,11 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { AMC_PLAN_SEED, EW_PLAN_SEED } from '../scripts/planSeedData.js';
 import { jobFlow } from './helpers/jobFlow.js';
+import { detectWarrantyForAppliance } from '../src/modules/warranty-amc-exchange/warrantyDetector.service.js';
+import { signForTesting } from '../src/modules/payments-wallet/paymentGateway.js';
+import { buildQuote } from '../src/modules/catalog/quote.service.js';
+import { createBooking } from '../src/modules/booking/booking.service.js';
+import { seedSimpleOffering, clearCatalogue } from './helpers/catalogue.js';
 import { testDbUri } from './helpers/testDb.js';
 
 // Super Admin → Plans → AMC plans (docs/master-catalogue Phase 12): the one
@@ -41,7 +47,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await Promise.all([User, Category, AMCPlan, AMCSubscription, ExtendedWarrantyPlan, ExtendedWarrantyOrder, AuditLog].map((m) => m.deleteMany({})));
+  await Promise.all([User, Category, ProductType, AMCPlan, AMCSubscription, ExtendedWarrantyPlan, ExtendedWarrantyOrder, AuditLog].map((m) => m.deleteMany({})));
   await Category.create([
     { key: 'AC', name: 'AC', sortOrder: 1 },
     { key: 'Refrigerator', name: 'Refrigerator', sortOrder: 2 },
@@ -186,5 +192,72 @@ describe('extended-warranty packs (Phase 13)', () => {
 
   it('every seeded pack names a catalogue appliance', () => {
     for (const pack of EW_PLAN_SEED) expect(pack.applianceCategory).toEqual(expect.any(String));
+  });
+});
+
+
+describe('customer purchase to covered service regression', () => {
+  it.each(['amc', 'extended-warranty'])('%s covers a catalogue-only brand after verified payment, with the same zero price at quote and booking', async (kind) => {
+    await clearCatalogue();
+    const offering = await seedSimpleOffering({ categoryKey: 'AC', code: 'AMC-REGRESSION', price: 500 });
+    const cust = await flow.customer();
+    const plan = kind === 'amc'
+      ? await AMCPlan.create({ ...acGold, name: 'AC Silver', tier: 'Silver' })
+      : await ExtendedWarrantyPlan.create({ name: 'AC Shield', applianceCategory: 'AC', price: 999, durationYears: 1, claimsTotal: 2 });
+    const path = kind === 'amc' ? 'amc/subscriptions' : 'extended-warranty/orders';
+    const auth = { Authorization: `Bearer ${cust.token}` };
+    const purchased = await request(app).post(`/api/v1/warranty-amc/${path}`).set(auth)
+      .send({ plan: plan.id, category: 'AC', brand: 'Catalogue Only Manufacturer', model: 'X', modelName: 'X' }).expect(201);
+    const purchase = purchased.body.data.subscription || purchased.body.data.order;
+    const warranty = { brand: 'Catalogue Only Manufacturer' };
+    const input = { lines: [{ offeringId: String(offering._id), quantity: 1 }], warranty };
+    const pending = await buildQuote(input, { userId: cust.user.id });
+    expect(pending.totals.final).toBe(50000);
+    if (kind === 'amc') expect(purchase.plan.name).toBe('AC Silver');
+
+    await request(app).post(`/api/v1/warranty-amc/${path}/${purchase.id}/verify-payment`).set(auth)
+      .send({ razorpayPaymentId: 'pay_invalid', razorpaySignature: 'invalid' }).expect(400);
+    expect((await buildQuote(input, { userId: cust.user.id })).totals.final).toBe(50000);
+    const signature = signForTesting({ orderId: purchased.body.data.razorpay.orderId, paymentId: 'pay_covered' });
+    await request(app).post(`/api/v1/warranty-amc/${path}/${purchase.id}/verify-payment`).set(auth)
+      .send({ razorpayPaymentId: 'pay_covered', razorpaySignature: signature }).expect(200);
+
+    const quote = await buildQuote(input, { userId: cust.user.id });
+    expect(quote.totals.final).toBe(0);
+    const { booking, serviceRequest } = await createBooking(cust.user.id, {
+      offeringId: String(offering._id), quantity: 1, brand: warranty.brand, expectedFinalAmount: 0,
+      address: { line1: 'Test address', city: 'Delhi', pincode: '110001' },
+    });
+    expect(booking.totalPrice).toBe(0);
+    expect(serviceRequest.warranty).toBe('In Warranty');
+    expect(String(kind === 'amc' ? serviceRequest.amcSubscription : serviceRequest.extendedWarrantyOrder)).toBe(purchase.id);
+    const foreignCategory = await detectWarrantyForAppliance({ userId: cust.user.id, category: 'Refrigerator', brandName: warranty.brand });
+    expect(foreignCategory.warrantyStatus).toBe('Out of Warranty');
+    const model = kind === 'amc' ? AMCSubscription : ExtendedWarrantyOrder;
+    await model.updateOne({ _id: purchase.id }, kind === 'amc' ? { visitsRemaining: 0 } : { claimsRemaining: 0 });
+    expect((await buildQuote(input, { userId: cust.user.id })).totals.final).toBe(50000);
+  });
+
+  it('rejects buying a category-specific plan for another appliance', async () => {
+    const cust = await flow.customer();
+    const plan = await AMCPlan.create(acGold);
+    await request(app).post('/api/v1/warranty-amc/amc/subscriptions')
+      .set('Authorization', `Bearer ${cust.token}`)
+      .send({ plan: plan.id, category: 'Refrigerator', brand: 'LG' }).expect(400);
+  });
+});
+
+
+describe('any-appliance plans remain discoverable', () => {
+  it.each(['amc', 'extended-warranty'])('%s includes active catalogue appliances when only a generic plan exists', async kind => {
+    const categories = await Category.find({ key: { $in: ['AC', 'Refrigerator'] } });
+    await ProductType.create(categories.map(category => ({ category: category._id, slug: 'appliance', name: category.name })));
+    await Category.create({ key: 'Plumber', name: 'Plumber' });
+    if (kind === 'amc') await AMCPlan.create({ name: 'Any Silver', price: 499, visitsTotal: 2 });
+    else await ExtendedWarrantyPlan.create({ name: 'Any Shield', price: 499, durationYears: 1, claimsTotal: 2 });
+    const response = await request(app).get(`/api/v1/warranty-amc/${kind}/appliances`).expect(200);
+    expect(response.body.data.map(item => [item.appliance, item.fromPrice, item.planCount])).toEqual([
+      ['AC', 499, 1], ['Refrigerator', 499, 1],
+    ]);
   });
 });

@@ -8,9 +8,13 @@ const amcSubscriptionSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'AMCPlan', required: true },
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
+    applianceCategory: String,
     brand: String,
     brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     model: String,
+    installationDate: Date,
+    pincode: String,
+    invoiceFileUrl: String,
     expiryDate: Date,
     status: { type: String, enum: ['Active', 'Expiring Soon', 'Expired'], default: 'Active', index: true },
     // Same reasoning as ExtendedWarrantyOrder.paid — a subscription was granted

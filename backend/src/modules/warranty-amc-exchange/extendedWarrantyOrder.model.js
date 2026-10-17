@@ -11,6 +11,7 @@ const extendedWarrantyOrderSchema = new mongoose.Schema(
     brand: String,
     brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null, index: true },
     tierId: String,
+    planName: String,
     price: { type: Number, required: true },
     fullName: String,
     mobile: String,

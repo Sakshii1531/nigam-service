@@ -214,7 +214,7 @@ test.describe('customer payments actually reach the gateway', () => {
 
     const customer = await createCustomer(request);
     const auth = { headers: { Authorization: `Bearer ${customer.token}` } };
-    const purchase = await request.post('/api/v1/warranty-amc/amc/subscriptions', { ...auth, data: { plan: plan.id, brand: 'LG', model: 'X' } });
+    const purchase = await request.post('/api/v1/warranty-amc/amc/subscriptions', { ...auth, data: { plan: plan.id, category: 'AC', brand: 'LG', model: 'X' } });
     expect(purchase.status()).toBe(201);
     const { subscription } = (await purchase.json()).data;
     expect(subscription).toMatchObject({ visitsTotal: 2, paid: false });

@@ -21,6 +21,7 @@ const ExtendWarranty = () => {
   // Form states for pre-registered appliances
   const [selectedAppliance, setSelectedAppliance] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [purchasedOrder, setPurchasedOrder] = useState(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   // Form states for new in-warranty appliance registration
@@ -53,6 +54,7 @@ const ExtendWarranty = () => {
     productName: [a.brand, a.model || a.modelNumber].filter(Boolean).join(' ') || a.category,
     category: a.category,
     brand: a.brand,
+    modelNumber: a.modelNumber || a.model,
     purchaseDate: a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not recorded',
     expiryDate: a.warrantyExpiresOn ? new Date(a.warrantyExpiresOn).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not recorded',
     rawExpiry: a.warrantyExpiresOn || null,
@@ -72,7 +74,7 @@ const ExtendWarranty = () => {
     load(apiRequest('/catalog/categories'), (res) => setCategories((res || []).map((c) => ({ id: c.key || c.id, name: c.name, icon: c.icon || '🔧' }))));
     // apiRequest already returns the list — `.data` on it was undefined, so
     // this screen's brand picker was always empty.
-    load(apiRequest('/catalog/brands'), (res) => setBrands((Array.isArray(res) ? res : []).map((b) => b.name || b)));
+    load(apiRequest('/catalog/brands'), (res) => setBrands(Array.isArray(res) ? res : []));
     load(apiRequest('/appliances', { auth: true }), (res) => setExistingWarranties((res || []).map(toApplianceCard)));
     load(apiRequest('/warranty-amc/extended-warranty/plans'), (res) => setExtendWarrantyPlans(res || []));
     return () => { cancelled = true; };
@@ -144,19 +146,19 @@ const ExtendWarranty = () => {
             method: 'POST',
             auth: true,
             body: {
-              category: (categories || []).find((c) => c.id === selectedCategory)?.name || selectedCategory,
+              category: selectedCategory,
               brand: selectedBrand,
               modelNumber: modelNo,
               serialNumber: serialNo,
               purchaseDate,
               invoiceFileUrl: invoiceUrl || undefined,
             },
-          })).data;
+          }));
 
       setSelectedAppliance(toApplianceCard(appliance));
       setExistingWarranties((prev) => {
         const card = toApplianceCard(appliance);
-        return prev.some((a) => a.id === card.id) ? prev.map((a) => (a.id === card.id ? card : a)) : [card, ...prev];
+        return (prev || []).some((a) => a.id === card.id) ? (prev || []).map((a) => (a.id === card.id ? card : a)) : [card, ...(prev || [])];
       });
       setStep('plans');
     } catch (err) {
@@ -178,9 +180,9 @@ const ExtendWarranty = () => {
         body: {
           plan: selectedPlan?.id,
           appliance: selectedAppliance?.id,
-          category: selectedAppliance?.category || (categories || []).find((c) => c.id === selectedCategory)?.name,
+          category: selectedAppliance?.category || selectedCategory,
           brand: selectedAppliance?.brand || selectedBrand,
-          modelName: modelNo || selectedAppliance?.productName,
+          modelName: selectedAppliance?.modelNumber || modelNo,
           purchaseDate: purchaseDate || undefined,
           invoiceFileUrl: invoiceUrl || undefined,
         },
@@ -194,6 +196,7 @@ const ExtendWarranty = () => {
           description: selectedPlan?.name,
         });
       }
+      setPurchasedOrder(res.order);
       setStep('success');
     } catch (err) {
       setLoadError(err.message || 'We could not activate this policy. You have not been charged — please try again.');
@@ -393,7 +396,8 @@ const ExtendWarranty = () => {
 
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 md:gap-4 max-h-56 md:max-h-none overflow-y-auto pr-1">
                       {brands === null ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-14" rounded="rounded-xl" />) : brands
-                        .filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()))
+                        .filter(b => b.categories?.includes(selectedCategory) && b.name.toLowerCase().includes(brandSearch.toLowerCase()))
+                        .map(b => b.name)
                         .map((b) => (
                           <div
                             key={b}
@@ -525,7 +529,7 @@ const ExtendWarranty = () => {
             <p className="text-sm text-text-secondary -mt-2">Extend coverage for {selectedAppliance?.productName} (Current Expiry: {selectedAppliance?.expiryDate}).</p>
             
             <div className="flex flex-col gap-4">
-              {extendWarrantyPlans === null ? <SkeletonCards count={2} /> : extendWarrantyPlans.map((plan) => (
+              {extendWarrantyPlans === null ? <SkeletonCards count={2} /> : extendWarrantyPlans.filter((plan) => !plan.applianceCategory || plan.applianceCategory === selectedAppliance?.category).map((plan) => (
                 <div 
                   key={plan.id}
                   onClick={() => setSelectedPlan(plan)}
@@ -669,7 +673,7 @@ const ExtendWarranty = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-text-secondary">Updated Coverage Expiry:</span>
                   <strong className="text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
-                    {getExtendedExpiryDate(selectedAppliance?.rawExpiry, selectedPlan?.durationYears || 1)}
+                    {purchasedOrder?.validTill ? new Date(purchasedOrder.validTill).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : getExtendedExpiryDate(selectedAppliance?.rawExpiry, selectedPlan?.durationYears || 1)}
                   </strong>
                 </div>
                 <div className="flex justify-between items-center mt-1 pt-1.5 border-t border-slate-200/50">
@@ -707,7 +711,7 @@ const ExtendWarranty = () => {
               <div className="flex justify-between text-[#374151] border-t border-slate-200/50 pt-2 font-bold">
                 <span>Updated Expiry Date</span>
                 <span className="text-green-700">
-                  {getExtendedExpiryDate(selectedAppliance?.rawExpiry, selectedPlan?.durationYears || 1)}
+                  {purchasedOrder?.validTill ? new Date(purchasedOrder.validTill).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : getExtendedExpiryDate(selectedAppliance?.rawExpiry, selectedPlan?.durationYears || 1)}
                 </span>
               </div>
             </div>

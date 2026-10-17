@@ -229,6 +229,7 @@ export const ServiceProviderProvider = ({ children }) => {
         amcVisitsRemaining: sr.amcSubscription?.visitsRemaining ?? null,
         amcVisitsTotal: sr.amcSubscription?.visitsTotal ?? null,
         amcPlanExpiry: sr.amcSubscription?.expiryDate || null,
+        ewPlanName: sr.extendedWarrantyOrder?.planName || null,
         ewValidTill: sr.extendedWarrantyOrder?.validTill || null,
         ewClaimsRemaining: sr.extendedWarrantyOrder?.claimsRemaining ?? null,
         ewClaimsTotal: sr.extendedWarrantyOrder?.claimsTotal ?? null,
@@ -290,6 +291,7 @@ export const ServiceProviderProvider = ({ children }) => {
             job.amc?.visitsTotal ?? sr?.amcSubscription?.visitsTotal ?? null,
           amcPlanExpiry:
             job.amc?.planExpiry || sr?.amcSubscription?.expiryDate || null,
+          ewPlanName: job.ew?.planName || sr?.extendedWarrantyOrder?.planName || null,
           ewValidTill:
             job.ew?.validTill || sr?.extendedWarrantyOrder?.validTill || null,
           ewClaimsRemaining:

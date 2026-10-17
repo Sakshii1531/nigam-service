@@ -13,6 +13,7 @@ import { findAvailableServiceProvider } from '../shared/assignmentEngine.js';
 import { INSTANT_ROOM } from '../../sockets/instantBooking.gateway.js';
 import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
 import { AMCVisit } from '../warranty-amc-exchange/amcVisit.model.js';
+import { ExtendedWarrantyPlan } from '../warranty-amc-exchange/extendedWarrantyPlan.model.js';
 import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
@@ -747,8 +748,10 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     if (String(ewOrder.user) !== String(serviceRequest.user)) {
       throw new ApiError(403, 'That extended warranty order does not belong to this service request\'s customer');
     }
+    const ewPlan = !ewOrder.planName && mongoose.isValidObjectId(ewOrder.tierId)
+      ? await ExtendedWarrantyPlan.findById(ewOrder.tierId).select('name').lean() : null;
     jobData.ew = {
-      planName: ewOrder.tierId,
+      planName: ewOrder.planName || ewPlan?.name || (!mongoose.isValidObjectId(ewOrder.tierId) ? ewOrder.tierId : null),
       extendedWarrantyOrder: ewOrder._id,
       validTill: ewOrder.validTill,
       claimsRemaining: ewOrder.claimsRemaining,
@@ -1416,6 +1419,14 @@ export async function collectPayment(serviceProviderId, jobId, { paymentMethod =
     }
   }
 
+  // Repeating a successful completion must not consume another visit/claim
+  // or credit the technician's earnings a second time.
+  if (job.activeStep === 'completed') {
+    const payment = await Payment.findOne({ targetType: 'job', targetId: job._id, status: 'Success' }).sort({ createdAt: -1 });
+    if (!payment) throw new ApiError(409, 'This job is already completed');
+    return { job, payment, razorpay: null };
+  }
+
   if (expectedOtp) { job.completion ||= {}; job.completion.otpVerifiedAt = new Date(); }
 
   // Bill if it wasn't generated yet — same rules as generateBilling.
@@ -1510,11 +1521,12 @@ export async function verifyJobPayment(serviceProviderId, jobId, { razorpayPayme
  */
 export async function getJobAmcHistory(serviceProviderId, jobId) {
   const job = await findOwnedJob(serviceProviderId, jobId);
-  if (!job.amcSubscription) return { subscription: null, visits: [] };
+  const subscriptionId = job.amc?.amcSubscription;
+  if (!subscriptionId) return { subscription: null, visits: [] };
 
   const [subscription, visits] = await Promise.all([
-    AMCSubscription.findById(job.amcSubscription).populate('plan', 'name visitsTotal'),
-    AMCVisit.find({ subscription: job.amcSubscription })
+    AMCSubscription.findById(subscriptionId).populate('plan', 'name visitsTotal'),
+    AMCVisit.find({ subscription: subscriptionId })
       .populate('serviceProvider', 'name')
       .sort({ visitNumber: 1 }),
   ]);

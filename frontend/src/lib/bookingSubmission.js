@@ -21,6 +21,7 @@ function buildBookingBody(meta, line, index, extra) {
     ...(index === 0 && meta.couponCode ? { couponCode: meta.couponCode } : {}),
     ...(index === 0 && meta.useCoins ? { useCoins: true } : {}),
     brand: meta.brand || undefined,
+    applianceId: meta.applianceId || undefined,
     scheduledDate: new Date().toISOString(),
     timeSlot: { date: meta.date || '', time: meta.timeGroup || '' },
     address: meta.address,

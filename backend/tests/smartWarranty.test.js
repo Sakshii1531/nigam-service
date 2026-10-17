@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/glo
 import mongoose from 'mongoose';
 import { testDbUri } from './helpers/testDb.js';
 import { detectWarrantyForAppliance } from '../src/modules/warranty-amc-exchange/warrantyDetector.service.js';
+import { withWarranty } from '../src/modules/service-requests/ownedAppliance.service.js';
 import { createBooking } from '../src/modules/booking/booking.service.js';
 import { acceptJob } from '../src/modules/service-provider/job.service.js';
 import { User } from '../src/modules/auth/user.model.js';
@@ -141,6 +142,7 @@ describe('Smart Warranty Detection Pipeline', () => {
         visitsTotal: 4,
         visitsRemaining: 3,
         status: 'Active',
+        paid: true,
       });
 
       const res = await detectWarrantyForAppliance({
@@ -154,6 +156,38 @@ describe('Smart Warranty Detection Pipeline', () => {
       expect(String(res.amcSubscriptionId)).toBe(amc.id);
     });
 
+    it('uses the same paid, category and allowance checks for registered appliances', async () => {
+      const appliance = await OwnedAppliance.create({ user: customer._id, category: 'AC', brand: 'Catalogue Brand', modelNumber: 'X' });
+      const fridge = await OwnedAppliance.create({ user: customer._id, category: 'Refrigerator', brand: 'Catalogue Brand' });
+      const plan = await AMCPlan.create({ name: 'Silver', applianceCategory: 'AC', price: 999, visitsTotal: 2 });
+      const sub = await AMCSubscription.create({ user: customer._id, plan: plan._id, brand: 'Catalogue Brand', model: 'X', expiryDate: new Date(Date.now() + 86400000), visitsTotal: 2, visitsRemaining: 2 });
+      expect((await withWarranty(appliance)).warrantyStatus).toBe('Out of Warranty');
+      sub.paid = true;
+      await sub.save();
+      expect((await withWarranty(appliance)).warrantyStatus).toBe('AMC');
+      expect((await withWarranty(fridge)).warrantyStatus).toBe('Out of Warranty');
+      sub.expiryDate = new Date(Date.now() - 86400000);
+      await sub.save();
+      expect((await withWarranty(appliance)).warrantyStatus).toBe('Out of Warranty');
+    });
+
+    it('applies an appliance-bound policy only to the selected unit when a customer has two ACs', async () => {
+      const [first, second] = await OwnedAppliance.create([
+        { user: customer._id, category: 'AC', brand: 'Catalogue Brand', modelNumber: 'A' },
+        { user: customer._id, category: 'AC', brand: 'Catalogue Brand', modelNumber: 'B' },
+      ]);
+      const policy = await ExtendedWarrantyOrder.create({ user: customer._id, appliance: second._id, applianceCategory: 'AC', brand: 'Catalogue Brand', price: 999, paid: true, claimsRemaining: 2, validTill: new Date(Date.now() + 86400000) });
+      const params = { userId: customer.id, category: 'AC', brandName: 'Catalogue Brand' };
+      expect((await detectWarrantyForAppliance(params)).extendedWarrantyOrderId).toBeNull();
+      expect((await detectWarrantyForAppliance({ ...params, applianceId: first.id })).extendedWarrantyOrderId).toBeNull();
+      expect(String((await detectWarrantyForAppliance({ ...params, applianceId: second.id })).extendedWarrantyOrderId)).toBe(policy.id);
+    });
+
+    it("does not use another customer's appliance to detect coverage", async () => {
+      const appliance = await OwnedAppliance.create({ user: serviceProviderUser._id, category: 'AC', brand: 'LG Electronics', purchaseDate: new Date() });
+      await expect(detectWarrantyForAppliance({ userId: customer.id, category: 'AC', applianceId: appliance.id })).rejects.toThrow('Appliance not found');
+    });
+
     it('detects Extended Warranty when active order exists', async () => {
       const ew = await ExtendedWarrantyOrder.create({
         user: customer._id,
@@ -163,6 +197,7 @@ describe('Smart Warranty Detection Pipeline', () => {
         price: 999,
         validTill: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         status: 'Active',
+        paid: true,
         claimsRemaining: 2,
         claimsTotal: 2,
       });
@@ -219,6 +254,7 @@ describe('Smart Warranty Detection Pipeline', () => {
         visitsTotal: 4,
         visitsRemaining: 3,
         status: 'Active',
+        paid: true,
       });
 
       const { serviceRequest } = await createBooking(

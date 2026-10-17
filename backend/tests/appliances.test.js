@@ -705,7 +705,7 @@ describe('warranty and AMC purchases are charged', () => {
     const res = await request(app)
       .post('/api/v1/warranty-amc/amc/subscriptions')
       .set(auth)
-      .send({ plan: plan.id, brand: 'LG', model: 'Double Door' })
+      .send({ plan: plan.id, category: 'Refrigerator', brand: 'LG', model: 'Double Door' })
       .expect(201);
 
     const { subscription, razorpay } = res.body.data;
@@ -859,7 +859,7 @@ describe('AMC plan catalogue', () => {
     const res = await request(app)
       .post('/api/v1/warranty-amc/amc/subscriptions')
       .set(auth)
-      .send({ plan: plan.id, brand: 'LG' })
+      .send({ plan: plan.id, category: 'AC', brand: 'LG' })
       .expect(201);
 
     // The visit allowance and the charge both come from the plan.

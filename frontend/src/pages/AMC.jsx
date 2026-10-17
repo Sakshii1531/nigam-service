@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { motion } from "framer-motion";
-import { apiRequest } from "../lib/apiClient";
+import { apiRequest, apiUpload } from "../lib/apiClient";
 import { goBack } from "../lib/navigation";
 import { payWithRazorpay } from "../lib/razorpayCheckout";
 import { useAuth } from "../context/AuthContext";
@@ -70,11 +70,13 @@ const AMC = () => {
   // Form states
   const [selectedBrand, setSelectedBrand] = useState("");
   const [purchaseError, setPurchaseError] = useState("");
+  const [purchaseProcessing, setPurchaseProcessing] = useState(false);
   const [createdSubscription, setCreatedSubscription] = useState(null);
   const [modelNumber, setModelNumber] = useState("");
   const [installationDate, setInstallationDate] = useState("");
   const [pincode, setPincode] = useState("");
   const [invoiceFile, setInvoiceFile] = useState(null);
+  const [invoiceUrl, setInvoiceUrl] = useState("");
   const [paymentMode, setPaymentMode] = useState("UPI");
   const [dynamicBrands, setDynamicBrands] = useState([]);
 
@@ -147,7 +149,7 @@ const AMC = () => {
   // catalogue list when none is tagged for it.
   const getBrandsForAppliance = (applianceKey) => {
     const tagged = dynamicBrands.filter((b) => b.categories.includes(applianceKey)).map((b) => b.name);
-    return tagged.length > 0 ? tagged : dynamicBrands.map((b) => b.name);
+    return tagged;
   };
 
   const getModelPlaceholder = (appliance) => {
@@ -191,7 +193,7 @@ const AMC = () => {
 
   const selectedPlan = amcPlans?.[selectedPlanIndex] || amcPlans?.[0] || null;
   const applianceBrands = getBrandsForAppliance(selectedAppliance);
-  const activeBrand = selectedBrand || applianceBrands[0];
+  const activeBrand = applianceBrands.includes(selectedBrand) ? selectedBrand : (applianceBrands[0] || "");
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 relative">
@@ -589,13 +591,7 @@ const AMC = () => {
               </div>
               <div className="bg-white border border-slate-200/60 rounded-2xl p-2.5 sm:p-3 shadow-2xs">
                 <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-0.5">
-                  {(dynamicBrands.length > 0 ? dynamicBrands : [
-                    { name: "SAMSUNG", color: "#1428A0" },
-                    { name: "LG", color: "#A50034" },
-                    { name: "Whirlpool", color: "#00205B" },
-                    { name: "VOLTAS", color: "#E31837" },
-                    { name: "PANASONIC", color: "#003087" },
-                  ]).map((brand, idx) => (
+                  {dynamicBrands.map((brand, idx) => (
                     <div
                       key={brand.name || idx}
                       onClick={() => navigate(`/buy-new?brand=${encodeURIComponent(brand.name)}`)}
@@ -792,8 +788,10 @@ const AMC = () => {
                   </label>
                   <select
                     value={activeBrand}
+                    disabled={!applianceBrands.length}
                     onChange={(e) => setSelectedBrand(e.target.value)}
                     className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5 cursor-pointer appearance-none">
+                    {!applianceBrands.length && <option value="">No brands available for this appliance</option>}
                     {applianceBrands.map((b) => (
                       <option key={b} value={b}>
                         {b}
@@ -877,7 +875,10 @@ const AMC = () => {
                     type="file"
                     className="hidden"
                     onChange={(e) => {
-                      if (e.target.files[0]) setInvoiceFile(e.target.files[0]);
+                      if (e.target.files[0]) {
+                        setInvoiceFile(e.target.files[0]);
+                        setInvoiceUrl("");
+                      }
                     }}
                   />
                 </label>
@@ -1130,7 +1131,21 @@ const AMC = () => {
                 // customer would believe they were covered with no contract on file.
                 onClick={async () => {
                   setPurchaseError("");
+                  if (!activeBrand || !selectedPlan) {
+                    setPurchaseError("Please select an available brand and plan.");
+                    return;
+                  }
+                  if (purchaseProcessing) return;
+                  setPurchaseProcessing(true);
                   try {
+                    let invoiceFileUrl = invoiceUrl;
+                    if (invoiceFile && !invoiceFileUrl) {
+                      if (invoiceFile.size > 5 * 1024 * 1024) throw new Error("Invoice must be 5MB or smaller.");
+                      const upload = new FormData();
+                      upload.append("file", invoiceFile);
+                      invoiceFileUrl = (await apiUpload("/uploads", upload)).url;
+                      setInvoiceUrl(invoiceFileUrl);
+                    }
                     const res = await apiRequest(
                       "/warranty-amc/amc/subscriptions",
                       {
@@ -1139,9 +1154,12 @@ const AMC = () => {
                         body: {
                           plan: selectedPlan?.id,
                           planName: selectedPlan?.name,
-                          category: applianceName || "Appliance",
-                          brand: selectedBrand || "Nigam Care",
+                          category: selectedAppliance,
+                          brand: activeBrand,
                           model: modelNumber || undefined,
+                          installationDate: installationDate || undefined,
+                          pincode: pincode || undefined,
+                          invoiceFileUrl: invoiceFileUrl || undefined,
                         },
                       },
                     );
@@ -1162,12 +1180,15 @@ const AMC = () => {
                         "We could not activate this plan. You have not been charged — please try again.",
                     );
                     return;
+                  } finally {
+                    setPurchaseProcessing(false);
                   }
                   navigate(
                     `/buy/amc/success/${encodeURIComponent(selectedAppliance || "")}/${selectedPlanIndex}`,
                   );
                 }}
-                className="w-full bg-brand-yellow hover:bg-yellow-400 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2">
+                disabled={purchaseProcessing}
+                className="w-full bg-brand-yellow hover:bg-yellow-400 disabled:opacity-60 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2">
                 <Lock className="h-4 w-4" />
                 Pay ₹{Number(selectedPlan.price || 0).toLocaleString(
                   "en-IN",
@@ -1248,7 +1269,7 @@ const AMC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/60">Duration:</span>
-                  <span className="font-bold text-white">1 Year AMC</span>
+                  <span className="font-bold text-white">{selectedPlan.durationMonths} Months AMC</span>
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
 import { AMCSubscription } from './amcSubscription.model.js';
 import { ExtendedWarrantyOrder } from './extendedWarrantyOrder.model.js';
 import { computeWarrantyStatus } from '../shared/warrantyEngine.js';
+import { ApiError } from '../../middleware/errorHandler.js';
 import { brandWarrantyMonths } from '../shared/brandWarranty.js';
 
 /**
@@ -38,16 +39,22 @@ export async function detectWarrantyForAppliance({
 
   // 1. Resolve OwnedAppliance
   if (applianceId) {
-    appliance = await OwnedAppliance.findById(applianceId);
+    appliance = await OwnedAppliance.findOne({ _id: applianceId, user: userId });
+    if (!appliance) throw new ApiError(404, 'Appliance not found');
+    if (category && appliance.category !== category) throw new ApiError(400, 'Appliance category does not match this service');
+    if (brandName && appliance.brand?.toLowerCase() !== brandName.trim().toLowerCase()) throw new ApiError(400, 'Appliance brand does not match this service');
   } else if (serialNo) {
     appliance = await OwnedAppliance.findOne({ user: userId, serialNumber: serialNo });
-  } else if (brandDoc && category) {
-    appliance = await OwnedAppliance.findOne({
+  } else if (brandName && category) {
+    const candidates = await OwnedAppliance.find({
       user: userId,
       category,
-      brandRef: brandDoc._id,
-    });
+      brand: { $regex: `^${String(brandName).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+    }).limit(2);
+    appliance = candidates.length === 1 ? candidates[0] : null;
   }
+
+  if (appliance && category && appliance.category !== category) throw new ApiError(400, 'Appliance category does not match this service');
 
   if (!brandDoc && appliance?.brandRef) brandDoc = await Brand.findById(appliance.brandRef);
 
@@ -55,39 +62,33 @@ export async function detectWarrantyForAppliance({
   const resolvedBrand = brandName || appliance?.brand;
   const resolvedPurchaseDate = purchaseDate || appliance?.purchaseDate;
 
-  // 2. Look up active AMC subscription
-  let amcSubscription = null;
-  const amcQuery = {
-    user: userId,
-    status: 'Active',
-    visitsRemaining: { $gt: 0 },
-    expiryDate: { $gt: new Date() },
+  // A catalogue manufacturer need not be a partner Brand. Match unlinked
+  // purchases by their saved brand/category, while appliance-bound purchases
+  // only cover that unit. Never grant coverage from an unpaid checkout.
+  const matchesAppliance = (purchase, purchaseCategory, model) => {
+    if (!category || (purchaseCategory && purchaseCategory !== category)) return false;
+    if (purchase.appliance) return !!appliance && String(purchase.appliance) === String(appliance._id);
+    if (!resolvedBrand || purchase.brand?.trim().toLowerCase() !== resolvedBrand.trim().toLowerCase()) return false;
+    const ownedModel = appliance?.modelNumber || appliance?.model;
+    return !ownedModel || !model || ownedModel.trim().toLowerCase() === model.trim().toLowerCase();
   };
-  if (appliance) {
-    amcQuery.appliance = appliance._id;
-    amcSubscription = await AMCSubscription.findOne(amcQuery).populate('plan');
-  }
-  if (!amcSubscription && brandDoc) {
-    delete amcQuery.appliance;
-    amcSubscription = await AMCSubscription.findOne({ ...amcQuery, brandRef: brandDoc._id }).populate('plan');
-  }
-
-  // 3. Look up active Extended Warranty order
-  let extendedWarrantyOrder = null;
-  const ewQuery = {
-    user: userId,
-    status: 'Active',
-    claimsRemaining: { $gt: 0 },
-    validTill: { $gt: new Date() },
-  };
-  if (appliance) {
-    ewQuery.appliance = appliance._id;
-    extendedWarrantyOrder = await ExtendedWarrantyOrder.findOne(ewQuery);
-  }
-  if (!extendedWarrantyOrder && brandDoc) {
-    delete ewQuery.appliance;
-    extendedWarrantyOrder = await ExtendedWarrantyOrder.findOne({ ...ewQuery, brandRef: brandDoc._id });
-  }
+  const now = new Date();
+  const [amcCandidates, ewCandidates] = await Promise.all([
+    AMCSubscription.find({
+      user: userId, paid: true, status: { $in: ['Active', 'Expiring Soon'] },
+      visitsRemaining: { $gt: 0 }, expiryDate: { $gt: now },
+    }).populate('plan').sort({ createdAt: -1 }),
+    ExtendedWarrantyOrder.find({
+      user: userId, paid: true, status: 'Active', verificationStatus: { $ne: 'Rejected' },
+      claimsRemaining: { $gt: 0 }, validTill: { $gt: now },
+    }).sort({ createdAt: -1 }),
+  ]);
+  const amcSubscription = amcCandidates.find((sub) => sub.plan && matchesAppliance(
+    sub, sub.applianceCategory || sub.plan.applianceCategory, sub.model,
+  )) || null;
+  const extendedWarrantyOrder = ewCandidates.find((order) => matchesAppliance(
+    order, order.applianceCategory, order.modelNumber,
+  )) || null;
 
   // 4. Compute status
   // The brand's own warranty length — not a flat 12 months for every brand.
@@ -113,5 +114,7 @@ export async function detectWarrantyForAppliance({
     amcSubscriptionId: amcSubscription?._id || null,
     extendedWarrantyOrderId: extendedWarrantyOrder?._id || null,
     purchaseDate: resolvedPurchaseDate || null,
+    extendedWarrantyValidTill: extendedWarrantyOrder?.validTill || null,
+    amcExpiryDate: amcSubscription?.expiryDate || null,
   };
 }

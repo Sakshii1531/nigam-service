@@ -35,6 +35,8 @@ const Profile = () => {
   const [hasMembership, setHasMembership] = useState(null); // null = still loading
   const [membershipName, setMembershipName] = useState('');
   const [membershipExpiry, setMembershipExpiry] = useState('');
+  const [membershipDetails, setMembershipDetails] = useState(null);
+  const [showMembershipDetails, setShowMembershipDetails] = useState(false);
   const [bookingsCount, setBookingsCount] = useState(null); // null = still loading
 
   const userCoins = user?.walletCoins || 0;
@@ -66,14 +68,16 @@ const Profile = () => {
         .then(([amcRes, warrantiesRes]) => {
           const amcList = Array.isArray(amcRes) ? amcRes : amcRes || [];
           const warrantyList = Array.isArray(warrantiesRes) ? warrantiesRes : warrantiesRes || [];
-          const activeAmc = amcList.find((s) => s.status === 'Active');
-          const activeWarranty = warrantyList.find((w) => w.status === 'Active');
+          const activeAmc = amcList.find((s) => s.paid && ['Active', 'Expiring Soon'].includes(s.status) && new Date(s.expiryDate) > new Date());
+          const activeWarranty = warrantyList.find((w) => w.paid && w.status === 'Active' && w.verificationStatus !== 'Rejected' && new Date(w.validTill) > new Date());
           if (activeAmc) {
-            setMembershipName(activeAmc.planName || 'GOLD PLAN');
+            setMembershipDetails({ benefits: activeAmc.plan?.benefits || [], remaining: activeAmc.visitsRemaining, total: activeAmc.visitsTotal, unit: 'visits', brand: activeAmc.brand, model: activeAmc.model });
+            setMembershipName(activeAmc.plan?.name || activeAmc.planName || 'AMC Plan');
             setMembershipExpiry(new Date(activeAmc.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
             setHasMembership(true);
           } else if (activeWarranty) {
-            setMembershipName(`${activeWarranty.brand} Warranty`);
+            setMembershipDetails({ benefits: activeWarranty.coverage || [], remaining: activeWarranty.claimsRemaining, total: activeWarranty.claimsTotal, unit: 'claims', brand: activeWarranty.brand, model: activeWarranty.modelNumber });
+            setMembershipName(activeWarranty.planName || `${activeWarranty.brand} Warranty`);
             setMembershipExpiry(new Date(activeWarranty.validTill).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }));
             setHasMembership(true);
           } else {
@@ -168,7 +172,7 @@ const Profile = () => {
                   <span>Valid till {membershipExpiry}</span>
                 </div>
                 <button 
-                  onClick={() => navigate('/rewards')}
+                  onClick={() => setShowMembershipDetails(true)}
                   className="bg-transparent border border-[#FFDF00]/60 hover:bg-white/5 text-[#FFDF00] text-[9px] font-black px-3 py-1 rounded-full transition-all cursor-pointer"
                 >
                   View Benefits
@@ -590,7 +594,7 @@ const Profile = () => {
                 <div className="flex justify-between items-center border-t border-white/10 pt-3 mt-2">
                   <span className="text-xs text-slate-300 font-medium">Valid till {membershipExpiry}</span>
                   <button 
-                    onClick={() => navigate('/rewards')}
+                    onClick={() => setShowMembershipDetails(true)}
                     className="bg-transparent border border-[#FFDF00]/60 hover:bg-white/10 text-[#FFDF00] text-xs font-bold px-4 py-1.5 rounded-xl transition-all cursor-pointer"
                   >
                     Benefits
@@ -934,6 +938,19 @@ const Profile = () => {
         </div>
 
       </div>
+
+      {showMembershipDetails && membershipDetails && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-6 z-[100]">
+          <div role="dialog" aria-modal="true" aria-labelledby="membership-details-title" className="bg-white rounded-3xl p-6 max-w-sm w-full flex flex-col gap-4 shadow-xl max-h-[80vh] overflow-y-auto">
+            <h2 id="membership-details-title" className="text-lg font-black text-slate-900">{membershipName}</h2>
+            <p className="text-sm text-slate-600">{[membershipDetails.brand, membershipDetails.model].filter(Boolean).join(' · ')}</p>
+            <p className="text-sm font-bold text-brand-blue">{membershipDetails.remaining} of {membershipDetails.total} {membershipDetails.unit} remaining</p>
+            <p className="text-xs text-slate-500">Valid till {membershipExpiry}</p>
+            {membershipDetails.benefits.length > 0 && <ul className="list-disc pl-5 text-sm text-slate-700 space-y-2">{membershipDetails.benefits.map((benefit, index) => <li key={index}>{benefit}</li>)}</ul>}
+            <button onClick={() => setShowMembershipDetails(false)} className="bg-brand-blue text-white rounded-xl py-3 text-sm font-bold">Close</button>
+          </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Modal Overlay */}
       {showLogoutConfirm && (

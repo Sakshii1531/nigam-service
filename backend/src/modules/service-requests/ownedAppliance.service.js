@@ -1,9 +1,8 @@
 import { OwnedAppliance } from './ownedAppliance.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { computeWarrantyStatus, addMonths } from '../shared/warrantyEngine.js';
+import { addMonths } from '../shared/warrantyEngine.js';
 import { brandWarrantyMonths } from '../shared/brandWarranty.js';
-import { AMCSubscription } from '../warranty-amc-exchange/amcSubscription.model.js';
-import { ExtendedWarrantyOrder } from '../warranty-amc-exchange/extendedWarrantyOrder.model.js';
+import { detectWarrantyForAppliance } from '../warranty-amc-exchange/warrantyDetector.service.js';
 import { Brand } from '../super-admin/brand.model.js';
 import { applianceIdentity } from '../shared/applianceIdentity.js';
 
@@ -24,19 +23,12 @@ async function resolveBrand(data) {
  * plus the customer's real AMC/EW documents.
  */
 export async function withWarranty(appliance) {
-  const [amc, ew, warrantyMonths] = await Promise.all([
-    AMCSubscription.findOne({ user: appliance.user, status: 'Active' }),
-    ExtendedWarrantyOrder.findOne({ user: appliance.user, status: 'Active' }).sort({ validTill: -1 }),
+  const [detection, warrantyMonths] = await Promise.all([
+    detectWarrantyForAppliance({ userId: appliance.user, category: appliance.category, applianceId: appliance._id }),
     brandWarrantyMonths(appliance.brand),
   ]);
-
-  const status = computeWarrantyStatus({
-    purchaseDate: appliance.purchaseDate,
-    brandWarrantyMonths: warrantyMonths,
-    amcActive: Boolean(amc),
-    extendedWarrantyActive: Boolean(ew),
-    extendedWarrantyValidTill: ew?.validTill || null,
-  });
+  const status = detection.warrantyStatus;
+  const ewExpiry = detection.extendedWarrantyValidTill;
 
   if (status !== appliance.warrantyStatus) {
     appliance.warrantyStatus = status;
@@ -50,15 +42,15 @@ export async function withWarranty(appliance) {
   const brandExpiry = appliance.purchaseDate
     ? addMonths(appliance.purchaseDate, warrantyMonths)
     : null;
-  const warrantyExpiresOn = ew?.validTill && (!brandExpiry || new Date(ew.validTill) > brandExpiry)
-    ? ew.validTill
-    : brandExpiry;
+  const warrantyExpiresOn = status === 'AMC'
+    ? detection.amcExpiryDate
+    : ewExpiry && (!brandExpiry || new Date(ewExpiry) > brandExpiry) ? ewExpiry : brandExpiry;
 
   return {
     ...appliance.toJSON(),
     warrantyStatus: status,
     warrantyExpiresOn,
-    extendedWarrantyValidTill: ew?.validTill || null,
+    extendedWarrantyValidTill: ewExpiry,
   };
 }
 

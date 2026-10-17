@@ -4,12 +4,12 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
   const additionalServicesTotal = additionalServices.filter(s => s.checked).reduce((sum, s) => sum + s.price, 0);
 
   // Months remaining calc
-  const validTill = job?.ewValidTill ? new Date(job.ewValidTill) : new Date('2028-01-15');
+  const validTill = job?.ewValidTill ? new Date(job.ewValidTill) : null;
   const now = new Date();
-  const monthsLeft = Math.max(
+  const monthsLeft = validTill ? Math.max(
     0,
     (validTill.getFullYear() - now.getFullYear()) * 12 + (validTill.getMonth() - now.getMonth())
-  );
+  ) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -20,10 +20,10 @@ const ExtendedWarrantyOverview = ({ job, additionalServices, setAdditionalServic
           <ShieldCheck className="h-5 w-5 text-white" />
         </div>
         <div className="flex flex-col flex-1">
-          <span className="text-xs font-bold text-[#052355]">{job?.ewPlanName || 'NCC Protect Plus'}</span>
+          <span className="text-xs font-bold text-[#052355]">{job?.ewPlanName || 'Extended Warranty'}</span>
           <span className="text-[10px] text-slate-600 font-normal mt-0.5">
-            Valid Till: <strong className="text-[#052355]">{job?.ewValidTill || '15 Jan 2028'}</strong>
-            &nbsp;·&nbsp;{monthsLeft} months left
+            Valid Till: <strong className="text-[#052355]">{validTill ? validTill.toLocaleDateString('en-IN') : 'Not recorded'}</strong>
+            {monthsLeft !== null && <> · {monthsLeft} months left</>}
           </span>
         </div>
         {/* Claims counter */}
