@@ -232,19 +232,28 @@ test.describe('warranty registration verification', () => {
       role: 'customer', identifier: customer.phone, password: 'password123',
     });
 
-    // Created through the customer-facing purchase flow, as it would be in life.
+    // Purchase a real admin-managed plan; client-supplied prices/durations no
+    // longer create a policy without a catalogue plan.
+    const planRes = await request.post('/api/v1/super-admin/extended-warranty-plans', {
+      ...auth,
+      data: { name: `Console verification ${randomUUID()}`, durationYears: 1, price: 799, claimsTotal: 1 },
+    });
+    expect(planRes.status()).toBe(201);
+    const plan = (await planRes.json()).data;
     const orderRes = await request.post('/api/v1/warranty-amc/extended-warranty/orders', {
       headers: { Authorization: `Bearer ${customerToken}` },
-      data: { category: 'AC', brand: 'LG', modelName: 'LSA5NP2A', planDurationYears: 1, amountPaid: 799 },
+      data: { plan: plan.id, category: 'AC', brand: 'LG', modelName: 'LSA5NP2A' },
     });
-    expect([200, 201]).toContain(orderRes.status());
+    expect(orderRes.status()).toBe(201);
+    const order = (await orderRes.json()).data.order;
 
     const listRes = await request.get('/api/v1/super-admin/warranty-registrations?verificationStatus=Pending', auth);
     expect(listRes.status()).toBe(200);
     const pending = (await listRes.json()).data;
     expect(pending.length).toBeGreaterThan(0);
 
-    const target = pending[0];
+    const target = pending.find(row => row.id === order.id);
+    expect(target).toBeDefined();
     const verifyRes = await request.patch(`/api/v1/super-admin/warranty-registrations/${target.id}/verification`, {
       ...auth,
       data: { verificationStatus: 'Approved' },

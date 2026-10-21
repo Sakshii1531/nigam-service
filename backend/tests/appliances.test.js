@@ -113,7 +113,9 @@ beforeEach(async () => {
 async function seedServiceProvider() {
   const phone = nextPhone();
   const user = await User.create({ role: ROLES.SERVICE_PROVIDER, phone, name: 'Test ServiceProvider', passwordHash: await hashPassword('password123') });
-  const serviceProvider = await ServiceProvider.create({ user: user._id, name: 'Test ServiceProvider', phone, status: 'Active' });
+  // This legacy active provider must be authorized for the AC jobs below.
+  // An empty specialty list correctly fails the onboarding eligibility guard.
+  const serviceProvider = await ServiceProvider.create({ user: user._id, name: 'Test ServiceProvider', phone, status: 'Active', specs: ['AC'] });
   const token = await loginAndVerify({ role: ROLES.SERVICE_PROVIDER, identifier: phone, password: 'password123' });
   return { user, serviceProvider, token };
 }
