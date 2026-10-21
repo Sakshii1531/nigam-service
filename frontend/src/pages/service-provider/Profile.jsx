@@ -36,11 +36,11 @@ const ProfilePage = () => {
 
   const avatarDisplay = profile?.avatarUrl || user?.avatarUrl || serviceProviderAvatar;
   const serviceProviderName = profile?.name || user?.name || 'Service Partner';
-  const serviceProviderSpecs = profile?.specs?.length ? profile.specs.join(', ') : 'Verified Service Specialist';
+  const serviceProviderSpecs = profile?.specs?.length ? profile.specs.join(', ') : 'Service categories awaiting approval';
   const serviceProviderRating = summary?.rating ?? null;
   const serviceProviderReviewCount = summary?.reviewCount ?? 0;
   const serviceProviderPartnerId = profile?.humanId || 'PROV-NCC';
-  const isVerifiedPartner = profile?.status === 'Active';
+  const isVerifiedPartner = profile?.status === 'Active' && (profile?.providerAccess || user?.providerAccess)?.eligible !== false;
 
   // Grouped Menu Sections for clarity & modern UX
   const operationsItems = [
@@ -77,6 +77,8 @@ const ProfilePage = () => {
       path: '/service-provider/academy',
       accent: 'bg-purple-50/80 border-purple-100',
     },
+    { label: 'My Onboarding', path: '/service-provider/onboarding', icon: <ShieldCheck className="h-5 w-5 text-blue-700" /> },
+    { label: 'Partner Kits & Orders', path: '/service-provider/kits', icon: <Award className="h-5 w-5 text-blue-700" /> },
     {
       label: 'KYC & Verification Status',
       desc: 'Aadhaar, PAN & background security check',
@@ -177,7 +179,7 @@ const ProfilePage = () => {
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl font-black text-slate-900 tracking-tight">Partner Profile & Workspace</h1>
                 <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[11px] font-bold text-emerald-700">
-                  <BadgeCheck size={13} className="text-emerald-600" /> Active Verified Partner
+                  <BadgeCheck size={13} className="text-emerald-600" /> {isVerifiedPartner ? 'Active Verified Partner' : 'Onboarding in progress'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5">Manage trade identity, financial payouts, credentials and performance ratings</p>
@@ -279,7 +281,7 @@ const ProfilePage = () => {
 
                   <div className="inline-flex items-center gap-1.5 bg-blue-50/90 border border-blue-200/80 px-2.5 py-1 rounded-xl text-[#0D47A1] text-[11px] font-black shadow-2xs">
                     <BadgeCheck className="h-3.5 w-3.5 text-[#0D47A1]" />
-                    <span>Verified Partner</span>
+                    <span>{isVerifiedPartner ? 'Verified Partner' : 'Onboarding in progress'}</span>
                   </div>
                 </div>
               </div>

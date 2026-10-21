@@ -68,3 +68,36 @@ export function verifyRazorpaySignature({ orderId, paymentId, signature }) {
 export function signForTesting({ orderId, paymentId }) {
   return createHmac('sha256', signingSecret()).update(`${orderId}|${paymentId}`).digest('hex');
 }
+
+/** Payment facts must match the server-owned order before kit fulfilment. */
+export async function verifyCapturedPayment({ orderId, paymentId, amount }) {
+  if (!isRazorpayConfigured) {
+    if (isProd) throw new ApiError(503, 'Payment gateway is not configured');
+    return { method: 'upi' };
+  }
+  const payment = await getClient().payments.fetch(paymentId);
+  if (payment.order_id !== orderId || payment.amount !== Math.round(amount * 100) || payment.currency !== 'INR' || payment.status !== 'captured') {
+    throw new ApiError(409, 'Payment is not yet captured for this order and amount. Retry verification shortly.');
+  }
+  return payment;
+}
+
+export async function findCapturedPayment(orderId) {
+  if (!isRazorpayConfigured || !orderId) return null;
+  const result = await getClient().orders.fetchPayments(orderId);
+  return result.items.find(payment => payment.status === 'captured')?.id || null;
+}
+
+export async function refundKitPayment({ paymentId, amount, orderId }) {
+  if (!isRazorpayConfigured) {
+    if (isProd) throw new ApiError(503, 'Payment gateway is not configured');
+    return { id: `rfnd_stub_${randomUUID()}`, status: 'processed', amount: Math.round(amount * 100), currency: 'INR', payment_id: paymentId };
+  }
+  return getClient().payments.refund(paymentId, { amount: Math.round(amount * 100), notes: { providerKitOrderId: orderId } });
+}
+export async function findKitRefund({ paymentId, refundId, orderId }) {
+  if (!isRazorpayConfigured) return null;
+  if (refundId) return getClient().payments.fetchRefund(paymentId, refundId);
+  const result = await getClient().payments.fetchMultipleRefund(paymentId, { count: 100 });
+  return result.items.find(refund => refund.notes?.providerKitOrderId === orderId) || null;
+}

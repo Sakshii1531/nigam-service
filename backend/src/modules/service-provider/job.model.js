@@ -187,7 +187,7 @@ const jobSchema = new mongoose.Schema(
     revisit: revisitSchema,
     billingEstimate: billingEstimateSchema,
   },
-  { timestamps: true },
+  { timestamps: true, optimisticConcurrency: true },
 );
 
 jobSchema.index({ serviceProvider: 1, activeStep: 1 });

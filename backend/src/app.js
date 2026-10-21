@@ -6,6 +6,10 @@ import { auditMutations } from './modules/brand-crm/auditMutations.js';
 import { brandAuditRouter } from './modules/brand-crm/brandAudit.routes.js';
 import { ticketPartsRouter } from './modules/brand-crm/ticketParts.routes.js';
 import express from 'express';
+import { requireAuth, requireRole } from './middleware/auth.js';
+import { attachServiceProvider } from './middleware/serviceProvider.js';
+import { restrictOnboardingApplicant } from './middleware/providerOnboardingAccess.js';
+import { providerOnboardingRouter, providerKitRouter, adminOnboardingRouter, adminKitRouter, adminKitOrderRouter, providerPaymentWebhookRouter } from './modules/provider-onboarding/onboarding.routes.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -134,7 +138,9 @@ export function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '50mb', verify: (req, _res, buffer) => {
+    if (req.originalUrl.startsWith('/api/v1/provider-kit-payment-webhook')) req.rawBody = buffer;
+  } }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.use(requestLogger);
   app.use(auditRequestContext);
@@ -195,6 +201,13 @@ export function createApp() {
   app.use('/api/v1/exchange', exchangeRouter);
   app.use('/api/v1/wallet', walletRouter);
   app.use('/api/v1/service-provider/register', serviceProviderRegistrationRouter);
+  app.use('/api/v1/service-provider', requireAuth, requireRole('service_provider'), attachServiceProvider, restrictOnboardingApplicant);
+  app.use('/api/v1/service-provider/onboarding', providerOnboardingRouter);
+  app.use('/api/v1/service-provider/kits', providerKitRouter);
+  app.use('/api/v1/super-admin/provider-onboarding', adminOnboardingRouter);
+  app.use('/api/v1/super-admin/provider-kits', adminKitRouter);
+  app.use('/api/v1/super-admin/provider-kit-orders', adminKitOrderRouter);
+  app.use('/api/v1/provider-kit-payment-webhook', providerPaymentWebhookRouter);
   app.use('/api/v1/service-provider/profile', serviceProviderRouter);
   app.use('/api/v1/service-provider/assistant', assistantRouter);
   app.use('/api/v1/service-provider/jobs', jobRouter);

@@ -73,23 +73,20 @@ describe('findAvailableService Provider — weighted scoring', () => {
     expect(String(result._id)).toBe(String(specialist._id));
   });
 
-  it('a strong enough rating advantage CAN outweigh a specs mismatch (weighted, not a hard filter)', async () => {
-    // 18-point fixed skill-score gap (60 pts * 30% weight) can be overcome by a
-    // large enough rating gap (100 pts * 20% weight = 20 > 18) — proves scoring is
-    // genuinely weighted across all four factors, not skill-gated.
-    await createServiceProvider({ specs: ['AC'], rating: 0, activeJobsCount: 0 });
-    const topRatedGeneralist = await createServiceProvider({ specs: ['Refrigerator'], rating: 5, activeJobsCount: 0 });
+  it('never lets a higher rating override category authorization', async () => {
+    const specialist = await createServiceProvider({ specs: ['AC'], rating: 0, activeJobsCount: 0 });
+    await createServiceProvider({ specs: ['Refrigerator'], rating: 5, activeJobsCount: 0 });
 
     const result = await findAvailableServiceProvider({ category: 'AC' });
-    expect(String(result._id)).toBe(String(topRatedGeneralist._id));
+    expect(String(result._id)).toBe(String(specialist._id));
   });
 
-  it('falls back to the best-scoring generalist when nobody specializes in the category', async () => {
-    const betterGeneralist = await createServiceProvider({ specs: ['Refrigerator'], rating: 5, activeJobsCount: 0 });
+  it('leaves a request unassigned when no provider is authorized for its category', async () => {
+    await createServiceProvider({ specs: ['Refrigerator'], rating: 5, activeJobsCount: 0 });
     await createServiceProvider({ specs: ['Washing Machine'], rating: 0, activeJobsCount: 5 });
 
     const result = await findAvailableServiceProvider({ category: 'AC' });
-    expect(String(result._id)).toBe(String(betterGeneralist._id));
+    expect(result).toBeNull();
   });
 
   it('breaks a specs tie by rating and workload', async () => {
@@ -104,10 +101,9 @@ describe('findAvailableService Provider — weighted scoring', () => {
     const lucknow = await City.create({ name: 'Lucknow', state: 'UP' });
     const delhi = await City.create({ name: 'Delhi', state: 'Delhi' });
 
-    // Both are generalists (no specs match) with identical rating/workload — only
-    // proximity differs, so the city match must be what decides it.
-    const nearby = await createServiceProvider({ specs: [], city: lucknow._id, rating: 0, activeJobsCount: 0 });
-    await createServiceProvider({ specs: [], city: delhi._id, rating: 0, activeJobsCount: 0 });
+    // Both are category-authorized with identical rating/workload.
+    const nearby = await createServiceProvider({ specs: ['AC'], city: lucknow._id, rating: 0, activeJobsCount: 0 });
+    await createServiceProvider({ specs: ['AC'], city: delhi._id, rating: 0, activeJobsCount: 0 });
 
     const result = await findAvailableServiceProvider({ category: 'AC', city: 'Lucknow' });
     expect(String(result._id)).toBe(String(nearby._id));
@@ -115,10 +111,10 @@ describe('findAvailableService Provider — weighted scoring', () => {
 
   it('respects a custom AssignmentWeighting config instead of the hardcoded default', async () => {
     // Weight workload at 100%, everything else at 0 — the service provider with fewer
-    // active jobs must win even with a worse specs/rating match.
+    // active jobs must win even with a worse rating among eligible providers.
     await AssignmentWeighting.create({ proximityPercent: 0, skillPercent: 0, ratingPercent: 0, workloadPercent: 100 });
 
-    const leastBusy = await createServiceProvider({ specs: [], rating: 0, activeJobsCount: 0 });
+    const leastBusy = await createServiceProvider({ specs: ['AC'], rating: 0, activeJobsCount: 0 });
     await createServiceProvider({ specs: ['AC'], rating: 5, activeJobsCount: 4 });
 
     const result = await findAvailableServiceProvider({ category: 'AC' });
@@ -169,14 +165,16 @@ describe('findAvailableService Provider — weighted scoring', () => {
 });
 
 describe('rankServiceProviders — the shortlist the assignment console shows', () => {
-  it('returns every candidate ordered by score, with the same winner as findAvailableServiceProvider', async () => {
+  it('returns category-authorized candidates ordered by score, with the same winner as findAvailableServiceProvider', async () => {
     const lucknow = await City.create({ name: 'Lucknow' });
     const specialist = await createServiceProvider({ specs: ['AC'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 5 });
-    await createServiceProvider({ specs: ['TV'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 1 });
-    await createServiceProvider({ specs: ['TV'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 0, activeJobsCount: 4 });
+    await createServiceProvider({ specs: ['AC'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 1 });
+    await createServiceProvider({ specs: ['AC'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 0, activeJobsCount: 4 });
+    const unauthorized = await createServiceProvider({ specs: ['TV'], city: lucknow._id, serviceCityName: 'Lucknow', rating: 5 });
 
     const ranked = await rankServiceProviders({ category: 'AC', city: 'Lucknow' });
     expect(ranked).toHaveLength(3);
+    expect(ranked.some(row => String(row.serviceProvider._id) === String(unauthorized._id))).toBe(false);
     expect(String(ranked[0].serviceProvider._id)).toBe(String(specialist._id));
     // Descending, and every entry carries the breakdown the console renders.
     for (let i = 1; i < ranked.length; i += 1) {

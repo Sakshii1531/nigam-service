@@ -30,6 +30,7 @@ const BROADCAST_USER_PAGE = 500;
 // rather than constructing a Notification doc themselves — one place owns what
 // each event actually says.
 const EVENT_TEMPLATES = {
+  'provider.onboarding': p => ({ recipient: p.user, type: 'provider', title: p.title, message: p.message, priority: 'High', cta: { label: 'View onboarding', route: p.route } }),
   'brand.callback_due': p=>({recipient:p.user,type:'service',title:'Customer callback due',message:`${p.humanId}: ${p.remarks}`,cta:{label:'Open ticket',route:`/brand-admin/tickets/${p.warrantyClaim}`}}),
   'brand.visit_reschedule': p=>({recipient:p.user||null,type:'service',title:'Visit reschedule request',message:`${p.humanId}: ${p.date}, ${p.slot}. ${p.reason}`,cta:p.cta||{label:'Open request',route:`/super-admin/warranty-claims/${p.warrantyClaim}`}}),
   'booking.created': (p) => ({

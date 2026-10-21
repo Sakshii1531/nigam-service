@@ -196,6 +196,16 @@ const Tracking = () => {
     socket.on('disconnect', () => setSocketConnected(false));
     socket.on('connect_error', () => setSocketConnected(false));
 
+    socket.on('service_request:updated', (payload) => {
+      if (payload?.status !== 'Cancelled' || !payload.jobId) return;
+      setJobs(current => {
+        const remaining = current.filter(item => String(item.job?.id || item.job?._id || item.job) !== String(payload.jobId));
+        removeStaleMarkers(remaining.map(item => item.id || item._id));
+        return remaining;
+      });
+      setSelectedJob(current => current && String(current.job?.id || current.job?._id || current.job) === String(payload.jobId) ? null : current);
+    });
+
     socket.on('tracking:update', (tracking) => {
       setJobs((prev) => {
         const id = tracking.id || tracking._id;
@@ -212,7 +222,7 @@ const Tracking = () => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [createOrUpdateMarker]);
+  }, [createOrUpdateMarker, removeStaleMarkers]);
 
   // ── Bootstrap: fetch existing active jobs via REST, then init map ──────────
 

@@ -377,6 +377,7 @@ const UserRoleManagement = () => {
               <Field label="Email (sign-in)"><input type="email" className={inputCls} value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} /></Field>
             )}
             <Field label="Phone"><input className={inputCls} value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })} /></Field>
+            {userForm.mode === 'create' && <p className="text-xs text-[#64748B]">Each brand user needs a unique sign-in email or phone number. To add roles to an existing user, edit that user.</p>}
             {userForm.mode === 'create' && (
               <Field label="Initial password"><input type="password" className={inputCls} placeholder="Min. 6 characters" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} /></Field>
             )}

@@ -16,3 +16,6 @@ CLAUDE.md
 /package-lock.json
 test-results/
 
+
+# Private local-development KYC documents
+backend/.private-kyc/

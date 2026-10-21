@@ -43,6 +43,11 @@ const serviceProviderSchema = new mongoose.Schema(
       longitude: { type: Number },
     },
     specs: [String], // active specializations, e.g. ['AC', 'Refrigerator', 'Washing Machine'] — drives job-feed filtering
+    onboardingPolicyVersion: Number,
+    approvedCategoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    legacyExemption: { recordedAt: Date, reason: String },
+    jobEligible: { type: Boolean, default: false, index: true },
+    eligibilityRevision: { type: Number, default: 0 },
     // Partner brands this provider is authorized to service under warranty
     // (docs/partner-warranty §6). Set by Super Admin.
     authorizedBrands: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Brand', index: true }],

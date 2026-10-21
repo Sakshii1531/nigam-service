@@ -177,6 +177,11 @@ const SuperAdminCMS = lazy(() => import("./pages/super-admin/CMS"));
 const SuperAdminLoyaltyProgram = lazy(() => import("./pages/super-admin/LoyaltyProgram"));
 const SuperAdminServiceProviderAppCustomization = lazy(() => import("./pages/super-admin/ServiceProviderAppCustomization"));
 const SuperAdminReviewsCustomization = lazy(() => import("./pages/super-admin/ReviewsCustomization"));
+const ProviderOnboardingPage = lazy(() => import("./pages/service-provider/OnboardingJourney"));
+const ProviderKitShop = lazy(() => import("./pages/service-provider/KitShop"));
+const AdminProviderOnboarding = lazy(() => import("./pages/super-admin/ProviderOnboarding"));
+const AdminProviderKits = lazy(() => import("./pages/super-admin/ProviderKits"));
+const AdminProviderKitOrders = lazy(() => import("./pages/super-admin/ProviderKitOrders"));
 const ServiceProviderDashboard = lazy(() => import("./pages/service-provider/Dashboard"));
 const ActiveJob = lazy(() => import("./pages/service-provider/ActiveJob"));
 const Schedule = lazy(() => import("./pages/service-provider/Schedule"));
@@ -314,6 +319,7 @@ const ScrollToTop = () => {
     const asmAllowedPaths = [
       "/super-admin/zone-dashboard",
       "/super-admin/service-providers",
+      "/super-admin/provider-onboarding",
       "/super-admin/city-change-requests",
       "/super-admin/requests",
       "/super-admin/tracking",
@@ -388,6 +394,12 @@ const ScrollToTop = () => {
     // 3. SERVICE_PROVIDER PORTAL
     else if (pathname.startsWith("/service-provider")) {
       if (user && user.role === "service_provider") {
+        const onboardingPaths = ["/service-provider/onboarding", "/service-provider/kits", "/service-provider/profile", "/service-provider/personal-info", "/service-provider/help-support", "/service-provider/notifications", "/service-provider/verification"];
+        if (user.providerAccess?.eligible === false && !onboardingPaths.some(path => pathname === path || pathname.startsWith(`${path}/`))) {
+          navigate("/service-provider/onboarding", { replace: true });
+          return;
+        }
+
         if (
           serviceProviderAuthPages.includes(pathname) &&
           pathname !== "/service-provider/apply"
@@ -1093,6 +1105,11 @@ function App() {
                             path="/brand-admin/teams"
                             element={<BrandTeamsDepartments />}
                           />
+                          <Route path="/service-provider/onboarding" element={<ProviderOnboardingPage />} />
+                          <Route path="/service-provider/kits" element={<ProviderKitShop />} />
+                          <Route path="/super-admin/provider-onboarding" element={<AdminProviderOnboarding />} />
+                          <Route path="/super-admin/provider-kits" element={<AdminProviderKits />} />
+                          <Route path="/super-admin/provider-kit-orders" element={<AdminProviderKitOrders />} />
                           <Route
                             path="/service-provider/apply"
                             element={<ServiceProviderApply />}

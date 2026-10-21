@@ -4,6 +4,7 @@ import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
+import { useServiceRequestUpdates } from '../../hooks/useServiceRequestUpdates';
 import {
   Search, UserPlus, MapPin, Star, Clock, ClipboardList, CheckCircle2,
   Zap, SlidersHorizontal, Save, Sparkles, AlertCircle
@@ -53,7 +54,7 @@ const Assignment = () => {
       const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
       const items = Array.isArray(res) ? res : [];
       const allActive = items
-        .filter(item => !['Closed', 'Cancelled'].includes(item.status))
+        .filter(item => !['Closed', 'Completed', 'Cancelled'].includes(item.status) && !['Completed', 'Cancelled'].includes(item.booking?.status) && !['completed', 'cancelled'].includes(item.job?.activeStep))
         .map(item => ({
           id: item.id,
           ref: item.humanId || item.id,
@@ -70,6 +71,7 @@ const Assignment = () => {
           isAssigned: Boolean(item.serviceProvider),
         }));
       setRequests(allActive);
+      setSelectedRequest(current => current && (allActive.find(item => item.id === current.id) || null));
       setLoadError('');
     } catch (err) {
       setLoadError(err.message || 'Could not load service requests.');
@@ -91,7 +93,7 @@ const Assignment = () => {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useServiceRequestUpdates(loadData);
 
   // If a request is selected, score service providers for that request.
   // Otherwise, load all active service providers so the operator sees the available team.

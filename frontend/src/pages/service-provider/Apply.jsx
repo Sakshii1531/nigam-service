@@ -55,12 +55,7 @@ const ServiceProviderApply = () => {
   const [availableCities, setAvailableCities] = useState([]);
   const [citiesLoading, setCitiesLoading] = useState(true);
 
-  const [availableServices, setAvailableServices] = useState([
-    "AC Repair",
-    "Washing Machine",
-    "Electrician",
-    "Full Home Cleaning",
-  ]);
+  const [availableServices, setAvailableServices] = useState([]);
 
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -94,16 +89,8 @@ const ServiceProviderApply = () => {
       }
 
       try {
-        const [skills, categories] = await Promise.all([
-          apiRequest("/cms/skills").catch(() => []),
-          apiRequest("/catalog/categories").catch(() => []),
-        ]);
-        const configuredSkills = (skills || []).map((skill) => skill.name).filter(Boolean);
-        const serviceList = [...new Set(
-          configuredSkills.length
-            ? configuredSkills
-            : (categories || []).map((category) => category.name).filter(Boolean),
-        )];
+        const categories = await apiRequest("/catalog/categories");
+        const serviceList = [...new Set((categories || []).map(category => category.name).filter(Boolean))];
         if (serviceList.length > 0) {
           setAvailableServices(serviceList);
         }

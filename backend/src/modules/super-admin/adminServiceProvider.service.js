@@ -1,3 +1,7 @@
+import { ProviderKitOrder } from '../provider-onboarding/kitOrder.model.js';
+import { runInTransaction } from '../../utils/transaction.js';
+import { ProviderOnboarding } from '../provider-onboarding/onboarding.model.js';
+import { resolveRequestedCategories } from '../provider-onboarding/eligibility.service.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { Job } from '../service-provider/job.model.js';
 import { User } from '../auth/user.model.js';
@@ -132,49 +136,29 @@ export async function getServiceProvider(id, scopedCity) {
 }
 
 export async function createServiceProvider({ name, phone, email, password, cityId, specs, status }, actingUserId) {
+  if (status === 'Active') throw new ApiError(409, 'New providers require an interview, final approval and kit receipt');
+  const requested = await resolveRequestedCategories(specs);
   const city = await City.findOne({ _id: cityId, status: 'Active' });
   if (!city) throw new ApiError(400, 'Choose an active service city');
-
-  const duplicate = await User.findOne({
-    $or: [{ phone }, ...(email ? [{ email: email.toLowerCase() }] : [])],
-  });
-  if (duplicate) throw new ApiError(409, 'A user already exists with this phone number or email');
-
-  let user;
+  const duplicate = await User.findOne({ role: ROLES.SERVICE_PROVIDER, $or: [{ phone }, ...(email ? [{ email: email.toLowerCase() }] : [])] });
+  if (duplicate) throw new ApiError(409, 'A provider already exists with this phone number or email');
+  const passwordHash = await hashPassword(password);
+  let provider;
   try {
-    user = await User.create({
-      role: ROLES.SERVICE_PROVIDER,
-      name,
-      phone,
-      email: email || undefined,
-      passwordHash: await hashPassword(password),
-      status: status === 'Active' ? 'Active' : 'Pending',
-    });
-    const provider = await ServiceProvider.create({
-      user: user._id,
-      name,
-      phone,
-      email: email || undefined,
-      city: city._id,
-      serviceCityName: city.name,
-      serviceStateName: city.state || '',
-      specs: [...new Set(specs)],
-      status,
-      availability: 'Offline',
-      joinedAt: status === 'Active' ? new Date() : undefined,
-      verification: status === 'Active'
-        ? { aadharStatus: 'Verified', panStatus: 'Verified', backgroundCheckStatus: 'Verified' }
-        : undefined,
-    });
-    await logAudit({ user: actingUserId, action: `Created service provider "${name}" (${phone})`, type: 'System' });
-    const populated = await ServiceProvider.findById(provider._id).populate('city', 'name state');
-    const [withAsm] = await attachAsm([populated]);
-    return withAsm;
+    provider = await runInTransaction(async session => {
+      const [user] = await User.create([{ role: ROLES.SERVICE_PROVIDER, name, phone, email: email || undefined, passwordHash, status: 'Active' }], { session });
+      const [created] = await ServiceProvider.create([{ user: user._id, name, phone, email: email || undefined, city: city._id, serviceCityName: city.name, serviceStateName: city.state || '', specs: [], approvedCategoryIds: [], onboardingPolicyVersion: 1, status: 'Pending', availability: 'Offline' }], { session });
+      await ProviderOnboarding.create([{ serviceProvider: created._id, requestedCategories: requested.map(c => c._id), state: 'CHANGES_REQUESTED', decisionReason: 'Sign in and upload both Aadhaar documents before interview', events: [{ action: 'application.admin_created', actor: actingUserId, actorRole: 'super_admin', message: 'Documents required from applicant' }] }], { session });
+      await logAudit({ user: actingUserId, action: `Created provider application for ${name}`, type: 'System', entityType: 'ServiceProvider', entityId: created._id }, { session });
+      return created;
+    }, { required: true });
   } catch (err) {
-    if (user?._id) await User.findByIdAndDelete(user._id);
-    if (err?.code === 11000) throw new ApiError(409, 'A user already exists with this phone number or email');
+    if (err?.code === 11000) throw new ApiError(409, 'A provider already exists with this phone number or email');
     throw err;
   }
+  const populated = await ServiceProvider.findById(provider._id).populate('city', 'name state');
+  const [withAsm] = await attachAsm([populated]);
+  return withAsm;
 }
 
 /**
@@ -192,6 +176,15 @@ export async function createServiceProvider({ name, phone, email, password, city
  */
 export async function updateServiceProviderStatus(id, status, scopedCity, actingUserId) {
   const serviceProvider = await findOr404(id, scopedCity);
+  if (serviceProvider.onboardingPolicyVersion === 1) {
+    if (status === 'Pending') throw new ApiError(409, 'Use onboarding review actions for this application');
+    if (status === 'Active') {
+      const app = await ProviderOnboarding.findOne({ serviceProvider: id });
+      if (scopedCity || app?.state !== 'APPROVED') throw new ApiError(409, 'Super admin must complete final onboarding approval');
+    }
+  } else if (serviceProvider.status === 'Pending' && status === 'Active') {
+    throw new ApiError(409, 'This pending application must complete the onboarding interview');
+  }
   const previousStatus = serviceProvider.status;
   serviceProvider.status = status;
   if (status !== 'Active') serviceProvider.availability = 'Offline';
@@ -199,7 +192,7 @@ export async function updateServiceProviderStatus(id, status, scopedCity, acting
   // Aadhaar before approving — but it never touched the per-document statuses,
   // so an approved partner's Verification screen said "Pending" forever.
   // Rejected documents are left alone; only still-pending ones clear.
-  if (status === 'Active') {
+  if (status === 'Active' && serviceProvider.onboardingPolicyVersion !== 1) {
     const verification = serviceProvider.verification || {};
     for (const key of ['aadharStatus', 'panStatus', 'backgroundCheckStatus']) {
       if (!verification[key] || verification[key] === 'Pending') {
@@ -227,6 +220,7 @@ export async function updateServiceProviderStatus(id, status, scopedCity, acting
 
 export async function deleteServiceProvider(id) {
   const serviceProvider = await findOr404(id);
+  if (serviceProvider.onboardingPolicyVersion === 1 || await ProviderKitOrder.exists({ serviceProvider: id })) throw new ApiError(409, 'Suspend this provider instead; onboarding and kit order history must be preserved');
 
   // Jobs carry a required service provider ref, so removing a service provider mid-job would
   // orphan them. Callers should reassign or close those jobs first. 'idle' and

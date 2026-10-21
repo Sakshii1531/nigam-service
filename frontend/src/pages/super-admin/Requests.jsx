@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
+import { useServiceRequestUpdates } from '../../hooks/useServiceRequestUpdates';
 import { 
   Search, 
   Eye, 
@@ -77,7 +78,7 @@ const Requests = () => {
     try {
       const res = await apiRequest('/service-requests?limit=200&sort=-createdAt', { auth: true });
       const items = Array.isArray(res) ? res : [];
-      setRequests(items.map(item => {
+      const nextRequests = items.map(item => {
         const bk = item.booking && typeof item.booking === 'object' ? item.booking : null;
         const addr = bk?.address || (item.user?.addresses?.length ? item.user.addresses[0] : null);
         const lat = addr?.latitude ?? item.customerLocation?.latitude ?? null;
@@ -151,7 +152,9 @@ const Requests = () => {
           billingEstimate: item.job?.billingEstimate || null,
           proofs: item.job?.proofs || null,
         };
-      }));
+      });
+      setRequests(nextRequests);
+      setSelectedRequest(current => current && (nextRequests.find(item => item.id === current.id) || current));
       setLoadError('');
     } catch (err) {
       setLoadError(err.message || 'Could not load service requests.');
@@ -167,7 +170,7 @@ const Requests = () => {
     }
   }, []);
 
-  useEffect(() => { loadRequests(); }, [loadRequests]);
+  useServiceRequestUpdates(loadRequests);
 
   const showToast = (message) => {
     setSuccessMessage(message);

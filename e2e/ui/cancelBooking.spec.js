@@ -165,7 +165,7 @@ for (const providerView of ['dashboard', 'active-job']) {
       data: await offeringBookingBody(request, { api: API, offeringCode: 'AC-WINDOW-REPAIR', address: { house: 'Cancellation test', city, pincode: '452001' }, fullName: 'Customer Cancellation Test' }),
     });
     expect(created.status()).toBe(201);
-    const { booking } = (await created.json()).data;
+    const { booking, serviceRequest } = (await created.json()).data;
     const offer = page.getByRole('dialog');
     await expect(offer).toBeVisible();
     await offer.getByRole('button', { name: /Accept job/i }).click();
@@ -173,7 +173,18 @@ for (const providerView of ['dashboard', 'active-job']) {
     if (providerView === 'active-job') {
       await page.getByRole('button', { name: 'Start Job' }).click();
       await expect(page).toHaveURL(/\/service-provider\/active-job/);
+      await page.getByRole('button', { name: 'Start Trip (On My Way)' }).click();
+      await expect(page.getByRole('button', { name: 'Mark as Inspection Arrived' })).toBeVisible();
     }
+    const adminEmail = `cancel-admin-${uniquePhone()}@e2e.test`;
+    await request.post(`${API}/_dev/test-user`, { data: { role: 'super_admin', email: adminEmail, password: 'password123' } });
+    const admin = await verifyOtp(request, 'super_admin', adminEmail);
+    const adminContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    const adminPage = await adminContext.newPage();
+    await signIn(adminPage, admin);
+    await adminPage.goto('/super-admin/assignment');
+    await adminPage.getByRole('button', { name: /Active \/ In Progress/ }).click();
+    await expect(adminPage.getByText(serviceRequest.humanId, { exact: true })).toBeVisible();
     // The customer uses the real cancellation modal in a separate session.
     const customerPage = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
     await signIn(customerPage, customer);
@@ -185,7 +196,15 @@ for (const providerView of ['dashboard', 'active-job']) {
     await expect(page).toHaveURL(/\/service-provider\/dashboard$/);
     await expect(page.getByRole('button', { name: '0 Active jobs' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start Job', exact: true })).toHaveCount(0);
-    await expect(page.getByText(/Customer cancelled this job|Customer Cancelled Booking/).first()).toBeVisible();
+    const notice = page.getByRole('alertdialog', { name: 'Customer Cancelled Booking' });
+    await expect(notice).toBeVisible();
+    await expect(notice.getByText(/Reason: Changed my mind/)).toBeVisible();
+    await notice.getByRole('button', { name: 'Understood' }).click();
+    await expect(adminPage.getByText(serviceRequest.humanId, { exact: true })).toHaveCount(0);
+    await adminPage.goto('/super-admin/requests');
+    await adminPage.getByPlaceholder('Search Ticket, Customer, Brand...').fill(serviceRequest.humanId);
+    await adminPage.getByRole('combobox').first().selectOption({ label: 'Cancelled' });
+    await expect(adminPage.getByText(serviceRequest.humanId, { exact: true })).toBeVisible();
     expect(await page.evaluate(() => localStorage.getItem('ncc_service_provider_active_job'))).toBeNull();
     const headers = { Authorization: `Bearer ${provider.accessToken}` };
     const active = await request.get(`${API}/service-provider/jobs/active`, { headers });
@@ -194,5 +213,26 @@ for (const providerView of ['dashboard', 'active-job']) {
     expect(notifications.some(item => item.title === 'Job cancelled by customer' && item.message.includes(booking.humanId))).toBe(true);
     await page.reload();
     await expect(page.getByRole('button', { name: '0 Active jobs' })).toBeVisible();
+    await adminContext.close();
+    await customerPage.context().close();
+    await context.close();
   });
 }
+
+test('assignment queue excludes completed and cancelled parents even when the service request status is stale', async ({ page, request }) => {
+  const email = `cancel-queue-${uniquePhone()}@e2e.test`;
+  await request.post(`${API}/_dev/test-user`, { data: { role: 'super_admin', email, password: 'password123' } });
+  await signIn(page, await verifyOtp(request, 'super_admin', email));
+  const base = { category: 'AC', serviceProvider: { id: 'provider', name: 'Test Provider' }, user: { name: 'Test Customer' } };
+  const items = [
+    { ...base, id: 'completed', humanId: 'SR-COMPLETED', status: 'Customer Confirmation', booking: { status: 'Completed' }, job: { activeStep: 'completed' } },
+    { ...base, id: 'cancelled', humanId: 'SR-CANCELLED', status: 'Engineer Accepted', booking: { status: 'Cancelled' }, job: { activeStep: 'cancelled' } },
+    { ...base, id: 'active', humanId: 'SR-ACTIVE', status: 'Engineer Reached', booking: { status: 'Ongoing' }, job: { activeStep: 'inspection' } },
+  ];
+  await page.route('**/api/v1/service-requests?*', route => route.fulfill({ json: { data: items, error: null, meta: {} } }));
+  await page.goto('/super-admin/assignment');
+  await page.getByRole('button', { name: 'Active / In Progress (1)', exact: true }).click();
+  await expect(page.getByText('SR-ACTIVE', { exact: true })).toBeVisible();
+  await expect(page.getByText('SR-COMPLETED', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('SR-CANCELLED', { exact: true })).toHaveCount(0);
+});

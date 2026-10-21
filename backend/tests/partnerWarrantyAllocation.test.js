@@ -122,7 +122,7 @@ describe('Phase 6 — who is eligible for a warranty job', () => {
       .send({ availability: 'Available', location: { latitude: 100, longitude: 75 } }).expect(400);
   });
 
-  it('skill is a hard filter (a non-warranty booking would still take a generalist)', async () => {
+  it('skill is a hard filter for both warranty and ordinary bookings', async () => {
     const s = await scenario();
     await partner({ specs: ['Refrigerator'], at: 1 });
 
@@ -130,10 +130,8 @@ describe('Phase 6 — who is eligible for a warranty job', () => {
     expect(sr.serviceProvider).toBeNull();
     expect(saved.flags.allocationFailed).toBe(true);
 
-    // Contrast: ordinary ranking keeps the generalist, at a lower skill score.
     const ordinary = await rankServiceProviders({ category: 'AC', city: 'Indore' });
-    expect(ordinary).toHaveLength(1);
-    expect(ordinary[0].skill).toBe(40);
+    expect(ordinary).toHaveLength(0);
   });
 
   it('only the brand\'s authorized partners, when it has any — even if an unauthorized one is nearer', async () => {
@@ -245,7 +243,8 @@ describe('Phase 6 — offer, reject, timeout, never stuck', () => {
     // Nobody can pick it up from the open feed — not the unqualified tech in the same city.
     const feed = await api().get('/api/v1/service-provider/jobs/available').set(bearer(fridgeTech.token)).expect(200);
     expect(feed.body.data.map((j) => j.id)).not.toContain(sr.id);
-    await api().post(`/api/v1/service-provider/jobs/accept/${sr.id}`).set(bearer(fridgeTech.token)).send({}).expect(403);
+    const blocked = await api().post(`/api/v1/service-provider/jobs/accept/${sr.id}`).set(bearer(fridgeTech.token)).send({}).expect(409);
+    expect(blocked.body.error.details.blockingReasons).toContain('CATEGORY_NOT_APPROVED');
   });
 
   it('recovers automatically when an eligible partner comes online', async () => {

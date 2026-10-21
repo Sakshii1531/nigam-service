@@ -1,3 +1,4 @@
+import { eligibilityFor } from '../provider-onboarding/eligibility.service.js';
 import { recordAction } from '../shared/auditLog.js';
 import { securityAudit } from '../brand-crm/securityAudit.js';
 import mongoose from 'mongoose';
@@ -49,7 +50,7 @@ async function findUserByIdentifier(role, identifier) {
 
   if (user && (user.role === ROLES.SERVICE_PROVIDER || role === 'service_provider')) {
     const provider = await ServiceProvider.findOne({ user: user._id });
-    if (provider) {
+    if (provider && provider.onboardingPolicyVersion !== 1) {
       const expectedUserStatus = provider.status === 'Active' ? 'Active' : provider.status === 'Pending' ? 'Pending' : 'Suspended';
       if (user.status !== expectedUserStatus) {
         user.status = expectedUserStatus;
@@ -124,7 +125,9 @@ async function issueSession(user) {
   // The token also carries it, but undecoded and not something the frontend
   // parses — see asm/Dashboard.jsx's view-only gating for why a plain field
   // is worth the duplication.
-  return { accessToken, refreshToken, user: { ...sanitizeUser(user), permissions } };
+  const provider = user.role === ROLES.SERVICE_PROVIDER ? await ServiceProvider.findOne({ user: user._id }) : null;
+  const providerAccess = provider ? await eligibilityFor(provider) : undefined;
+  return { accessToken, refreshToken, user: { ...sanitizeUser(user), permissions, ...(providerAccess ? { providerAccess } : {}) } };
 }
 
 function sanitizeUser(user) {

@@ -1,3 +1,5 @@
+import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
+import { eligibilityFor } from '../provider-onboarding/eligibility.service.js';
 import { Router } from 'express';
 import { loadBrandAccess } from '../brand-crm/brandPermission.middleware.js';
 import { ROLES } from '../../config/constants.js';
@@ -141,6 +143,10 @@ authRouter.get('/me', requireAuth, async (req, res, next) => {
     const userObj = user.toJSON();
     delete userObj.passwordHash;
     userObj.referralsCount = referralsCount;
+    if (user.role === ROLES.SERVICE_PROVIDER) {
+      const provider = await ServiceProvider.findOne({ user: user._id });
+      userObj.providerAccess = await eligibilityFor(provider);
+    }
     // req.user.permissions comes straight from the access token (requireAuth
     // decodes it), so this stays free — no extra resolvePermissions() query.
     // Brand users are the exception: their permissions are enforced from the

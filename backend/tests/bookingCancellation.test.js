@@ -17,6 +17,8 @@ import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { jobFlow } from './helpers/jobFlow.js';
 import { seedSimpleOffering, offeringBooking } from './helpers/catalogue.js';
 import { testDbUri } from './helpers/testDb.js';
+import { reconcileCancelledBookings } from '../src/modules/booking/booking.service.js';
+import { LiveTracking } from '../src/modules/super-admin/liveTracking.model.js';
 
 let server, sockets;
 const clients = [];
@@ -60,6 +62,11 @@ async function fixture(accepted = true) {
 describe('customer cancellation reaches the assigned provider', () => {
   it.each([false, true])('cancels an assigned booking (accepted=%s), removes it from active jobs, and notifies an offline provider exactly once', async accepted => {
     const { provider, customer, job, booking, serviceRequest } = await fixture(accepted);
+    if (accepted) {
+      await api('post', `/service-provider/jobs/${job.id}/start-travel`, provider.token).expect(200);
+      await api('post', `/service-provider/jobs/${job.id}/arrive`, provider.token).expect(200);
+      await LiveTracking.updateOne({ job: job.id }, { $set: { serviceProvider: provider.serviceProvider._id, status: 'Repairing' } }, { upsert: true });
+    }
     await ServiceProvider.updateOne({ _id: provider.serviceProvider._id }, { availability: 'Offline' });
     // Deliberately do not join the instant feed: offline providers still
     // receive cancellation through their authenticated user room.
@@ -75,6 +82,7 @@ describe('customer cancellation reaches the assigned provider', () => {
     expect((await ServiceRequest.findById(serviceRequest.id)).status).toBe('Cancelled');
     if (accepted) {
       expect((await Job.findById(job.id)).activeStep).toBe('cancelled');
+      expect((await LiveTracking.findOne({ job: job.id })).status).toBe('Cancelled');
       await api('post', `/service-provider/jobs/${job.id}/start-travel`, provider.token).expect(400);
       const history = (await api('get', '/service-provider/jobs/history?status=cancelled', provider.token).expect(200)).body.data;
       expect(history.items.some(item => item.id === job.id)).toBe(true);
@@ -96,5 +104,35 @@ describe('customer cancellation reaches the assigned provider', () => {
     await ServiceRequest.updateOne({ _id: serviceRequest.id }, { status: 'Cancelled' });
     expect((await api('get', '/service-provider/jobs/active', provider.token).expect(200)).body.data).toEqual([]);
     await api('post', `/service-provider/jobs/${job.id}/start-travel`, provider.token).expect(400);
+  });
+
+  it.each([false, true])('repairs legacy cancelled bookings in the database (missing booking link=%s) and moves requests into cancelled filters', async missingLink => {
+    const { provider, customer, job, booking, serviceRequest } = await fixture();
+    await Booking.updateOne({ _id: booking.id }, { $set: { status: 'Cancelled', cancellationReason: 'Legacy cancellation', ...(missingLink ? { serviceRequest: null } : {}) } });
+    await LiveTracking.updateOne({ job: job.id }, { $set: { serviceProvider: provider.serviceProvider._id, status: 'On the way' } }, { upsert: true });
+    await reconcileCancelledBookings();
+    expect((await ServiceRequest.findById(serviceRequest.id)).status).toBe('Cancelled');
+    expect((await Booking.findById(booking.id)).serviceRequest.toString()).toBe(serviceRequest.id);
+    expect((await Job.findById(job.id)).activeStep).toBe('cancelled');
+    expect((await LiveTracking.findOne({ job: job.id })).status).toBe('Cancelled');
+    expect((await ServiceProvider.findById(provider.serviceProvider._id)).activeJobsCount).toBe(0);
+    const cancelled = (await api('get', '/service-requests?status=Cancelled', customer.token).expect(200)).body.data;
+    expect(cancelled.some(item => item.id === serviceRequest.id && item.job.activeStep === 'cancelled')).toBe(true);
+    await reconcileCancelledBookings();
+    expect(await Notification.countDocuments({ recipient: provider.serviceProvider.user, title: 'Job cancelled by customer' })).toBe(1);
+    expect((await ServiceRequest.findById(serviceRequest.id)).timeline.filter(step => step.stepLabel === 'Cancelled')).toHaveLength(1);
+  });
+
+  it('rejects stale provider writes that would resurrect a cancelled job or service request', async () => {
+    const { customer, job, booking, serviceRequest } = await fixture();
+    const staleJob = await Job.findById(job.id);
+    const staleRequest = await ServiceRequest.findById(serviceRequest.id);
+    await api('post', `/bookings/${booking.id}/cancel`, customer.token, { reason: 'Cancelled mid-job' }).expect(200);
+    staleJob.activeStep = 'ontheway';
+    staleRequest.status = 'Engineer Reached';
+    await expect(staleJob.save()).rejects.toMatchObject({ name: 'VersionError' });
+    await expect(staleRequest.save()).rejects.toMatchObject({ name: 'VersionError' });
+    expect((await Job.findById(job.id)).activeStep).toBe('cancelled');
+    expect((await ServiceRequest.findById(serviceRequest.id)).status).toBe('Cancelled');
   });
 });

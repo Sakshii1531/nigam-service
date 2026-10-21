@@ -5,9 +5,8 @@ export const updateProfileSchema = z.object({
   phone: z.string().optional(),
   email: z.string().optional(),
   address: z.string().optional(),
-  specs: z.array(z.string()).optional(),
   avatarUrl: z.string().optional(),
-});
+}).strict();
 
 export const addPayoutMethodSchema = z.object({
   type: z.enum(['bank', 'upi']),

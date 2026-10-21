@@ -1,3 +1,5 @@
+import { Category } from '../src/modules/catalog/category.model.js';
+import { ProviderOnboarding } from '../src/modules/provider-onboarding/onboarding.model.js';
 /**
  * adminServiceProvider.test.js
  *
@@ -95,7 +97,10 @@ beforeEach(async () => {
     Notification.deleteMany({}),
     City.deleteMany({}),
     ServiceRequest.deleteMany({}),
+    Category.deleteMany({}),
+    ProviderOnboarding.deleteMany({}),
   ]);
+  await Category.create([{ key: 'AC', name: 'AC' }, { key: 'Refrigerator', name: 'Refrigerator' }]);
 });
 
 describe('GET /super-admin/service-providers', () => {
@@ -187,16 +192,16 @@ describe('POST /super-admin/service-providers', () => {
         email: 'onboarded@test.local',
         password: 'password123',
         cityId: city.id,
-        specs: ['Split AC Installation'],
-        status: 'Active',
+        specs: ['AC'],
+        status: 'Pending',
       })
       .expect(201);
 
     expect(res.body.data).toMatchObject({
       name: 'Admin Onboarded Partner',
-      status: 'Active',
+      status: 'Pending',
       availability: 'Offline',
-      specs: ['Split AC Installation'],
+      specs: [],
     });
     expect(res.body.data.city.name).toBe('Indore');
     expect(await User.countDocuments({ phone: '9898989898', role: ROLES.SERVICE_PROVIDER })).toBe(1);
@@ -238,7 +243,7 @@ describe('PATCH /super-admin/service-providers/:id/status', () => {
     expect(inDb.status).toBe('Inactive');
   });
 
-  it('marks pending KYC documents verified on approval, leaving rejected ones alone', async () => {
+  it('blocks the old activation shortcut and does not auto-verify pending documents', async () => {
     const token = await seedSuperAdmin();
     const { serviceProvider } = await seedServiceProvider({ status: 'Pending' });
     await ServiceProvider.updateOne({ _id: serviceProvider._id }, { 'verification.panStatus': 'Rejected' });
@@ -247,11 +252,11 @@ describe('PATCH /super-admin/service-providers/:id/status', () => {
       .patch(`/api/v1/super-admin/service-providers/${serviceProvider._id}/status`)
       .set('Authorization', `Bearer ${token}`)
       .send({ status: 'Active' })
-      .expect(200);
+      .expect(409);
 
     const inDb = await ServiceProvider.findById(serviceProvider._id);
-    expect(inDb.verification.aadharStatus).toBe('Verified');
-    expect(inDb.verification.backgroundCheckStatus).toBe('Verified');
+    expect(inDb.verification.aadharStatus).toBe('Pending');
+    expect(inDb.verification.backgroundCheckStatus).toBe('Pending');
     expect(inDb.verification.panStatus).toBe('Rejected');
   });
 
@@ -429,6 +434,8 @@ describe('public serviceProvider application (/service-provider/register)', () =
       .field('password', 'password123')
       .field('city', 'Lucknow')
       .field('specs', JSON.stringify(['AC', 'Refrigerator']))
+      .attach('aadharFront', Buffer.from('%PDF-front'), { filename: 'front.pdf', contentType: 'application/pdf' })
+      .attach('aadharBack', Buffer.from('%PDF-back'), { filename: 'back.pdf', contentType: 'application/pdf' })
       .expect(201);
 
     expect(res.body.data.status).toBe('Pending');
@@ -437,7 +444,8 @@ describe('public serviceProvider application (/service-provider/register)', () =
     // Must not be assignable until a human approves it.
     expect(serviceProvider.status).toBe('Pending');
     expect(serviceProvider.availability).toBe('Offline');
-    expect(serviceProvider.specs).toEqual(['AC', 'Refrigerator']);
+    expect(serviceProvider.specs).toEqual([]);
+    expect((await ProviderOnboarding.findOne({ serviceProvider: serviceProvider._id })).requestedCategories).toHaveLength(2);
     expect(String(serviceProvider.city)).toBe(String(city._id));
 
     const listed = await request(app)
@@ -448,11 +456,15 @@ describe('public serviceProvider application (/service-provider/register)', () =
   });
 
   it('rejects a second application for the same phone with 409', async () => {
+    await City.create({ name: 'Lucknow', status: 'Active' });
     await request(app)
       .post('/api/v1/service-provider/register')
       .field('name', 'Applicant Two')
       .field('phone', '9811100022')
       .field('password', 'password123')
+      .field('city', 'Lucknow').field('specs', JSON.stringify(['AC']))
+      .attach('aadharFront', Buffer.from('%PDF-front'), { filename: 'front.pdf', contentType: 'application/pdf' })
+      .attach('aadharBack', Buffer.from('%PDF-back'), { filename: 'back.pdf', contentType: 'application/pdf' })
       .expect(201);
 
     const dup = await request(app)
@@ -479,15 +491,10 @@ describe('public serviceProvider application (/service-provider/register)', () =
       .expect(400);
   });
 
-  it('accepts an unknown city rather than failing the application', async () => {
-    const res = await request(app)
-      .post('/api/v1/service-provider/register')
-      .field('name', 'Applicant Four')
-      .field('phone', '9811100055')
-      .field('password', 'password123')
-      .field('city', 'Nowhere-Ville')
-      .expect(201);
-
-    expect((await ServiceProvider.findById(res.body.data.id)).city).toBeNull();
+  it('rejects an unknown service city so the application can be routed to an area manager', async () => {
+    const response = await request(app).post('/api/v1/service-provider/register')
+      .field('name', 'Applicant Four').field('phone', '9811100055').field('password', 'password123').field('city', 'Nowhere-Ville').expect(400);
+    expect(response.body.error.message).toMatch(/active service city/);
+    expect(await User.countDocuments({ phone: '9811100055' })).toBe(0);
   });
 });

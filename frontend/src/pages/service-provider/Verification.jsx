@@ -23,14 +23,14 @@ const Verification = () => {
         // Admin approval is the KYC review. Partners approved before approval
         // started recording per-document statuses still carry the 'Pending'
         // defaults, so an active account's pending documents read as verified.
-        const approved = res?.status === 'Active';
+        const approved = res?.status === 'Active' && res?.onboardingPolicyVersion !== 1;
         const statusOf = (value) => {
           const status = value || 'Pending';
           return approved && status === 'Pending' ? 'Verified' : status;
         };
         setDocuments([
           { label: 'Aadhaar Card', status: statusOf(v.aadharStatus) },
-          { label: 'PAN Card', status: statusOf(v.panStatus) },
+          ...(res?.onboardingPolicyVersion === 1 ? [] : [{ label: 'PAN Card', status: statusOf(v.panStatus) }]),
           { label: 'Criminal Background Check', status: statusOf(v.backgroundCheckStatus) },
         ]);
       })
@@ -108,7 +108,7 @@ const Verification = () => {
           </h2>
           <p className="text-xs text-slate-500 text-center">
             {allVerified
-              ? 'Your documents are verified. You are eligible for premium jobs.'
+              ? 'Your documents are verified. Job eligibility also depends on approval and kit receipt.'
               : 'Some documents are still being reviewed. You will be notified once they clear.'}
           </p>
         </div>

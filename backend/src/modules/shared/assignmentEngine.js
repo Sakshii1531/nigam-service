@@ -1,3 +1,4 @@
+import { eligibilityFor } from '../provider-onboarding/eligibility.service.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { AssignmentWeighting } from '../super-admin/assignmentWeighting.model.js';
@@ -44,10 +45,9 @@ async function pendingAssignmentCounts() {
  *   - proximity: city-name match against the service provider's City doc (100 if
  *     match, 0 if a known mismatch, 50 if unknown either way) — a simplified
  *     proxy since neither Service Provider nor Booking store real lat/lng yet.
- *   - skill: 100 if `category` is in the service provider's specs, else 40 (a
- *     generalist is still assignable, just less preferred than a specialist —
- *     this is what naturally reproduces the old stub's "fall back to any
- *     available service provider" behavior without a separate code path).
+ *   - skill: category authorization is a hard filter before scoring. New
+ *     providers need interview-approved categories and verified paid kit
+ *     receipt; exempt existing providers retain their recorded specialties.
  *   - rating: service provider.rating (0-5) scaled to 0-100.
  *   - workload: inversely proportional to the service provider's open load — their
  *     accepted activeJobsCount plus anything already assigned to them and
@@ -121,7 +121,7 @@ export function inWarrantyServiceArea(provider, { pincode, city, state, latitude
  * (docs/partner-warranty Phase 6): skill becomes a hard filter, the brand's
  * authorized partners are required when it has any (each result then carries
  * `authorized`), the service area replaces the plain city match, and tier
- * adds a small bonus. Without it, ranking is exactly as before.
+ * adds a small bonus. Every ranking path also enforces onboarding eligibility.
  */
 export async function rankServiceProviders({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [], warranty = null, urgency = null } = {}) {
   // Auto-assignment only ever considers service providers who have marked themselves
@@ -132,6 +132,8 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
   if (exclude.length) filter._id = { $nin: exclude };
 
   let candidates = await ServiceProvider.find(filter).populate('city');
+  const eligibility = await Promise.all(candidates.map(provider => eligibilityFor(provider, { category })));
+  candidates = candidates.filter((_provider, index) => eligibility[index].eligible);
   if (candidates.length === 0) return [];
   const skillLabels = await skillLabelsFor(category);
   const hasSkill = provider => (provider.specs || []).some(spec => skillLabels.has(normalizedSkill(spec)));

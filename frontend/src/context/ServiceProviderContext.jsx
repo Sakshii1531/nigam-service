@@ -8,7 +8,7 @@ import {
   useMemo,
 } from "react";
 import { io } from "socket.io-client";
-import { useToast } from "./ToastContext";
+import CancellationNotice from "../components/service-provider/CancellationNotice";
 import { useAuth } from "./AuthContext";
 import { apiRequest, getStoredTokens } from "../lib/apiClient";
 import { currentCoordinates } from '../lib/googleMaps';
@@ -92,8 +92,8 @@ export const useTech = () => {
 };
 
 export const ServiceProviderProvider = ({ children }) => {
-  const { info: showCancellationNotice } = useToast();
-  const { user } = useAuth();
+  const [cancellationAlert, setCancellationAlert] = useState(null);
+  const { user, updateUser } = useAuth();
   const [jobs, setJobs] = useState([]);
   // Distinguishes "no jobs" from "jobs not loaded yet". Without it the stat
   // cards rendered a confident 0 for the several seconds the fetch takes,
@@ -154,6 +154,7 @@ export const ServiceProviderProvider = ({ children }) => {
   const jobsLoadedOnceRef = useRef(false);
   const fetchRealJobs = useCallback(async () => {
     if (!user || user.role !== "service_provider") return;
+    if (user.providerAccess?.eligible === false) { setJobs([]); setJobsLoading(false); setInventoryLoading(false); setClaimsLoading(false); setEarningsLoading(false); return; }
     if (!jobsLoadedOnceRef.current) setJobsLoading(true);
     try {
       // 1. Fetch jobs. In parallel, not one after the other: /jobs/available is
@@ -526,6 +527,9 @@ export const ServiceProviderProvider = ({ children }) => {
     });
     socketRef.current = socket;
 
+    socket.on("provider:onboarding_updated", async () => {
+      try { const current = await apiRequest("/auth/me", { auth: true }); updateUser({ providerAccess: current.providerAccess }); } catch { /* Next session refresh retries. */ }
+    });
     socket.on("connect", () => {
       if (availability === "Available") socket.emit("join-instant-feed", {});
     });
@@ -553,7 +557,7 @@ export const ServiceProviderProvider = ({ children }) => {
     const handleJobCancelled = (payload) => {
       const ids = new Set([payload?.jobId, payload?.bookingId, payload?.serviceRequestId].filter(Boolean).map(String));
       setJobs(current => current.filter(job => ![job.id, job.bookingId, job.serviceRequestId].some(id => id && ids.has(String(id)))));
-      showCancellationNotice(`Customer cancelled this job.${payload?.reason ? ` Reason: ${payload.reason}` : ''}`);
+      setCancellationAlert(payload);
       fetchRealJobs();
       if (typeof window !== "undefined") {
         window.dispatchEvent(
@@ -654,7 +658,7 @@ export const ServiceProviderProvider = ({ children }) => {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [user, availability, fetchRealJobs, showCancellationNotice]);
+  }, [user, availability, fetchRealJobs, updateUser]);
 
   // Active fast polling fallback:
   // When service provider is Online / Available, refresh jobs every 4 seconds
@@ -1722,6 +1726,9 @@ export const ServiceProviderProvider = ({ children }) => {
         appSettings,
       }}>
       {children}
+      {user?.role === "service_provider" && cancellationAlert && (
+        <CancellationNotice booking={cancellationAlert} onDismiss={() => setCancellationAlert(null)} />
+      )}
     </ServiceProviderContext.Provider>
   );
 };

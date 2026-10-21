@@ -101,3 +101,33 @@ test('a CCE sees only their menus; the owner edits a role in the permission matr
   await cceCtx.close();
   await ownerCtx.close();
 });
+
+test('duplicate brand-user phone shows a useful error and the form can be corrected', async ({ page, request }) => {
+  const tag = randomUUID().slice(0, 8);
+  const adminEmail = `rbac-duplicate-admin-${tag}@e2e.test`;
+  await request.post(`${API}/_dev/test-user`, { data: { role: 'super_admin', email: adminEmail, password: 'password123' } });
+  const admin = await session(request, 'super_admin', adminEmail);
+  const brand = await call(request, 'post', '/super-admin/brands', admin.accessToken, { name: `Duplicate Test ${tag}`, status: 'Active' });
+  const ownerEmail = `rbac-duplicate-owner-${tag}@e2e.test`;
+  await request.post(`${API}/_dev/test-user`, { data: { role: 'brand_admin', email: ownerEmail, password: 'password123', brand: brand.id, employeeId: `OWNER-${tag}` } });
+  const owner = await session(request, 'brand_admin', ownerEmail);
+  const phone = `9${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;
+  await call(request, 'post', '/brand/users', owner.accessToken, { name: `Existing ${tag}`, email: `existing-${tag}@e2e.test`, phone, password: 'password123' });
+  await signIn(page, owner, 'brand_admin');
+  await page.goto('/brand-admin/users');
+  await page.getByRole('button', { name: 'Add user', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Full name', { exact: true }).fill(`New Staff ${tag}`);
+  await dialog.getByLabel('Email (sign-in)', { exact: true }).fill(`new-staff-${tag}@e2e.test`);
+  await dialog.getByLabel('Phone', { exact: true }).fill(phone);
+  await dialog.getByLabel('Initial password', { exact: true }).fill('password123');
+  await dialog.getByRole('checkbox', { name: 'Customer Care Executive', exact: true }).check();
+  await dialog.getByRole('button', { name: 'Add user', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('phone number is already registered');
+  await expect(dialog.getByRole('alert')).not.toContainText('E11000');
+  await expect(dialog.getByLabel('Full name', { exact: true })).toHaveValue(`New Staff ${tag}`);
+  await dialog.getByLabel('Phone', { exact: true }).fill(`8${phone.slice(1)}`);
+  await dialog.getByRole('button', { name: 'Add user', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('row').filter({ hasText: `New Staff ${tag}` })).toBeVisible();
+});

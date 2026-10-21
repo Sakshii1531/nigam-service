@@ -7,7 +7,7 @@ const liveTrackingSchema = new mongoose.Schema(
   {
     job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true, unique: true },
     serviceProvider: { type: mongoose.Schema.Types.ObjectId, ref: 'ServiceProvider', required: true, index: true },
-    status: { type: String, enum: ['On the way', 'Repairing', 'Completed'], default: 'On the way' },
+    status: { type: String, enum: ['On the way', 'Repairing', 'Completed', 'Cancelled'], default: 'On the way' },
     eta: String,
     location: String,
     coords: { lat: Number, lng: Number },

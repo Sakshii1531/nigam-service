@@ -2,6 +2,7 @@ import { ServiceProvider } from './serviceProvider.model.js';
 import { User } from '../auth/user.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { autoAssignPendingRequests } from '../service-requests/serviceRequest.service.js';
+import { assertJobEligible, eligibilityFor } from '../provider-onboarding/eligibility.service.js';
 import { AppSetting } from '../super-admin/appSetting.model.js';
 
 const ONLINE = 'Available';
@@ -27,6 +28,7 @@ export async function setAvailability(serviceProviderId, availability, { locatio
     );
   }
 
+  if (availability === ONLINE) await assertJobEligible(serviceProvider);
   serviceProvider.availability = availability;
   if (location) serviceProvider.location = location;
   await serviceProvider.save();
@@ -49,10 +51,10 @@ export async function setAvailability(serviceProviderId, availability, { locatio
 export async function getProfile(serviceProviderId) {
   const serviceProvider = await ServiceProvider.findById(serviceProviderId).select('+payoutMethods.accountNo');
   if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
-  return serviceProvider;
+  return { ...serviceProvider.toJSON(), providerAccess: await eligibilityFor(serviceProvider) };
 }
 
-const EDITABLE_FIELDS = ['name', 'phone', 'email', 'address', 'specs', 'avatarUrl'];
+const EDITABLE_FIELDS = ['name', 'phone', 'email', 'address', 'avatarUrl'];
 
 export async function updateProfile(serviceProviderId, data) {
   const updates = {};

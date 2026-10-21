@@ -1,3 +1,4 @@
+import { emitEligibleOffers } from '../provider-onboarding/offerDispatch.js';
 import mongoose from 'mongoose';
 import { Booking } from './booking.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
@@ -25,6 +26,7 @@ import { createServiceRequest, transitionStatus, emitWarrantyClaimNotification, 
 import { emit as emitNotification } from '../notifications/notification.service.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { runInTransaction } from '../../utils/transaction.js';
+import { LiveTracking } from '../super-admin/liveTracking.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
 import { env } from '../../config/env.js';
@@ -311,20 +313,8 @@ export async function createBooking(userId, data) {
 
       // Schedule 60-second waterfall cascade timeout for Candidate #1
       scheduleDispatchTimeout(serviceRequest._id, serviceProvider._id);
-    } else if (customerCity) {
-      // If no single candidate matched, broadcast to city channel
-      io.to(`city:${customerCity.toLowerCase().trim()}`).emit('job:new_available', jobPayload);
     } else {
-      // If no single candidate matched, broadcast to instant room, serviceProviders room, and city channel
-      io.to(INSTANT_ROOM).emit('instant:new_request', jobPayload);
-      io.to(INSTANT_ROOM).emit('job:new_available', jobPayload);
-      io.to(INSTANT_ROOM).emit('instant:job_offered', jobPayload);
-      io.to('serviceProviders').emit('job:new_available', jobPayload);
-      io.to('serviceProviders').emit('instant:job_offered', jobPayload);
-      if (customerCity) {
-        io.to(`city:${customerCity.toLowerCase().trim()}`).emit('job:new_available', jobPayload);
-        io.to(`city:${customerCity.toLowerCase().trim()}`).emit('instant:new_request', jobPayload);
-      }
+      await emitEligibleOffers(io, jobPayload, { city: customerCity, state: data.address?.state });
     }
   }
 
@@ -634,7 +624,6 @@ export async function listBookings(userId, { status, page, limit, sort } = {}) {
 export async function cancelBooking(userId, id, reason) {
   const booking = await findOwnedOr404(userId, id);
   if (booking.status === 'Completed') throw new ApiError(400, 'Cannot cancel a completed booking');
-  if (booking.status === 'Cancelled') return booking;
 
   return closeBooking(booking, {
     reason: reason || 'Cancelled by customer',
@@ -646,7 +635,7 @@ export async function cancelBooking(userId, id, reason) {
 /** Cancels the booking and its service request, and tells everyone watching. */
 async function closeBooking(booking, { reason, timelineDescription, searchEndReason = null, notifyProvider = false }) {
   const result = await runInTransaction(async (session) => {
-    const updated = await Booking.findOneAndUpdate(
+    let updated = await Booking.findOneAndUpdate(
       { _id: booking._id, status: { $nin: ['Cancelled', 'Completed'] } },
       { $set: { status: 'Cancelled', cancellationReason: reason, cancelledAt: new Date(),
         ...(booking.isInstant ? { instantStatus: 'CANCELLED' } : {}),
@@ -654,27 +643,37 @@ async function closeBooking(booking, { reason, timelineDescription, searchEndRea
       } },
       { new: true, session },
     );
+    const bookingChanged = Boolean(updated);
     if (!updated) {
       const current = await Booking.findById(booking._id).session(session);
       if (current?.status === 'Completed') throw new ApiError(400, 'Cannot cancel a completed booking');
-      return { booking: current || booking, changed: false };
+      updated = current || booking;
+    }
+    if (!updated.cancelledAt) {
+      updated.cancelledAt = updated.updatedAt || new Date();
+      await updated.save(session ? { session } : undefined);
     }
 
     const srId = updated.serviceRequest?._id || updated.serviceRequest;
-    const sr = srId ? await ServiceRequest.findById(srId).session(session) : null;
-    if (sr && !['Cancelled', 'Closed', 'Completed'].includes(sr.status)) {
+    const sr = await (srId ? ServiceRequest.findById(srId) : ServiceRequest.findOne({ booking: updated._id })).session(session);
+    if (sr && !srId) {
+      updated.serviceRequest = sr._id;
+      await updated.save(session ? { session } : undefined);
+    }
+    const srChanged = sr && !['Cancelled', 'Closed', 'Completed'].includes(sr.status);
+    if (srChanged) {
       sr.status = 'Cancelled';
       if (sr.isInstant) sr.instantStatus = 'CANCELLED';
-      sr.cancellationReason = reason;
+      sr.cancellationReason = updated.cancellationReason || reason;
       sr.cancelledAt = updated.cancelledAt;
       if (searchEndReason) sr.searchEndReason = searchEndReason;
       sr.timeline.push({ stepLabel: 'Cancelled', done: true, timestamp: updated.cancelledAt, description: timelineDescription });
       await sr.save(session ? { session } : undefined);
     }
 
-    const job = srId ? await Job.findOneAndUpdate(
-      { serviceRequest: srId, activeStep: { $nin: ['completed', 'cancelled'] } },
-      { $set: { activeStep: 'cancelled' } }, { new: true, session },
+    const job = sr ? await Job.findOneAndUpdate(
+      { serviceRequest: sr._id, activeStep: { $nin: ['completed', 'cancelled'] } },
+      { $set: { activeStep: 'cancelled' }, $inc: { __v: 1 } }, { new: true, session },
     ) : null;
     if (job) {
       await ServiceProvider.updateOne(
@@ -682,9 +681,11 @@ async function closeBooking(booking, { reason, timelineDescription, searchEndRea
         { $inc: { activeJobsCount: -1 } }, { session },
       );
     }
+    const cancelledJob = job || (sr ? await Job.findOne({ serviceRequest: sr._id, activeStep: 'cancelled' }).session(session) : null);
+    if (cancelledJob) await LiveTracking.updateMany({ job: cancelledJob._id }, { $set: { status: 'Cancelled' } }, { session });
     const providerId = job?.serviceProvider || sr?.serviceProvider || updated.serviceProvider;
     const provider = providerId ? await ServiceProvider.findById(providerId).select('user').session(session).lean() : null;
-    return { booking: updated, changed: true, jobId: job?._id || null, providerId, providerUser: provider?.user };
+    return { booking: updated, changed: Boolean(bookingChanged || srChanged || job), jobId: cancelledJob?._id || null, providerId, providerUser: provider?.user };
   });
   if (!result.changed) return result.booking;
   booking = result.booking;
@@ -708,6 +709,7 @@ async function closeBooking(booking, { reason, timelineDescription, searchEndRea
     io.to(`user:${booking.user}`).emit('booking:cancelled', payload);
     io.to(`user:${booking.user}`).emit('instant:status_update', payload);
     io.to(INSTANT_ROOM).emit('instant:status_update', payload);
+    io.to('admins').emit('service_request:updated', payload);
     if (result.providerId) {
       // The user's room is joined even when the provider is offline and has
       // not subscribed to new offers. Socket.IO unions rooms without duplicates.
@@ -717,6 +719,20 @@ async function closeBooking(booking, { reason, timelineDescription, searchEndRea
     }
   }
   return booking;
+}
+
+/** Repair cancellations saved before booking, request and Job were synchronized. */
+export async function reconcileCancelledBookings() {
+  let checked = 0;
+  for await (const booking of Booking.find({ status: 'Cancelled' }).cursor()) {
+    const reason = booking.cancellationReason || 'Cancelled by customer';
+    await closeBooking(booking, {
+      reason, timelineDescription: `Cancelled booking synchronized: ${reason}`,
+      notifyProvider: true,
+    });
+    checked += 1;
+  }
+  return { checked };
 }
 
 /**
@@ -981,10 +997,7 @@ export async function retrySearchBooking(userId, id) {
         io.to(`service-provider:${serviceProvider.id || serviceProvider._id}`).emit('instant:new_request', jobPayload);
         io.to(`service-provider:${serviceProvider.id || serviceProvider._id}`).emit('job:assigned', jobPayload);
       } else {
-        io.to(INSTANT_ROOM).emit('instant:job_offered', jobPayload);
-        io.to(INSTANT_ROOM).emit('instant:new_request', jobPayload);
-        io.to(INSTANT_ROOM).emit('job:new_available', jobPayload);
-        io.to('serviceProviders').emit('job:new_available', jobPayload);
+        await emitEligibleOffers(io, jobPayload, { city: customerCity, state: booking.address?.state });
       }
     }
   } catch (_e) {

@@ -119,7 +119,6 @@ const Dashboard = () => {
   const [declinedOfferIds, setDeclinedOfferIds] = useState([]);
   const [acceptedInstantIds, setAcceptedInstantIds] = useState([]);
   const [rescheduleAlertJob, setRescheduleAlertJob] = useState(null);
-  const [cancellationAlert, setCancellationAlert] = useState(null);
   const [respondingToReschedule, setRespondingToReschedule] = useState(false);
 
   const playDispatchChime = () => {
@@ -181,7 +180,6 @@ const Dashboard = () => {
     const handleCancelledEvent = (e) => {
       const payload = e.detail;
       if (!payload) return;
-      setCancellationAlert(payload);
       // Suppress any open alerts for this cancelled job
       const targetId =
         payload.bookingId || payload.serviceRequestId || payload.id;
@@ -1985,55 +1983,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ⚠️ Customer Cancellation Notice Modal */}
-      {cancellationAlert && (
-        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 z-[125] animate-fade-in">
-          <div className="bg-white border border-rose-100 rounded-[32px] max-w-md w-full flex flex-col shadow-2xl relative overflow-hidden">
-            <div className="bg-linear-to-r from-rose-600 to-red-700 p-5 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
-                  <AlertTriangle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-extrabold tracking-widest text-rose-200 uppercase block">
-                    JOB CANCELLED
-                  </span>
-                  <h3 className="text-sm font-black text-white">
-                    Customer Cancelled Booking
-                  </h3>
-                </div>
-              </div>
-            </div>
 
-            <div className="p-5 flex flex-col gap-4 text-left">
-              <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                Booking{" "}
-                <strong className="font-mono">
-                  {cancellationAlert.bookingId ||
-                    cancellationAlert.humanId ||
-                    "Order"}
-                </strong>{" "}
-                has been cancelled by the customer.
-                {cancellationAlert.reason && (
-                  <span className="block mt-1 text-slate-500">
-                    Reason: "{cancellationAlert.reason}"
-                  </span>
-                )}
-              </p>
-              <p className="text-[11px] text-slate-500">
-                This booking has been removed from your active schedule.
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setCancellationAlert(null)}
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-2xl transition-all cursor-pointer text-center">
-                Understood
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

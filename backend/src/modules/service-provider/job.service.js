@@ -1,3 +1,4 @@
+import { assertJobEligible, eligibilityFor } from '../provider-onboarding/eligibility.service.js';
 import { runInTransaction } from '../../utils/transaction.js';
 import { flushAudit } from '../partner-warranty/claimTimeline.js';
 import { isOwnUploadUrl } from '../shared/fileUpload.js';
@@ -223,6 +224,7 @@ const EW_POPULATE = { path: 'extendedWarrantyOrder' };
 
 export async function listAvailableJobs(serviceProviderId) {
   const provider = await ServiceProvider.findById(serviceProviderId).populate('city');
+  if (!(await eligibilityFor(provider)).eligible) return [];
   const serviceProviderCity = (provider?.serviceCityName || provider?.city?.name || '').toLowerCase().trim();
 
   const acceptedServiceRequestIds = await Job.distinct('serviceRequest');
@@ -243,7 +245,9 @@ export async function listAvailableJobs(serviceProviderId) {
     .populate(EW_POPULATE)
     .sort({ createdAt: -1 });
 
-  const visible = srs.filter((sr) => {
+  const allowedCategories = await Promise.all(srs.map(sr => eligibilityFor(provider, { category: sr.category })));
+  const visible = srs.filter((sr, index) => {
+    if (!allowedCategories[index].eligible) return false;
     // If specifically assigned to this service provider, always visible to them
     if (sr.serviceProvider && String(sr.serviceProvider) === String(serviceProviderId)) {
       return true;
@@ -664,6 +668,10 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     throw new ApiError(409, 'This service request is no longer available');
   }
 
+  await assertJobEligible(serviceProviderId, { category: serviceRequest.category });
+  const acceptingProvider = await ServiceProvider.findById(serviceProviderId);
+  let claimOpen = false;
+
   // Open offers — requests nobody is assigned to — are broadcast to every
   // service provider in the city and listed in their feed, but accepting one
   // used to fail with 403 because only an assigned request could be accepted.
@@ -677,6 +685,10 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     if (!offers.some((sr) => String(sr.id || sr._id) === String(serviceRequest._id))) {
       throw new ApiError(403, 'This request is outside your service area');
     }
+    if (acceptingProvider.onboardingPolicyVersion === 1) {
+      claimOpen = true;
+      serviceRequest.serviceProvider = serviceProviderId;
+    } else {
     const claimed = await ServiceRequest.findOneAndUpdate(
       { _id: serviceRequest._id, serviceProvider: null, status: 'New' },
       { serviceProvider: serviceProviderId, assignedAt: new Date() },
@@ -685,6 +697,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     if (!claimed) throw new ApiError(409, 'Another service provider has already taken this job');
     await transitionStatus(serviceRequest._id, 'Assigned', { description: 'Claimed from open offers' });
     serviceRequest = await ServiceRequest.findById(serviceRequest._id);
+    }
   }
 
   if (String(serviceRequest.serviceProvider) !== String(serviceProviderId)) throw new ApiError(403, 'This request is not assigned to you');
@@ -767,7 +780,31 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     };
   }
 
-  const job = await Job.create(jobData);
+  let job;
+  if (acceptingProvider.onboardingPolicyVersion === 1) {
+    job = await runInTransaction(async session => {
+      const p = await ServiceProvider.findById(serviceProviderId).session(session);
+      await assertJobEligible(p, { category: serviceRequest.category, session });
+      await ServiceProvider.updateOne({ _id: p._id }, { $inc: { activeJobsCount: 1, eligibilityRevision: 1 } }, { session });
+      let sr = await ServiceRequest.findById(serviceRequestId).session(session);
+      if (claimOpen) {
+        if (sr.serviceProvider || sr.status !== 'New') throw new ApiError(409, 'Another provider has already taken this job');
+        sr.serviceProvider = p._id; await sr.save({ session });
+        sr = await transitionStatus(sr._id, 'Assigned', { description: 'Claimed from open offers', session });
+      }
+      if (String(sr.serviceProvider) !== String(p._id) || sr.status !== 'Assigned') throw new ApiError(409, 'This request is no longer available');
+      sr.isAccepted = true; sr.acceptedAt = new Date(); await sr.save({ session });
+      serviceRequest = await transitionStatus(sr._id, 'Engineer Accepted', { description: 'Provider accepted the job', session });
+      if (booking) {
+        const updated = await Booking.updateOne({ _id: booking._id, status: { $nin: ['Cancelled', 'Completed'] } }, { $set: { isAccepted: true, searchExpiresAt: null, status: 'Ongoing', serviceProvider: p._id, ...(booking.isInstant ? { instantStatus: 'EN_ROUTE' } : {}) } }, { session });
+        if (!updated.matchedCount) throw new ApiError(409, 'This booking is no longer available');
+      }
+      const [created] = await Job.create([jobData], { session });
+      return created;
+    }, { required: true });
+    if (job.warrantyClaim) await (await import('../partner-warranty/claimDispatch.js')).syncJobStage(serviceRequest._id);
+  } else {
+    job = await Job.create(jobData);
   await ServiceProvider.findByIdAndUpdate(serviceProviderId, { $inc: { activeJobsCount: 1 } });
 
   // A service provider can only be assigned (and therefore accept) once the SR itself
@@ -787,6 +824,8 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     booking.serviceProvider = serviceProviderId;
     if (booking.isInstant) booking.instantStatus = 'EN_ROUTE';
     await booking.save();
+  }
+
   }
 
   // Real-time broadcast to the customer that their service provider is accepted & booked!
@@ -945,6 +984,8 @@ export async function listAddOnOfferings(serviceProviderId, jobId, { category } 
   const context = await addOnContext(job);
   const categoryDoc = await Category.findOne({ key: category || context.categoryKey });
   if (!categoryDoc) return [];
+  const provider = await ServiceProvider.findById(serviceProviderId);
+  if (provider.onboardingPolicyVersion === 1 && !(await eligibilityFor(provider, { category: categoryDoc.key })).eligible) return [];
 
   const bookable = await loadBookableOfferings({ category: categoryDoc._id }, { city: context.city });
   const parentIds = bookable.filter((b) => !b.offering.variant).map((b) => b.offering.productType?._id || b.offering.service._id);
@@ -975,6 +1016,11 @@ export async function addJobAddOn(serviceProviderId, jobId, { offeringId, quanti
   const context = await addOnContext(job);
   const quote = await buildQuote({ lines: [{ offeringId, quantity }], location: { city: context.city } }, { coverageType: null });
   const [line] = quote.lines;
+  const provider = await ServiceProvider.findById(serviceProviderId);
+  if (provider.onboardingPolicyVersion === 1) {
+    const offering = await ServiceOffering.findById(offeringId).populate('category');
+    await assertJobEligible(provider, { category: offering.category.key });
+  }
 
   job.additionalServices.push({
     offeringId,

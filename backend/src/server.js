@@ -1,3 +1,5 @@
+import { migrateLegacyProviders } from './modules/provider-onboarding/eligibility.service.js';
+import { expireKitCheckouts } from './modules/provider-onboarding/kit.service.js';
 import { billingSweep } from './modules/brand-crm/billing.service.js';
 import http from 'node:http';
 import { runCallbackSweep } from './modules/brand-crm/ticketComm.service.js';
@@ -7,7 +9,7 @@ import { registerAllModels } from './config/registerModels.js';
 import { env } from './config/env.js';
 import { initSockets } from './sockets/index.js';
 import { sweepExpiredAssignments } from './modules/service-requests/serviceRequest.service.js';
-import { expireStaleSearches } from './modules/booking/booking.service.js';
+import { expireStaleSearches, reconcileCancelledBookings } from './modules/booking/booking.service.js';
 import { autoCloseCompletedClaims } from './modules/partner-warranty/partnerWarrantyJob.service.js';
 import { runSlaSweep } from './modules/partner-warranty/claimSla.service.js';
 import { runWebhookSweep } from './modules/partner-warranty/claimWebhooks.service.js';
@@ -29,6 +31,8 @@ async function main() {
   }
   await connectDB();
   await ensureIndexes();
+  await migrateLegacyProviders();
+  await reconcileCancelledBookings();
 
   const app = createApp();
   const httpServer = http.createServer(app);
@@ -48,6 +52,7 @@ async function main() {
     try {
       // Give up on searches past their window first, so the assignment sweep
       // doesn't pass those bookings on to yet another provider.
+      await expireKitCheckouts();
       const { expired } = await expireStaleSearches();
       if (expired) console.log(`[search-expiry] stopped searching for ${expired} booking(s) after 15 minutes`);
       const { passedOn } = await sweepExpiredAssignments();

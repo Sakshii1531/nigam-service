@@ -1,3 +1,5 @@
+import { emitEligibleOffers } from '../provider-onboarding/offerDispatch.js';
+import { assertJobEligible } from '../provider-onboarding/eligibility.service.js';
 import { runInTransaction } from '../../utils/transaction.js';
 import { flushAudit } from '../partner-warranty/claimTimeline.js';
 import { ServiceRequest } from './serviceRequest.model.js';
@@ -325,6 +327,7 @@ export async function assignServiceProvider(id, serviceProviderId) {
     serviceProvider = await ServiceProvider.findById(serviceProviderId);
     if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
     if (serviceProvider.status !== 'Active') throw new ApiError(409, `Service Provider is ${serviceProvider.status}, not Active`);
+    await assertJobEligible(serviceProvider, { category: serviceRequest.category });
   } else {
     if (warranty) {
       // A held or finished claim is never auto-dispatched (Super Admin, Phase 8);
@@ -582,14 +585,7 @@ export async function declineAssignment(id, serviceProviderId, { reason = 'decli
         instantStatus: serviceRequest.isInstant ? 'SEARCHING' : null,
         isAvailableRequest: true,
       };
-      if (city) {
-        io.to(`city:${city}`).emit('job:new_available', openJobPayload);
-      }
-      io.to('instant:serviceProviders').emit('job:new_available', openJobPayload);
-      io.to('instant:serviceProviders').emit('instant:new_request', openJobPayload);
-      io.to('instant:serviceProviders').emit('instant:job_offered', openJobPayload);
-      io.to('serviceProviders').emit('job:new_available', openJobPayload);
-      io.to('serviceProviders').emit('instant:job_offered', openJobPayload);
+      await emitEligibleOffers(io, openJobPayload, { city, state: booking?.address?.state });
     } catch {
       // Socket emit optional
     }

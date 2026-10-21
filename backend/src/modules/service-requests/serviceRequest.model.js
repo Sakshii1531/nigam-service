@@ -72,7 +72,7 @@ const serviceRequestSchema = new mongoose.Schema(
     cancelledAt: { type: Date, default: null },
     searchEndReason: { type: String, default: null },
   },
-  { timestamps: true },
+  { timestamps: true, optimisticConcurrency: true },
 );
 
 serviceRequestSchema.index({ brand: 1, status: 1, createdAt: -1 });

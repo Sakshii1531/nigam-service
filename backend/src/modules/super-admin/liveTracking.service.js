@@ -54,7 +54,7 @@ export async function listActiveTracking(cityId) {
     console.warn('[liveTracking] auto-sync active jobs non-fatal error:', syncErr.message);
   }
 
-  const query = { status: { $ne: 'Completed' } };
+  const query = { status: { $nin: ['Completed', 'Cancelled'] } };
   if (cityId) {
     const ids = await ServiceProvider.find({ city: cityId }).distinct('_id');
     query.serviceProvider = { $in: ids };
@@ -103,6 +103,8 @@ export async function getTrackingForJob(jobId, cityId) {
  * this HTTP endpoint is the same write path a polling fallback or manual
  * super-admin correction would use. */
 export async function upsertTracking({ job, serviceProvider, status, eta, location, coords }) {
+  const currentJob = await Job.findById(job).select('activeStep');
+  if (currentJob?.activeStep === 'cancelled') throw new ApiError(409, 'Cannot track a cancelled job');
   const doc = await LiveTracking.findOneAndUpdate(
     { job },
     { job, serviceProvider, status, eta, location, coords },

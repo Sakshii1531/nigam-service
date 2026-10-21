@@ -23,13 +23,21 @@ export function errorHandler(err, req, res, next) {
   const isBadId = err.name === 'CastError' && err.kind === 'ObjectId';
   // An upload over multer's limit is the client's file, not a server fault.
   const isUploadError = err.name === 'MulterError';
+  const isStaleWrite = err.name === 'VersionError';
+  const isDuplicate = err.code === 11000;
 
   const statusCode = err.statusCode
-    || (isBadId ? 404 : err.name === 'ValidationError' || isUploadError ? 400 : 500);
+    || (isDuplicate || isStaleWrite ? 409 : isBadId ? 404 : err.name === 'ValidationError' || isUploadError ? 400 : 500);
   let message = isBadId && !err.statusCode
     ? `No ${err.model?.modelName || 'record'} found for id "${err.value}"`
     : err.message || 'Internal server error';
   if (isUploadError && err.code === 'LIMIT_FILE_SIZE') message = 'File too large — videos can be at most 50 MB';
+  if (isStaleWrite) message = 'This record changed while you were working. Refresh to see its current status.';
+  if (isDuplicate) {
+    const fields = err.keyPattern || err.keyValue || {};
+    const field = Object.hasOwn(fields, 'phone') ? 'phone number' : Object.hasOwn(fields, 'email') ? 'email address' : Object.hasOwn(fields, 'employeeId') ? 'employee ID' : null;
+    message = field ? `This ${field} is already registered. Edit the existing record or use a different ${field}.` : 'A record with these details already exists.';
+  }
 
   if (statusCode >= 500) {
     req.log ? req.log.error({ err }, message) : console.error(err);

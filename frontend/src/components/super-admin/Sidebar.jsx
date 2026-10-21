@@ -153,6 +153,7 @@ const Sidebar = () => {
   // server-side to their own zone (city). Everything else below this array
   // is the full super-admin nav and never renders for an ASM.
   const asmMenuSections = [
+    { type: "link", label: "Provider Onboarding", path: "/super-admin/provider-onboarding", icon: <ClipboardList size={18} /> },
     {
       type: "link",
       label: "Dashboard",
@@ -215,6 +216,10 @@ const Sidebar = () => {
   ];
 
   const fullMenuSections = [
+    { type: "header", label: "PROVIDER ONBOARDING" },
+    { type: "link", label: "Provider Onboarding", path: "/super-admin/provider-onboarding", icon: <ClipboardList size={18} /> },
+    { type: "link", label: "Provider Kit Catalog", path: "/super-admin/provider-kits", icon: <Package size={18} /> },
+    { type: "link", label: "Provider Kit Orders", path: "/super-admin/provider-kit-orders", icon: <Package size={18} /> },
     {
       type: "link",
       label: "Dashboard",

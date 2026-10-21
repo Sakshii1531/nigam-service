@@ -485,7 +485,7 @@ describe('D2C job — full lifecycle to payment', () => {
 
 describe('AMC-covered job — FOC claims and subscription decrement', () => {
   async function createAcceptedAmcJob() {
-    const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider();
+    const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider({ specs: ['Refrigerator'] });
     const { user: customer } = await seedCustomer();
 
     const plan = await AMCPlan.create({ name: 'AMC Gold Plan', tier: 'Gold', price: 2499, visitsTotal: 4 });
@@ -568,7 +568,7 @@ describe('AMC-covered job — FOC claims and subscription decrement', () => {
   });
 
   it('rejects linking an AMC subscription that belongs to a different customer than the service request (IDOR fix)', async () => {
-    const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider();
+    const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider({ specs: ['Refrigerator'] });
     const { user: srCustomer } = await seedCustomer();
     const { user: otherCustomer } = await seedCustomer();
 
@@ -979,7 +979,7 @@ describe('covered-visit earnings come from the brand rate card', () => {
 
   it('flags a zero payout when the brand has no rate for that category', async () => {
     const brand = await Brand.create({ name: 'Cardless Brand', category: 'Appliances', status: 'Active' });
-    const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider({ phone: '9390000102' });
+    const { serviceProvider, token: serviceProviderToken } = await seedServiceProvider({ phone: '9390000102', specs: ['Refrigerator'] });
     const customer = await User.create({
       role: ROLES.CUSTOMER, phone: '9290000102', name: 'Other Customer', passwordHash: await hashPassword('password123'),
     });

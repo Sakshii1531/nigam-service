@@ -49,6 +49,15 @@ async function assertEmployeeIdFree(brandId, employeeId, exceptId = null) {
   if (taken) throw new ApiError(409, `Employee ID ${employeeId} is already used by another user`);
 }
 
+// Login is scoped by application role, not by brand or staff permission role.
+async function assertLoginFree({ email, phone }, exceptId = null) {
+  for (const [field, value] of Object.entries({ email, phone })) {
+    if (!value) continue;
+    const taken = await User.exists({ role: ROLES.BRAND_ADMIN, [field]: value, ...(exceptId ? { _id: { $ne: exceptId } } : {}) });
+    if (taken) throw new ApiError(409, `This ${field === 'phone' ? 'phone number' : 'email address'} is already registered to a brand user. Edit the existing user's roles or use a different ${field === 'phone' ? 'phone number' : 'email address'}.`, { field });
+  }
+}
+
 /** Active users holding the Brand Super Admin role, other than `exceptId`. */
 async function otherActiveSuperAdmins(brandId, exceptId) {
   const roles = await ensureBrandRoleTemplates(brandId);
@@ -67,7 +76,10 @@ const roleNames = async (ids) => (await Role.find({ _id: { $in: ids } }).select(
  * so this creates the account directly with an admin-supplied initial password,
  * matching how scripts/seed.js creates every other role's account today. */
 export async function inviteBrandUser(brandId, { name, email, phone, password, assignedRoles = [], employeeId, department }, actor) {
+  email = email?.trim().toLowerCase() || undefined;
+  phone = phone?.trim() || undefined;
   const roles = await validateRolesBelongToBrand(brandId, assignedRoles);
+  await assertLoginFree({ email, phone });
   await assertEmployeeIdFree(brandId, employeeId);
   const created = await User.create({
     role: ROLES.BRAND_ADMIN,
@@ -93,6 +105,10 @@ export async function inviteBrandUser(brandId, { name, email, phone, password, a
 
 export async function updateBrandUser(brandId, id, { name, phone, assignedRoles, status, employeeId, department }, actor) {
   const user = await findOwnedBrandUser(brandId, id);
+  if (phone !== undefined) {
+    phone = phone.trim();
+    await assertLoginFree({ phone }, user._id);
+  }
   const isSelf = actor?.user && String(actor.user) === String(user._id);
   const changes = {};
   const set = (field, value) => {

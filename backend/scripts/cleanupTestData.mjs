@@ -284,6 +284,9 @@ export async function cleanTestData({
 
   // ── 10. Cascading collections ────────────────────────────────────────────
   const cascadePlan = [
+    ["provideronboardings", { serviceProvider: { $in: testProviderIds } }],
+    ["providerkitorders", { $or: [{ user: { $in: testUserIds } }, { serviceProvider: { $in: testProviderIds } }] }],
+    ["providerkits", { sku: { $regex: "^E2E-", $options: "i" } }],
     [
       "calllogs",
       {

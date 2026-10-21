@@ -493,14 +493,14 @@ const ServiceProviders = () => {
             {canManage && provider.status === "Pending" && (
               <>
                 <button
-                  onClick={() => handleStatusChange(provider.id, "Active")}
+                  onClick={() => navigate(`/super-admin/provider-onboarding?provider=${provider.id}`)}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center gap-1.5 shadow-sm">
-                  <CheckCircle size={14} /> Approve Partner
+                  <CheckCircle size={14} /> Review Onboarding
                 </button>
                 <button
-                  onClick={() => handleStatusChange(provider.id, "Inactive")}
+                  onClick={() => navigate(`/super-admin/provider-onboarding?provider=${provider.id}`)}
                   className="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors flex items-center gap-1.5 shadow-sm">
-                  <XCircle size={14} /> Reject Partner
+                  <XCircle size={14} /> Review Rejection
                 </button>
               </>
             )}
@@ -1289,15 +1289,15 @@ const ServiceProviders = () => {
                               <>
                                 <button
                                   onClick={() =>
-                                    handleStatusChange(provider.id, "Active")
+                                    navigate(`/super-admin/provider-onboarding?provider=${provider.id}`)
                                   }
                                   className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                                  title="Approve">
+                                  title="Review onboarding">
                                   <CheckCircle size={16} />
                                 </button>
                                 <button
                                   onClick={() =>
-                                    handleStatusChange(provider.id, "Inactive")
+                                    navigate(`/super-admin/provider-onboarding?provider=${provider.id}`)
                                   }
                                   className="p-1.5 text-red-600 hover:bg-red-50 rounded"
                                   title="Reject">
@@ -1496,7 +1496,7 @@ const ServiceProviders = () => {
                   value={newTech.status}
                   onChange={(e) => setNewTech({ ...newTech, status: e.target.value })}>
                   <option value="Pending">Pending review</option>
-                  <option value="Active">Active immediately</option>
+                  <option value="Active" disabled>Active (requires onboarding) immediately</option>
                 </select>
               </div>
 

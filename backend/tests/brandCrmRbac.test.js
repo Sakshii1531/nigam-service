@@ -249,6 +249,50 @@ describe('Phase 2 — changes take effect at once', () => {
 });
 
 describe('Phase 2 — guard rails', () => {
+  it('rejects duplicate brand-user phones and emails with clear conflicts without changing the existing account', async () => {
+    const w = await kit.world();
+    const { owner } = await staff(w);
+    const body = { name: 'New Staff', phone: '1234567890', email: 'unique-staff@lg.test', password: 'password123' };
+    const created = await send(owner, 'post', '/brand/users', body).expect(201);
+    const phoneConflict = await send(owner, 'post', '/brand/users', { ...body, email: 'other-staff@lg.test' }).expect(409);
+    expect(phoneConflict.body.error.message).toContain('phone number');
+    expect(phoneConflict.body.error.message).toContain("existing user's roles");
+    expect(phoneConflict.body.error.message).not.toContain('E11000');
+    const emailConflict = await send(owner, 'post', '/brand/users', { ...body, phone: '1234567891', email: ' UNIQUE-STAFF@LG.TEST ' }).expect(409);
+    expect(emailConflict.body.error.message).toContain('email address');
+    expect(await User.countDocuments({ role: 'brand_admin', phone: body.phone })).toBe(1);
+    expect((await User.findById(created.body.data.id)).name).toBe(body.name);
+    expect(await AuditLog.countDocuments({ entityId: created.body.data.id, action: 'user.created' })).toBe(1);
+  });
+
+  it('checks phone uniqueness across brands, preserves update data, and allows retaining your own number', async () => {
+    const w = await kit.world();
+    const { owner } = await staff(w);
+    const other = await kit.brandUser(w.samsung, { employeeId: 'S-DUPLICATE-PHONE', templates: ['viewer'] });
+    other.user.phone = '1234567894';
+    await other.user.save();
+    await User.updateOne({ _id: owner.user._id }, { phone: '1234567893' });
+    const before = await User.findById(owner.user._id);
+    await send(owner, 'post', '/brand/users', { name: 'Duplicate', phone: other.user.phone, password: 'password123' }).expect(409);
+    const conflict = await send(owner, 'put', `/brand/users/${owner.user._id}`, { name: 'Should not save', phone: other.user.phone }).expect(409);
+    expect(conflict.body.error.message).not.toContain('E11000');
+    expect((await User.findById(owner.user._id)).name).toBe(before.name);
+    await send(owner, 'put', `/brand/users/${owner.user._id}`, { phone: before.phone }).expect(200);
+  });
+
+  it('handles simultaneous creations with the same phone as a conflict, not a database error', async () => {
+    const w = await kit.world();
+    const { owner } = await staff(w);
+    const responses = await Promise.all(['a', 'b'].map(suffix => send(owner, 'post', '/brand/users', {
+      name: `Concurrent ${suffix}`, email: `concurrent-${suffix}@lg.test`, phone: '1234567892', password: 'password123',
+    })));
+    expect(responses.map(response => response.status).sort()).toEqual([201, 409]);
+    const conflict = responses.find(response => response.status === 409);
+    expect(conflict.body.error.message).toContain('phone number');
+    expect(conflict.body.error.message).not.toMatch(/E11000|nigam|index:/);
+    expect(await User.countDocuments({ role: 'brand_admin', phone: '1234567892' })).toBe(1);
+  });
+
   it('nobody changes their own roles or status', async () => {
     const w = await kit.world();
     const s = await staff(w);
