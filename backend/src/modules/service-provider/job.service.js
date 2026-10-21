@@ -1,3 +1,5 @@
+import { searchHasExpired } from '../shared/dispatchPolicy.js';
+import { inWarrantyServiceArea } from '../shared/assignmentEngine.js';
 import { assertJobEligible, eligibilityFor } from '../provider-onboarding/eligibility.service.js';
 import { runInTransaction } from '../../utils/transaction.js';
 import { flushAudit } from '../partner-warranty/claimTimeline.js';
@@ -247,7 +249,9 @@ export async function listAvailableJobs(serviceProviderId) {
 
   const allowedCategories = await Promise.all(srs.map(sr => eligibilityFor(provider, { category: sr.category })));
   const visible = srs.filter((sr, index) => {
-    if (!allowedCategories[index].eligible) return false;
+    if (!allowedCategories[index].eligible || searchHasExpired(sr, sr.booking)) return false;
+    const areaCity = sr.zone || sr.booking?.address?.city;
+    if (areaCity && !inWarrantyServiceArea(provider, { city: areaCity, state: sr.booking?.address?.state, pincode: sr.pincode || sr.booking?.address?.pincode, latitude: sr.customerLocation?.latitude ?? sr.booking?.address?.latitude, longitude: sr.customerLocation?.longitude ?? sr.booking?.address?.longitude })) return false;
     // If specifically assigned to this service provider, always visible to them
     if (sr.serviceProvider && String(sr.serviceProvider) === String(serviceProviderId)) {
       return true;
@@ -256,7 +260,7 @@ export async function listAvailableJobs(serviceProviderId) {
     // For broadcast unassigned jobs, only show if in service provider's city
     if (!serviceProviderCity) return false;
     const jobCity = (sr.zone || sr.booking?.address?.city || '').toLowerCase().trim();
-    return Boolean(jobCity && (jobCity === serviceProviderCity || jobCity.includes(serviceProviderCity) || serviceProviderCity.includes(jobCity)));
+    return Boolean(jobCity && jobCity === serviceProviderCity);
   });
 
   // What the partner will earn if they accept: the booking's fixed catalogue
@@ -669,7 +673,11 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   }
 
   await assertJobEligible(serviceProviderId, { category: serviceRequest.category });
-  const acceptingProvider = await ServiceProvider.findById(serviceProviderId);
+  const acceptingProvider = await ServiceProvider.findById(serviceProviderId).populate('city');
+  const sourceBooking = serviceRequest.booking ? await Booking.findById(serviceRequest.booking) : null;
+  if (searchHasExpired(serviceRequest, sourceBooking)) throw new ApiError(409, 'The 30-minute provider search has expired');
+  const areaCity = serviceRequest.zone || sourceBooking?.address?.city;
+  if (areaCity && !inWarrantyServiceArea(acceptingProvider, { city: areaCity, state: sourceBooking?.address?.state, pincode: serviceRequest.pincode || sourceBooking?.address?.pincode, latitude: serviceRequest.customerLocation?.latitude ?? sourceBooking?.address?.latitude, longitude: serviceRequest.customerLocation?.longitude ?? sourceBooking?.address?.longitude })) throw new ApiError(403, 'This request is outside your registered service area');
   let claimOpen = false;
 
   // Open offers — requests nobody is assigned to — are broadcast to every
@@ -785,8 +793,10 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
     job = await runInTransaction(async session => {
       const p = await ServiceProvider.findById(serviceProviderId).session(session);
       await assertJobEligible(p, { category: serviceRequest.category, session });
+      if (areaCity && !inWarrantyServiceArea(p, { city: areaCity, state: sourceBooking?.address?.state, pincode: serviceRequest.pincode || sourceBooking?.address?.pincode, latitude: serviceRequest.customerLocation?.latitude ?? sourceBooking?.address?.latitude, longitude: serviceRequest.customerLocation?.longitude ?? sourceBooking?.address?.longitude })) throw new ApiError(403, 'This request is outside your registered service area');
       await ServiceProvider.updateOne({ _id: p._id }, { $inc: { activeJobsCount: 1, eligibilityRevision: 1 } }, { session });
       let sr = await ServiceRequest.findById(serviceRequestId).session(session);
+      if (searchHasExpired(sr, sourceBooking)) throw new ApiError(409, 'The 30-minute provider search has expired');
       if (claimOpen) {
         if (sr.serviceProvider || sr.status !== 'New') throw new ApiError(409, 'Another provider has already taken this job');
         sr.serviceProvider = p._id; await sr.save({ session });

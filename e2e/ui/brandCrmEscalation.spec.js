@@ -31,6 +31,7 @@ test('breached countdown, assigned escalation, resolution history and sidebar ba
   await page.goto('/brand-admin/tickets');
   const row = page.getByRole('row').filter({hasText:ticket.humanId});
   const countdown = row.getByTestId('sla-countdown'); await expect(countdown).toContainText('Overdue'); await expect(countdown).toHaveClass(/bg-red-100/);
+  await page.getByRole('button',{name:/More filters/}).click();
   await page.getByLabel('SLA state',{exact:true}).selectOption('breached'); await expect(row).toBeVisible();
   await page.getByRole('link',{name:ticket.humanId,exact:true}).click(); await expect(page.getByRole('cell',{name:'breached',exact:true})).toBeVisible();
   const panel = page.locator('[aria-label="Ticket escalations"]'); await expect(panel.getByRole('row').filter({hasText:'Brand approval SLA breached'})).toContainText('L2');

@@ -335,9 +335,9 @@ const Requests = () => {
                         <h4 className="text-sm font-black text-rose-900">Service Request Cancelled</h4>
                         <p className="text-xs text-rose-700 font-semibold mt-0.5">
                           {selectedRequest.searchEndReason === 'NO_PROVIDERS_NEARBY'
-                            ? 'Search Ended — No verified service provider was available near the customer location within the 15-minute search window.'
+                            ? 'Search Ended — No verified service provider was available near the customer location within the 30-minute search window.'
                             : selectedRequest.searchEndReason === 'PROVIDERS_NOT_ACCEPTING'
-                            ? 'Search Ended — Nearby service partners were busy or did not accept the request within the 15-minute search window.'
+                            ? 'Search Ended — Nearby service partners were busy or did not accept the request within the 30-minute search window.'
                             : selectedRequest.cancellationReason
                             ? `Reason: ${selectedRequest.cancellationReason}`
                             : 'This booking was cancelled by the customer or platform before partner dispatch.'}

@@ -576,7 +576,7 @@ describe('manual assignment from the super-admin console', () => {
   });
 });
 
-describe('15-minute search cut-off', () => {
+describe('30-minute search cut-off', () => {
   const past = () => new Date(Date.now() - 1000);
 
   async function bookIn(city, token) {
@@ -588,14 +588,23 @@ describe('15-minute search cut-off', () => {
     return res.body.data;
   }
 
-  it('starts every booking with a 15-minute search window', async () => {
+  it('starts every booking with a 30-minute search window', async () => {
     await seedCatalog();
     const token = await seedCustomer();
     const { booking } = await bookIn('Mumbai', token);
     const minutes = (new Date(booking.searchExpiresAt).getTime() - Date.now()) / 60000;
-    expect(minutes).toBeGreaterThan(14.5);
-    expect(minutes).toBeLessThanOrEqual(15);
+    expect(minutes).toBeGreaterThan(29.5);
+    expect(minutes).toBeLessThanOrEqual(30);
     expect((await expireStaleSearches()).expired).toBe(0);
+  });
+
+  it('expires a legacy unaccepted booking even when its stored deadline is missing', async () => {
+    await seedCatalog(); const token = await seedCustomer();
+    const { booking, serviceRequest } = await bookIn('Mumbai', token);
+    await Booking.collection.updateOne({ _id: new mongoose.Types.ObjectId(booking.id) }, { $set: { searchExpiresAt: null, createdAt: new Date(Date.now() - 31 * 60000) } });
+    expect((await expireStaleSearches()).expired).toBe(1);
+    expect((await Booking.findById(booking.id)).status).toBe('Cancelled');
+    expect((await ServiceRequest.findById(serviceRequest.id)).status).toBe('Cancelled');
   });
 
   it('cancels with NO_PROVIDERS_NEARBY when nobody serves the customer\'s area', async () => {

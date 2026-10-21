@@ -14,7 +14,7 @@ const SOCKET_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'
 
 // The server stops searching after this long (booking.service.js
 // SEARCH_WINDOW_MS) and cancels the booking with a reason.
-const SEARCH_WINDOW_SECONDS = 15 * 60;
+const SEARCH_WINDOW_SECONDS = 30 * 60;
 
 const SEARCH_END_COPY = {
   PROVIDERS_NOT_ACCEPTING: {
@@ -27,7 +27,7 @@ const SEARCH_END_COPY = {
   },
 };
 
-// Search stages across the 15-minute window
+// Search stages across the 30-minute window
 const SEARCH_STAGES = [
   {
     maxSeconds: 30,
@@ -137,7 +137,7 @@ const SearchingPartner = () => {
   const [callLoading, setCallLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [rawBooking, setRawBooking] = useState(null);
-  // Set when the server gave up searching (15 minutes, nobody accepted).
+  // Set when the server gave up searching (30 minutes, nobody accepted).
   const [searchEndReason, setSearchEndReason] = useState(null);
   const [showSearchEnded, setShowSearchEnded] = useState(false);
 
@@ -187,7 +187,7 @@ const SearchingPartner = () => {
     stageName: 'Extended Wait',
   };
 
-  const isTimeoutReached = elapsedSeconds >= 600; // 10 minutes in — warn before the 15-minute cut-off
+  const isTimeoutReached = elapsedSeconds >= 1200; // Warn after 20 minutes of the 30-minute search window
   const remainingSeconds = Math.max(0, SEARCH_WINDOW_SECONDS - elapsedSeconds);
 
   // The pop-up opens once per booking. Polling and socket events report the
@@ -529,7 +529,7 @@ const SearchingPartner = () => {
       // Re-trigger polling
       setRetryCount((prev) => prev + 1);
 
-      setToastMessage('Search restarted! Searching for available verified partners for the next 15 minutes...');
+      setToastMessage('Search restarted! Searching for available verified partners for the next 30 minutes...');
       setTimeout(() => setToastMessage(''), 5000);
 
       if (res?.booking) {
@@ -623,7 +623,7 @@ const SearchingPartner = () => {
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 max-w-md mt-2 leading-relaxed">
               {searchEndReason
-                ? `${SEARCH_END_COPY[searchEndReason]?.message} We stopped searching after 15 minutes. If any advance amount was paid, it will be refunded to your original payment mode within 5–7 business days.`
+                ? `${SEARCH_END_COPY[searchEndReason]?.message} We stopped searching after 30 minutes. If any advance amount was paid, it will be refunded to your original payment mode within 5–7 business days.`
                 : 'This booking has been cancelled. If any advance amount was paid, it will be automatically refunded to your original payment mode within 5–7 business days.'}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -994,7 +994,7 @@ const SearchingPartner = () => {
       />
 
       {/* ── Cancel Booking Modal ── */}
-      {/* Search ended pop-up — the server stopped looking after 15 minutes */}
+      {/* Search ended pop-up — the server stopped looking after 30 minutes */}
       {showSearchEnded && searchEndReason && (
         <div className="fixed inset-0 z-[100] bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 animate-fade-in">
           <div
@@ -1032,7 +1032,7 @@ const SearchingPartner = () => {
                 ) : (
                   <>
                     <RotateCcw className="w-4 h-4" />
-                    <span>Search Again (Next 15 Mins)</span>
+                    <span>Search Again (Next 30 Mins)</span>
                   </>
                 )}
               </button>
@@ -1100,10 +1100,10 @@ const SearchingPartner = () => {
                 </div>
                 <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
                   <RotateCcw className={`w-4 h-4 text-brand-blue ${isRetryingSearch ? 'animate-spin' : ''}`} />
-                  Search Again (Next 15 Mins)
+                  Search Again (Next 30 Mins)
                 </h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Search again for available verified partners for another 15 minutes using your current booking details without re-entering anything.
+                  Search again for available verified partners for another 30 minutes using your current booking details without re-entering anything.
                 </p>
                 <button
                   type="button"
@@ -1118,7 +1118,7 @@ const SearchingPartner = () => {
                   ) : (
                     <>
                       <RotateCcw className="w-3.5 h-3.5" />
-                      Search Again for 15 Mins
+                      Search Again for 30 Mins
                     </>
                   )}
                 </button>

@@ -319,6 +319,7 @@ const ScrollToTop = () => {
     const asmAllowedPaths = [
       "/super-admin/zone-dashboard",
       "/super-admin/service-providers",
+      "/super-admin/pending-service-providers",
       "/super-admin/provider-onboarding",
       "/super-admin/city-change-requests",
       "/super-admin/requests",
@@ -1250,6 +1251,7 @@ function App() {
                             path="/super-admin/users"
                             element={<SuperAdminUsers />}
                           />
+                          <Route path="/super-admin/pending-service-providers" element={<SuperAdminServiceProviders key="pending" pendingOnly />} />
                           <Route
                             path="/super-admin/service-providers"
                             element={<SuperAdminServiceProviders />}

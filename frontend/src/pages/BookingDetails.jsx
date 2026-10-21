@@ -482,7 +482,7 @@ const BookingDetails = () => {
                 Reason:{" "}
                 {booking.cancellationReason ||
                   (booking.searchEndReason === "no_providers_found"
-                    ? "No service partners were available in your area within 15 minutes."
+                    ? "No service partners were available in your area within 30 minutes."
                     : booking.searchEndReason) ||
                   "Cancelled"}
                 . If any advance amount was paid, it will be refunded within 5-7

@@ -1,3 +1,4 @@
+import { stateFilter } from '../shared/indianStates.js';
 import { DASHBOARD_STAGES, slaExpressions, approvalMatch, OPEN_STATUSES } from './dashboardQueries.js';
 import { runInTransaction } from '../../utils/transaction.js';
 import { Brand } from '../super-admin/brand.model.js';
@@ -26,7 +27,8 @@ export async function queueQuery(user,f={}){
  for(const key of ['source','priority','jobStage'])if(f[key])query[key]=f[key];
  if(f.warrantyStatus)query['warranty.status']=f.warrantyStatus;
  if(f.categoryKey||f.category)query.categoryKey=f.categoryKey||f.category;
- for(const key of ['city','state'])if(f[key])query[`address.${key}`]=new RegExp(`^${escapeRegex(f[key])}$`,'i');
+ if(f.city)query['address.city']=new RegExp(`^${escapeRegex(f.city)}$`,'i');
+ if(f.state)query['address.state']=stateFilter(f.state);
  if(f.pincode)query['address.pincode']=f.pincode;
  if(f.assignedCce)query['assignedCce.user']=f.assignedCce==='me'?user.id:f.assignedCce;
  if(f.registeredBy)query['registeredBy.user']=f.registeredBy;

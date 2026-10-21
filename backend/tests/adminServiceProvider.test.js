@@ -104,6 +104,17 @@ beforeEach(async () => {
 });
 
 describe('GET /super-admin/service-providers', () => {
+  it('returns only the selected provider history, including an empty history for a new applicant', async () => {
+    const token = await seedSuperAdmin();
+    const { serviceProvider: existing, user } = await seedServiceProvider({ name: 'Existing Provider', status: 'Active' });
+    const { serviceProvider: applicant } = await seedServiceProvider({ name: 'New Applicant' });
+    const own = await ServiceRequest.create({ user: user._id, serviceProvider: existing._id, category: 'AC', status: 'Assigned' });
+    await ServiceRequest.create({ user: user._id, category: 'AC', status: 'New' });
+    const list = id => request(app).get(`/api/v1/service-requests?serviceProvider=${id}&limit=5`).set('Authorization', `Bearer ${token}`);
+    expect((await list(applicant.id).expect(200)).body.data).toEqual([]);
+    expect((await list(existing.id).expect(200)).body.data.map(row => row.id)).toEqual([own.id]);
+    await list('invalid-provider-id').expect(400);
+  });
   it('rejects unauthenticated and non-super-admin callers', async () => {
     await request(app).get('/api/v1/super-admin/service-providers').expect(401);
 

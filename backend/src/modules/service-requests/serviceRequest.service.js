@@ -4,7 +4,8 @@ import { runInTransaction } from '../../utils/transaction.js';
 import { flushAudit } from '../partner-warranty/claimTimeline.js';
 import { ServiceRequest } from './serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
-import { rankServiceProviders } from '../shared/assignmentEngine.js';
+import { searchHasExpired, SEARCH_WINDOW_MS } from '../shared/dispatchPolicy.js';
+import { rankServiceProviders, inWarrantyServiceArea } from '../shared/assignmentEngine.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { Booking } from '../booking/booking.model.js';
 import { Job } from '../service-provider/job.model.js';
@@ -320,6 +321,12 @@ export async function assignServiceProvider(id, serviceProviderId) {
     booking = await Booking.findById(serviceRequest.booking);
   }
 
+  if (booking && ['Cancelled', 'Completed'].includes(booking.status)) throw new ApiError(409, 'This booking is no longer available');
+  if (searchHasExpired(serviceRequest, booking)) {
+    if (booking) { const { expireStaleSearches } = await import('../booking/booking.service.js'); await expireStaleSearches(); }
+    else await expireStaleServiceRequests();
+    throw new ApiError(409, 'The 30-minute provider search has expired');
+  }
   const warranty = warrantyContext(serviceRequest);
   let serviceProvider;
   let authorized = null;
@@ -328,6 +335,8 @@ export async function assignServiceProvider(id, serviceProviderId) {
     if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
     if (serviceProvider.status !== 'Active') throw new ApiError(409, `Service Provider is ${serviceProvider.status}, not Active`);
     await assertJobEligible(serviceProvider, { category: serviceRequest.category });
+    const city = serviceRequest.zone || booking?.address?.city;
+    if (city && !inWarrantyServiceArea(serviceProvider, { city, state: booking?.address?.state, pincode: serviceRequest.pincode || booking?.address?.pincode, latitude: serviceRequest.customerLocation?.latitude ?? booking?.address?.latitude, longitude: serviceRequest.customerLocation?.longitude ?? booking?.address?.longitude })) throw new ApiError(409, 'Service provider is outside the registered service area');
   } else {
     if (warranty) {
       // A held or finished claim is never auto-dispatched (Super Admin, Phase 8);
@@ -344,6 +353,7 @@ export async function assignServiceProvider(id, serviceProviderId) {
       category: serviceRequest.category,
       city: serviceRequest.zone || booking?.address?.city,
       state: booking?.address?.state,
+      pincode: serviceRequest.pincode || booking?.address?.pincode,
       latitude: serviceRequest.customerLocation?.latitude ?? booking?.address?.latitude,
       longitude: serviceRequest.customerLocation?.longitude ?? booking?.address?.longitude,
       exclude: serviceRequest.declinedBy || [],
@@ -604,6 +614,7 @@ export async function declineAssignment(id, serviceProviderId, { reason = 'decli
  * the moment a previously-unassignable request becomes assignable.
  */
 export async function autoAssignPendingRequests({ limit = 25 } = {}) {
+  await expireStaleServiceRequests();
   const pending = await ServiceRequest.find({ serviceProvider: null, status: 'New' })
     .sort({ createdAt: 1 })
     .limit(limit)
@@ -624,4 +635,30 @@ export async function autoAssignPendingRequests({ limit = 25 } = {}) {
   }
 
   return { assignedCount: assigned.length, assigned };
+}
+
+/** Expire warranty/direct requests which do not have a Booking parent. */
+export async function expireStaleServiceRequests(now = new Date()) {
+  const stale = await ServiceRequest.find({ booking: null, status: { $in: ['New', 'Assigned', 'Pending'] }, isAccepted: { $ne: true }, createdAt: { $lte: new Date(now.getTime() - SEARCH_WINDOW_MS) } });
+  let expired = 0;
+  for (const request of stale) {
+    if (await Job.exists({ serviceRequest: request._id, activeStep: { $ne: 'cancelled' } })) continue;
+    const reason = 'Provider search expired after 30 minutes without acceptance';
+    const updated = await ServiceRequest.findOneAndUpdate({ _id: request._id, status: { $in: ['New', 'Assigned', 'Pending'] }, isAccepted: { $ne: true } }, { $set: { status: 'Cancelled', ...(request.isInstant ? { instantStatus: 'CANCELLED' } : {}), cancelledAt: now, cancellationReason: reason, searchEndReason: 'SEARCH_TIMEOUT' }, $push: { timeline: { stepLabel: 'Cancelled', done: true, timestamp: now, description: reason } }, $inc: { __v: 1 } }, { new: true });
+    if (!updated) continue;
+    expired++;
+    await warrantyHook('search expiry', () => syncClaimFromJob(updated));
+    const provider = updated.serviceProvider ? await ServiceProvider.findById(updated.serviceProvider).select('user') : null;
+    const payload = { serviceRequestId: updated.id, humanId: updated.humanId, status: 'Cancelled', reason, cancelledBy: 'system' };
+    const io = getIO();
+    if (io) {
+      io.to('admins').emit('service_request:updated', payload);
+      io.to(`user:${updated.user}`).emit('service_request:updated', payload);
+      if (provider) {
+        io.to(`user:${provider.user}`).to(`service-provider:${provider.user}`).to(`service-provider:${provider.id}`).emit('job:cancelled', payload);
+      }
+    }
+    if (provider?.user) await emitNotification('job.search_expired', { user: provider.user, humanId: updated.humanId, reason, dedupeKey: `search-expired:${updated.id}` });
+  }
+  return { checked: stale.length, expired };
 }

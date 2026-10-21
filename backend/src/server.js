@@ -8,7 +8,7 @@ import { connectDB, ensureIndexes } from './config/db.js';
 import { registerAllModels } from './config/registerModels.js';
 import { env } from './config/env.js';
 import { initSockets } from './sockets/index.js';
-import { sweepExpiredAssignments } from './modules/service-requests/serviceRequest.service.js';
+import { expireStaleServiceRequests, sweepExpiredAssignments } from './modules/service-requests/serviceRequest.service.js';
 import { expireStaleSearches, reconcileCancelledBookings } from './modules/booking/booking.service.js';
 import { autoCloseCompletedClaims } from './modules/partner-warranty/partnerWarrantyJob.service.js';
 import { runSlaSweep } from './modules/partner-warranty/claimSla.service.js';
@@ -33,6 +33,7 @@ async function main() {
   await ensureIndexes();
   await migrateLegacyProviders();
   await reconcileCancelledBookings();
+  await expireStaleServiceRequests();
 
   const app = createApp();
   const httpServer = http.createServer(app);
@@ -43,7 +44,7 @@ async function main() {
   });
 
   // Backstop for the per-assignment 60s dispatch timers, which don't survive a
-  // restart, plus the 15-minute search cut-off. Runs once at boot (anything
+  // restart, plus the 30-minute search cut-off. Runs once at boot (anything
   // that expired while we were down) and then every 15s.
   let sweeping = false;
   const runDispatchSweep = async () => {
@@ -53,8 +54,9 @@ async function main() {
       // Give up on searches past their window first, so the assignment sweep
       // doesn't pass those bookings on to yet another provider.
       await expireKitCheckouts();
+      await expireStaleServiceRequests();
       const { expired } = await expireStaleSearches();
-      if (expired) console.log(`[search-expiry] stopped searching for ${expired} booking(s) after 15 minutes`);
+      if (expired) console.log(`[search-expiry] stopped searching for ${expired} booking(s) after 30 minutes`);
       const { passedOn } = await sweepExpiredAssignments();
       if (passedOn) console.log(`[dispatch-sweep] passed on ${passedOn} unanswered assignment(s)`);
     } catch (err) {

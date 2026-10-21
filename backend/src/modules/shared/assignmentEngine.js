@@ -90,22 +90,25 @@ function cityMatches(provider, city, state) {
 
   // If service provider has a registered city, it MUST match the booking city
   if (!serviceProviderCity) return false;
-  const cityMatch = serviceProviderCity === targetCity || serviceProviderCity.includes(targetCity) || targetCity.includes(serviceProviderCity);
+  const cityMatch = serviceProviderCity === targetCity;
   if (!cityMatch) return false;
   if (targetState && serviceProviderState) {
-    return serviceProviderState === targetState || serviceProviderState.includes(targetState) || targetState.includes(serviceProviderState);
+    return serviceProviderState === targetState;
   }
   return true;
 }
 
 /**
- * Warranty service area (ARCHITECTURE §6), most specific rule first:
+ * Warranty service area: registered city first, then narrower constraints:
  *   1. the partner lists pincodes → the customer's pincode must be one of them;
  *   2. the partner has a radius (or a location, with the 25 km default) and
  *      both locations are known → within that distance;
  *   3. otherwise → the city match every other booking uses.
  */
 export function inWarrantyServiceArea(provider, { pincode, city, state, latitude, longitude }) {
+  // Registered territory is mandatory when specified. GPS and pincodes narrow
+  // that territory; neither may authorize a different registered city.
+  if (city?.trim() && !cityMatches(provider, city, state)) return false;
   if (provider.servicePincodes?.length) return Boolean(pincode) && provider.servicePincodes.includes(String(pincode));
 
   const lat = provider.location?.latitude ?? provider.latitude;
@@ -123,7 +126,7 @@ export function inWarrantyServiceArea(provider, { pincode, city, state, latitude
  * `authorized`), the service area replaces the plain city match, and tier
  * adds a small bonus. Every ranking path also enforces onboarding eligibility.
  */
-export async function rankServiceProviders({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [], warranty = null, urgency = null } = {}) {
+export async function rankServiceProviders({ category, city, state, latitude, longitude, includeUnavailable = false, exclude = [], warranty = null, urgency = null, pincode } = {}) {
   // Auto-assignment only ever considers service providers who have marked themselves
   // Available. The super-admin console passes includeUnavailable so an operator
   // can still hand-pick an Active service provider who is Busy or Offline.
@@ -155,7 +158,7 @@ export async function rankServiceProviders({ category, city, state, latitude, lo
   } else if (city && city.trim()) {
     // Territory restriction: If a booking has a city, only match service providers registered in that city territory.
     // A service provider registered in Indore, MP will never receive or be assigned jobs from Delhi, Bangalore, etc.
-    candidates = candidates.filter((provider) => cityMatches(provider, city, state));
+    candidates = candidates.filter((provider) => inWarrantyServiceArea(provider, { city, state, pincode, latitude, longitude }));
     if (candidates.length === 0) return [];
   }
 

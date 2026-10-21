@@ -7,6 +7,7 @@ export const transitionSchema = z.object({
 });
 
 export const listServiceRequestsQuerySchema = z.object({
+  serviceProvider: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid service provider ID').optional(),
   status: z.enum(SERVICE_REQUEST_STATUS).optional(),
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),

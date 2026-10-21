@@ -70,7 +70,9 @@ describe('provider onboarding lifecycle', () => {
     await api('get', `/super-admin/provider-onboarding/${w.application.id}`, w.otherAsm.accessToken).expect(404);
     expect((await api('get', '/super-admin/provider-onboarding', w.asm.accessToken).expect(200)).body.data.some(p => p.id === w.application.id)).toBe(true);
     expect(await Notification.countDocuments({ recipient: w.asm.user.id, templateKey: 'provider.onboarding' })).toBeGreaterThan(0);
-    expect((await api('get', `/super-admin/provider-onboarding/${w.application.id}/documents/front`, w.asm.accessToken).expect(200)).body.data.url).toMatch(/^data:application\/pdf/);
+    const document = (await api('get', `/super-admin/provider-onboarding/${w.application.id}/documents/front`, w.asm.accessToken).expect(200)).body.data;
+    expect(document.url).toMatch(/^data:application\/pdf/);
+    expect(document.contentType).toBe('application/pdf');
     await api('get', `/super-admin/provider-onboarding/${w.application.id}/documents/front`, w.otherAsm.accessToken).expect(404);
   });
   it('requires two approvals and paid receipt, then accepts only the two approved categories', async () => {

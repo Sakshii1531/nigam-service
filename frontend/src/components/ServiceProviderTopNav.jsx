@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { Briefcase, ClipboardList, History, Calendar, User, Bell, Wrench } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Briefcase, ClipboardList, History, Calendar, User, Bell, Wrench, Package, ShieldCheck } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -11,7 +11,13 @@ const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
   const { unreadCount } = useNotifications();
   const { user } = useAuth();
 
-  const navItems = [
+  const { pathname } = useLocation();
+  const onboarding = user?.providerAccess?.eligible === false;
+  const navItems = onboarding ? [
+    { id: 'onboarding', label: 'My onboarding', Icon: ShieldCheck, path: '/service-provider/onboarding' },
+    { id: 'kits', label: 'Partner kits', Icon: Package, path: '/service-provider/kits' },
+    { id: 'profile', label: 'Profile', Icon: User, path: '/service-provider/profile' },
+  ] : [
     { id: "jobs",      label: "Jobs",      Icon: Briefcase,    path: "/service-provider/dashboard" },
     { id: "requests",  label: "Requests",  Icon: ClipboardList,path: "/service-provider/raise-part-request?tab=claims" },
     { id: "history",   label: "History",   Icon: History,      path: "/service-provider/history" },
@@ -36,14 +42,14 @@ const ServiceProviderTopNav = ({ activePage = "jobs" }) => {
           </div>
           <div className="flex flex-col">
             <span className="text-white font-black text-sm tracking-wide leading-none">NCC Tech</span>
-            <span className="text-[9px] font-bold text-amber-400 tracking-wider uppercase mt-0.5">Verified Partner</span>
+            <span className="text-[9px] font-bold text-amber-400 tracking-wider uppercase mt-0.5">{onboarding ? 'Onboarding in progress' : 'Verified Partner'}</span>
           </div>
         </div>
 
         {/* Nav Items Pill Container */}
         <div className="flex items-center gap-1.5 bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-xs">
           {navItems.map(({ id, label, Icon, path }) => {
-            const isActive = activePage === id;
+            const isActive = onboarding ? pathname === path : activePage === id;
             return (
               <button
                 key={id}

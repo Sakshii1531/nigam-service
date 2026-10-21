@@ -42,6 +42,11 @@ const EVENT_TEMPLATES = {
     smsBody: `Your ${p.category} service booking is confirmed. Track via Nigam Care app.`,
     whatsappBody: `✅ *Booking Confirmed!*\n\nYour *${p.category}* service has been booked successfully.\n\nOpen the Nigam Care app to track your booking.`,
   }),
+  'job.search_expired': (p) => ({
+    recipient: p.user, type: 'jobs', title: 'Job offer expired',
+    message: `${p.humanId || 'The service request'} was cancelled after 30 minutes without acceptance.`,
+    priority: 'High', cta: { label: 'View jobs', route: '/service-provider/history' },
+  }),
   'job.cancelled': (p) => ({
     recipient: p.user,
     type: 'jobs',

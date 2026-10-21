@@ -15,7 +15,8 @@ import { PartOrder } from '../service-provider/partOrder.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 
 // How long a booking keeps looking for a service provider before giving up.
-export const SEARCH_WINDOW_MS = 15 * 60 * 1000;
+import { SEARCH_WINDOW_MS } from '../shared/dispatchPolicy.js';
+export { SEARCH_WINDOW_MS };
 
 export const SEARCH_END_MESSAGES = Object.freeze({
   PROVIDERS_NOT_ACCEPTING: 'Sorry, our service providers are not accepting service requests right now. Please retry after a few minutes.',
@@ -164,6 +165,7 @@ export async function createBooking(userId, data) {
     category: categoryKey,
     city: customerCity,
     state: customerState,
+    pincode: data.address?.pincode,
     latitude: customerLat,
     longitude: customerLng,
   });
@@ -691,7 +693,7 @@ async function closeBooking(booking, { reason, timelineDescription, searchEndRea
   booking = result.booking;
 
   if (notifyProvider && result.providerUser) {
-    await emitNotification('job.cancelled', {
+    await emitNotification(booking.searchEndReason ? 'job.search_expired' : 'job.cancelled', {
       user: result.providerUser, category: booking.category, reason,
       bookingId: booking.id, humanId: booking.humanId,
       dedupeKey: `booking-cancelled:${booking.id}:${booking.serviceRequest || booking.cancelledAt.toISOString()}`,
@@ -701,7 +703,7 @@ async function closeBooking(booking, { reason, timelineDescription, searchEndRea
   const payload = {
     bookingId: booking._id, humanId: booking.humanId, jobId: result.jobId,
     serviceRequestId: booking.serviceRequest?._id || booking.serviceRequest,
-    status: 'Cancelled', instantStatus: 'CANCELLED', reason,
+    status: 'Cancelled', instantStatus: 'CANCELLED', reason, cancelledBy: booking.searchEndReason ? 'system' : 'customer',
     searchEndReason: booking.searchEndReason || null,
   };
   const io = getIO();
@@ -747,7 +749,7 @@ export async function reconcileCancelledBookings() {
  */
 export async function expireStaleSearches(now = new Date()) {
   const stale = await Booking.find({
-    searchExpiresAt: { $ne: null, $lte: now },
+    $or: [{ searchExpiresAt: { $ne: null, $lte: now } }, { searchExpiresAt: null, createdAt: { $lte: new Date(now.getTime() - SEARCH_WINDOW_MS) } }],
     isAccepted: { $ne: true },
     status: { $nin: ['Cancelled', 'Completed'] },
   });
@@ -772,6 +774,9 @@ export async function expireStaleSearches(now = new Date()) {
           category: booking.category,
           city: booking.address?.city,
           state: booking.address?.state,
+          pincode: booking.address?.pincode,
+          latitude: booking.address?.latitude,
+          longitude: booking.address?.longitude,
           includeUnavailable: true,
         });
         providersNearby = nearby.length > 0;
@@ -878,7 +883,7 @@ export async function rescheduleBooking(userId, id, { scheduledDate, timeSlot, r
 }
 
 /**
- * Allows the customer to restart the 15-minute partner search for an expired
+ * Allows the customer to restart the 30-minute partner search for an expired
  * or cancelled booking without having to enter all booking details again.
  */
 export async function retrySearchBooking(userId, id) {
@@ -886,7 +891,7 @@ export async function retrySearchBooking(userId, id) {
   if (booking.status === 'Completed') throw new ApiError(400, 'Cannot retry a completed booking');
   if (booking.isAccepted) throw new ApiError(400, 'This booking has already been accepted by a partner');
 
-  // Reactivate the booking for a fresh 15-minute search window
+  // Reactivate the booking for a fresh 30-minute search window
   booking.status = booking.isInstant ? 'Ongoing' : 'Upcoming';
   booking.instantStatus = 'SEARCHING';
   booking.isAccepted = false;
@@ -914,7 +919,7 @@ export async function retrySearchBooking(userId, id) {
           stepLabel: 'Search Restarted',
           done: true,
           timestamp: new Date(),
-          description: 'Customer restarted partner search for 15 minutes',
+          description: 'Customer restarted partner search for 30 minutes',
         });
         await serviceRequest.save();
       }
@@ -933,6 +938,7 @@ export async function retrySearchBooking(userId, id) {
     category: booking.category,
     city: customerCity,
     state: customerState,
+    pincode: booking.address?.pincode,
     latitude: customerLat,
     longitude: customerLng,
   });

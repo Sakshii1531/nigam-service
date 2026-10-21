@@ -5,6 +5,7 @@ import Topbar from "../../components/super-admin/Topbar";
 import Pagination from "../../components/common/Pagination";
 import { apiRequest } from "../../lib/apiClient";
 import { useAuth } from "../../context/AuthContext";
+import { DocumentButtons } from "../../components/provider-onboarding/shared";
 import ChangeServiceCityModal from "../../components/super-admin/ChangeServiceCityModal";
 import {
   Users as UsersIcon,
@@ -30,7 +31,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-const ServiceProviders = () => {
+const ServiceProviders = ({ pendingOnly = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -81,6 +82,8 @@ const ServiceProviders = () => {
     let cancelled = false;
     (async () => {
       setProfileDetailLoading(true);
+      setProfileActivity([]);
+      setProfileReviews([]);
       try {
         const [requestsRes, reviewsRes] = await Promise.all([
           apiRequest(
@@ -149,7 +152,7 @@ const ServiceProviders = () => {
           email: item.email || "",
           name: item.name || "Service Provider",
           specs: item.specs?.length ? item.specs : [],
-          skill: item.specs?.length ? item.specs.join(", ") : "General Repair",
+          skill: item.specs?.length ? item.specs.join(", ") : "Categories awaiting approval",
           // Falls back to the free-text serviceCityName when `city` never
           // resolved to a real City doc at registration (a typo'd/unlisted
           // city — see serviceProviderRegistration.routes.js's cityDoc
@@ -434,7 +437,7 @@ const ServiceProviders = () => {
     const matchesSkill =
       selectedSkill === "All Skills" || t.specs.includes(selectedSkill);
     const matchesStatus =
-      selectedStatus === "All Status" || t.status === selectedStatus;
+      pendingOnly ? t.status === "Pending" : selectedStatus === "All Status" || t.status === selectedStatus;
     const matchesCity =
       selectedCity === "All Cities" || t.city === selectedCity;
     const matchesAvailability =
@@ -561,7 +564,7 @@ const ServiceProviders = () => {
                   <p className="text-xs text-blue-100 font-medium mt-1">
                     ID:{" "}
                     <span className="font-bold text-white">{provider.ref}</span>{" "}
-                    • Verified Nigam Service Partner
+                    • {provider.status === "Pending" ? "Applicant — onboarding pending" : provider.status === "Active" ? "Approved Nigam Service Partner" : "Inactive Service Partner"}
                   </p>
                 </div>
               </div>
@@ -705,8 +708,7 @@ const ServiceProviders = () => {
                   {provider.skill}
                 </span>
                 <p className="text-xs text-[#64748B] mt-2">
-                  Certified Nigam Service Provider authorized to verify, repair
-                  and troubleshoot consumer products and appliances.
+                  {provider.status === "Pending" ? "Service categories are assessed during onboarding. Approval and a paid, verified kit delivery are required before taking jobs." : "Service access is limited to approved categories."}
                 </p>
               </div>
             </div>
@@ -727,50 +729,10 @@ const ServiceProviders = () => {
                   </span>
                 </div>
 
-                {/* Render Uploaded WebP Aadhar Photos */}
-                {(provider.aadharFrontUrl || provider.aadharBackUrl) && (
-                  <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
-                    <p className="text-[10px] font-bold text-[#0D47A1] uppercase tracking-wider">
-                      Uploaded WebP Aadhar Photos (Cloudinary)
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {provider.aadharFrontUrl && (
-                        <div>
-                          <p className="text-[9.5px] font-semibold text-slate-500 mb-1">
-                            Aadhar Front (.webp)
-                          </p>
-                          <a
-                            href={provider.aadharFrontUrl}
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            <img
-                              src={provider.aadharFrontUrl}
-                              alt="Aadhar Front"
-                              className="w-full h-24 object-cover rounded-lg border border-slate-300 hover:opacity-90 shadow-2xs"
-                            />
-                          </a>
-                        </div>
-                      )}
-                      {provider.aadharBackUrl && (
-                        <div>
-                          <p className="text-[9.5px] font-semibold text-slate-500 mb-1">
-                            Aadhar Back (.webp)
-                          </p>
-                          <a
-                            href={provider.aadharBackUrl}
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            <img
-                              src={provider.aadharBackUrl}
-                              alt="Aadhar Back"
-                              className="w-full h-24 object-cover rounded-lg border border-slate-300 hover:opacity-90 shadow-2xs"
-                            />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div className="mt-3 space-y-2 pt-2 border-t border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600">Submitted Aadhaar documents</p>
+                  {(provider.aadharFrontUrl || provider.aadharBackUrl) ? <DocumentButtons key={provider.id} base={`/super-admin/provider-onboarding/${provider.id}/documents`} /> : <p className="text-xs text-slate-500">No Aadhaar documents submitted.</p>}
+                </div>
 
                 <div className="flex items-center justify-between py-1 border-b border-slate-100">
                   <span className="text-[#64748B] font-medium">
@@ -959,7 +921,7 @@ const ServiceProviders = () => {
       {/* Main Content */}
       <div className="flex-1 ml-64 min-h-screen flex flex-col">
         {/* Topbar */}
-        <Topbar title="Service Provider Management" />
+        <Topbar title={pendingOnly ? "Pending Service Providers" : "Service Provider Management"} />
 
         {/* Body */}
         {selectedTechProfile ? (
@@ -970,7 +932,7 @@ const ServiceProviders = () => {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-bold text-[#1E293B]">
-                  Service Providers
+                  {pendingOnly ? "Pending Service Providers" : "Service Providers"}
                 </h2>
                 {isAsm && (
                   <p className="text-xs text-[#64748B] mt-0.5">
@@ -996,7 +958,7 @@ const ServiceProviders = () => {
               alert whenever it's non-zero. */}
             {pendingCount > 0 && (
               <button
-                onClick={() => setSelectedStatus("Pending")}
+                onClick={() => navigate("/super-admin/pending-service-providers")}
                 className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-left hover:bg-amber-100/70 transition-colors">
                 <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                   <AlertTriangle size={18} />
@@ -1105,7 +1067,9 @@ const ServiceProviders = () => {
                 </select>
 
                 <select
-                  value={selectedStatus}
+                  aria-label="Provider status"
+                  disabled={pendingOnly}
+                  value={pendingOnly ? "Pending" : selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
                   className="text-sm text-[#1E293B] border border-[#E2E8F0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#0D47A1] bg-[#F8FAFC]">
                   <option>All Status</option>

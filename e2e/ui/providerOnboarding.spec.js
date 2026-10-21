@@ -29,7 +29,26 @@ test('signup, interview subset, final approval, kit payment, shipping and parcel
   await expect(providerPage.getByRole('button', { name: 'Go Online', exact: true })).toHaveCount(0);
   const adminContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } }), adminPage = await adminContext.newPage();
   adminPage.on('pageerror', error => console.log('Admin page error:', error.message));
-  await signIn(adminPage, admin, 'super_admin'); await adminPage.goto(`/super-admin/provider-onboarding?provider=${application.id}`);
+  await signIn(adminPage, admin, 'super_admin');
+  await adminPage.goto('/super-admin/pending-service-providers');
+  await expect(adminPage.getByRole('heading', { name: 'Pending Service Providers', exact: true, level: 2 })).toBeVisible();
+  await expect(adminPage.getByLabel('Provider status')).toBeDisabled();
+  const applicantRow = adminPage.locator('tr').filter({ hasText: 'Browser Provider' });
+  await expect(applicantRow).toContainText('Pending');
+  await applicantRow.getByTitle('View Profile').click();
+  await expect(adminPage.getByText('No service activity yet.', { exact: true })).toBeVisible();
+  await expect(adminPage.getByText('Applicant — onboarding pending', { exact: false })).toBeVisible();
+  await expect(adminPage.getByText('Verified Nigam Service Partner', { exact: false })).toHaveCount(0);
+  for (const side of ['front', 'back']) {
+    const responsePromise = adminPage.waitForResponse(r => r.url().endsWith(`/provider-onboarding/${application.id}/documents/${side}`));
+    await adminPage.getByRole('button', { name: `Review Aadhaar ${side}`, exact: true }).click();
+    const response = await responsePromise; expect(response.status()).toBe(200);
+    expect((await response.json()).data.url).toMatch(/^data:application\/pdf/);
+    await expect(adminPage.locator('iframe[title="Aadhaar document preview"]')).toHaveAttribute('src', /^blob:/);
+    await adminPage.getByRole('button', { name: 'Close document', exact: true }).click();
+  }
+  await adminPage.screenshot({ path: '/tmp/nigam-pending-provider-profile.png', fullPage: true });
+  await adminPage.goto(`/super-admin/provider-onboarding?provider=${application.id}`);
   await expect(adminPage.getByRole('heading', { name: 'Provider onboarding', exact: true })).toBeVisible({ timeout: 15000 });
   await adminPage.getByLabel('Review action', { exact: true }).selectOption('interview_pass');
   await adminPage.getByLabel('Reason super admin is conducting the ASM interview').fill('Area ASM unavailable; interview conducted by NCC');
@@ -38,14 +57,16 @@ test('signup, interview subset, final approval, kit payment, shipping and parcel
   await adminPage.getByLabel('Decision reason / message to provider').fill('Interview passed for two categories'); await adminPage.getByRole('button', { name: 'Save onboarding decision' }).click();
   await expect(adminPage.getByRole('heading', { name: 'Super-admin final review', exact: true })).toBeVisible();
   await adminPage.getByLabel('Decision reason / message to provider').fill('Final review completed'); await adminPage.getByRole('button', { name: 'Save onboarding decision' }).click();
-  await adminPage.screenshot({ path: '/tmp/nigam-onboarding-admin-review.png', fullPage: true });
   await expect(adminPage.getByText('Final review complete.', { exact: false })).toBeVisible();
+  await adminPage.screenshot({ path: '/tmp/nigam-onboarding-admin-review.png', fullPage: true });
   await providerPage.reload(); await expect(providerPage.getByRole('link', { name: 'Shop kits & track orders' })).toBeVisible();
   await expect(providerPage.getByRole('button', { name: 'Go Online', exact: true })).toHaveCount(0);
   await adminPage.goto('/super-admin/provider-kits'); await adminPage.getByRole('button', { name: 'Create kit', exact: true }).click();
   await adminPage.getByLabel('SKU', { exact: true }).fill(`E2E-ONBOARD-${tag}`); await adminPage.getByLabel('Kit name', { exact: true }).fill(`Starter Kit ${tag}`); await adminPage.getByLabel('Selling price (INR, tax inclusive)').fill('799'); await adminPage.getByLabel('Shipping per kit (INR)').fill('50'); await adminPage.getByLabel('Available stock', { exact: true }).fill('5'); await adminPage.getByRole('button', { name: 'Save kit', exact: true }).click();
   await expect(adminPage.getByRole('heading', { name: `Starter Kit ${tag}`, exact: true })).toBeVisible();
-  await providerPage.getByRole('link', { name: 'Shop kits & track orders' }).click(); await providerPage.getByLabel(`Quantity — Starter Kit ${tag}`).fill('1');
+  await adminPage.screenshot({ path: '/tmp/onboarding-kit-catalog.png', fullPage: true });
+  await providerPage.getByRole('link', { name: 'Shop kits & track orders' }).click(); await providerPage.getByRole('button', { name: `Add Starter Kit ${tag} to cart`, exact: true }).click();
+  await providerPage.getByRole('button', { name: 'Continue to checkout', exact: true }).click();
   for (const [name, value] of [['House / street address', '12 Provider Lane'], ['Shipping city', 'Delivery City'], ['Shipping state', 'Maharashtra'], ['Pincode', '400001']]) await providerPage.getByLabel(name, { exact: true }).fill(value);
   // Stub only the external gateway widget; the real backend verifies the HMAC.
   await providerPage.addInitScript(() => {});
@@ -63,10 +84,12 @@ test('signup, interview subset, final approval, kit payment, shipping and parcel
   await card.getByRole('button', { name: 'Show receipt insert for packing' }).click();
   const code = await card.locator('section[aria-label="Receipt insert"] .font-mono').innerText();
   await card.getByLabel('Courier', { exact: true }).fill('Test Courier'); await card.getByLabel('Tracking number', { exact: true }).fill(`SHIP-${tag}`); await card.getByRole('button', { name: 'Mark Shipped', exact: true }).click();
+  await expect(card.getByRole('button', { name: 'Mark Delivered', exact: true })).toBeVisible();
+  await adminPage.screenshot({ path: '/tmp/onboarding-kit-fulfillment.png', fullPage: true });
   await providerPage.reload(); const ownOrder = providerPage.locator('article').filter({ hasText: order.humanId });
   await ownOrder.getByLabel('Receipt code inside your parcel').fill(code); await ownOrder.getByRole('button', { name: 'Verify received kit' }).click();
   await expect(ownOrder.getByText('Receipt verified. Check My onboarding for job eligibility.')).toBeVisible();
-  await providerPage.getByRole('link', { name: '← My onboarding' }).click(); await expect(providerPage.getByRole('button', { name: 'Go Online', exact: true })).toBeVisible();
+  await providerPage.getByRole('link', { name: 'My onboarding', exact: true }).click(); await expect(providerPage.getByRole('button', { name: 'Go Online', exact: true })).toBeVisible();
   await providerPage.screenshot({ path: '/tmp/nigam-onboarding-provider-ready.png', fullPage: true });
   await providerPage.getByRole('button', { name: 'Go Online', exact: true }).click(); await expect(providerPage).toHaveURL(/\/service-provider\/dashboard$/);
   const profile = await call(request, 'get', '/service-provider/profile/profile', provider.accessToken); expect(profile.specs.sort()).toEqual(selectedCategories.slice(0, 2).map(c => c.key).sort()); expect(profile.availability).toBe('Available');

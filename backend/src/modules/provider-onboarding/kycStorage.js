@@ -27,13 +27,13 @@ export async function storePrivateKyc(file) {
 export async function privateKycLink(ref) {
   if (ref?.startsWith('kyc-cloud:')) {
     const value = decodeCloud(ref);
-    return { url: cloudinary.utils.private_download_url(value.publicId, value.format, { resource_type: value.resourceType, type: 'authenticated', expires_at: Math.floor(Date.now() / 1000) + 60, attachment: false }) };
+    return { contentType: ({ pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' })[value.format], url: cloudinary.utils.private_download_url(value.publicId, value.format, { resource_type: value.resourceType, type: 'authenticated', expires_at: Math.floor(Date.now() / 1000) + 60, attachment: false }) };
   }
   if (ref?.startsWith('kyc-local:') && /^[a-f\d-]{36}$/.test(ref.slice(10))) {
     const file = await readFile(path.join(directory, ref.slice(10))), cipher = createDecipheriv('aes-256-gcm', key(), file.subarray(0, 12));
     cipher.setAuthTag(file.subarray(12, 28));
     const value = JSON.parse(Buffer.concat([cipher.update(file.subarray(28)), cipher.final()]).toString());
-    return { url: `data:${value.type};base64,${value.data}` };
+    return { contentType: value.type, url: `data:${value.type};base64,${value.data}` };
   }
   // Old applications used public URLs. They remain reviewable but new uploads
   // always use the private path above.

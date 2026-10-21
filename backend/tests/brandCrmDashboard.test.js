@@ -1,3 +1,5 @@
+import { queueQuery } from '../src/modules/brand-crm/brandTicket.service.js';
+import { stateFilter } from '../src/modules/shared/indianStates.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { beforeAll, afterAll, beforeEach, afterEach, it, expect, jest } from '@jest/globals';
 import mongoose from 'mongoose';
@@ -479,4 +481,29 @@ it('billing invalidations follow committed writes and are absent on rejected wri
   finally {spy.mockRestore();}
   expect((await BrandInvoice.findById(rollback.id)).status).toBe('draft');expect(pushes).toHaveLength(2);
 
+});
+
+it('groups state aliases before counting and drills into every spelling in the same brand', async () => {
+  const w = await fixture();
+  const claims = await WarrantyClaim.find({ brand: w.lg._id }).sort({ _id: 1 }).lean();
+  const spellings = ['MP', 'Madhya Pradesh', ' madhya pradesh ', 'M.P.', 'mp', 'MH', 'Maharashtra', ' mh '];
+  await WarrantyClaim.bulkWrite(claims.map((c, i) => ({ updateOne: { filter: { _id: c._id }, update: { $set: { 'address.state': spellings[i] } } } })));
+  const d = await dashboard(w);
+  expect(d.byState).toEqual([
+    { name: 'Madhya Pradesh', state: 'Madhya Pradesh', value: 5, pct: 62.5 },
+    { name: 'Maharashtra', state: 'Maharashtra', value: 3, pct: 37.5 },
+  ]);
+  for (const state of ['MP', 'Madhya Pradesh', 'm.p.']) {
+    const query = await queueQuery(user(w), { state, from, to });
+    expect(query.brand).toEqual(w.lg._id);
+    expect(await WarrantyClaim.countDocuments(query)).toBe(5);
+  }
+});
+it('recognizes other state abbreviations without conflating different states', () => {
+  expect(stateFilter('UP').test('Uttar Pradesh')).toBe(true);
+  expect(stateFilter('Karnataka').test('KA')).toBe(true);
+  expect(stateFilter('Odisha').test('Orissa')).toBe(true);
+  expect(stateFilter('MP').test('Maharashtra')).toBe(false);
+  expect(stateFilter('Unknown region').test('Unknown region')).toBe(true);
+  expect(stateFilter('Unknown region').test('Another region')).toBe(false);
 });

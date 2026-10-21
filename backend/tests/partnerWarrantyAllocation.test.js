@@ -15,7 +15,7 @@ import { Job } from '../src/modules/service-provider/job.model.js';
 import { AuditLog } from '../src/modules/super-admin/auditLog.model.js';
 import { Notification } from '../src/modules/notifications/notification.model.js';
 import { rankServiceProviders } from '../src/modules/shared/assignmentEngine.js';
-import { sweepExpiredAssignments, autoAssignPendingRequests } from '../src/modules/service-requests/serviceRequest.service.js';
+import { sweepExpiredAssignments, autoAssignPendingRequests, expireStaleServiceRequests } from '../src/modules/service-requests/serviceRequest.service.js';
 import { testDbUri } from './helpers/testDb.js';
 import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 import { partnerWarrantyKit } from './helpers/partnerWarranty.js';
@@ -88,7 +88,7 @@ describe('Phase 6 — who is eligible for a warranty job', () => {
   it('uses zero latitude/longitude as real GPS for warranty distance matching', async () => {
     const s = await scenario();
     await WarrantyClaim.updateOne({ _id: s.claim.id }, { $set: { 'address.latitude': 0, 'address.longitude': 0 } });
-    const eligible = await partner({ at: null, city: 'Bhopal' });
+    const eligible = await partner({ at: null, city: 'Indore' });
     await ServiceProvider.updateOne({ _id: eligible.id }, { $set: { location: { latitude: 0, longitude: 0 }, serviceRadiusKm: 10 } });
     const { sr } = await approve(s);
     expect(sr.customerLocation).toMatchObject({ latitude: 0, longitude: 0 });
@@ -157,6 +157,50 @@ describe('Phase 6 — who is eligible for a warranty job', () => {
     expect(saved.flags.unauthorizedFallback).toBe(true);
     expect(saved.timeline.findLast(e=>e.action==='PARTNER_OFFERED')).toMatchObject({ action: 'PARTNER_OFFERED', visibility: 'internal' });
     expect(saved.timeline.findLast(e=>e.action==='PARTNER_OFFERED').note).toMatch(/no authorized partners/);
+  });
+
+  it('never lets nearby GPS or matching pincodes override the registered city', async () => {
+    const s = await scenario();
+    const wrongCity = await partner({ at: 0.01, city: 'Bengaluru', pincodes: ['452001'], name: 'Wrong registered city' });
+    const correctCity = await partner({ at: 5, city: 'Indore', name: 'Registered locally' });
+    const { sr } = await approve(s);
+    expect(await assignedTo(sr._id)).toBe(correctCity.id);
+    await api().patch(`/api/v1/service-requests/${sr.id}/assign`).set(bearer(s.admin.token)).send({ serviceProvider: wrongCity.id }).expect(409);
+    // A pre-existing invalid assignment must also be hidden and unclaimable.
+    await ServiceRequest.updateOne({ _id: sr._id }, { serviceProvider: wrongCity.id });
+    const feed = await api().get('/api/v1/service-provider/jobs/available').set(bearer(wrongCity.token)).expect(200);
+    expect(feed.body.data.map(row => row.id)).not.toContain(sr.id);
+    await api().post(`/api/v1/service-provider/jobs/accept/${sr.id}`).set(bearer(wrongCity.token)).send({}).expect(403);
+  });
+
+  it('expires old unaccepted warranty jobs and never reoffers them when a provider goes online', async () => {
+    const s = await scenario(); const { sr } = await approve(s);
+    await ServiceRequest.collection.updateOne({ _id: sr._id }, { $set: { createdAt: new Date(Date.now() - 31 * 60000) } });
+    const p = await partner({ at: 1 });
+    await api().post(`/api/v1/service-provider/jobs/accept/${sr.id}`).set(bearer(p.token)).send({}).expect(409);
+    expect((await autoAssignPendingRequests()).assignedCount).toBe(0);
+    const expired = await ServiceRequest.findById(sr._id);
+    expect(expired.status).toBe('Cancelled'); expect(expired.searchEndReason).toBe('SEARCH_TIMEOUT');
+    expect((await WarrantyClaim.findById(s.claim.id)).flags.allocationFailed).toBe(true);
+    expect((await expireStaleServiceRequests()).expired).toBe(0);
+  });
+
+  it('does not expire warranty work already accepted by a provider', async () => {
+    const s = await scenario(); const p = await partner({ at: 1 }); const { sr } = await approve(s);
+    await api().post(`/api/v1/service-provider/jobs/accept/${sr.id}`).set(bearer(p.token)).send({}).expect(200);
+    await ServiceRequest.collection.updateOne({ _id: sr._id }, { $set: { createdAt: new Date(Date.now() - 31 * 60000) } });
+    await expireStaleServiceRequests();
+    expect((await ServiceRequest.findById(sr._id)).status).toBe('Engineer Accepted');
+  });
+
+  it('keeps a fresh warranty search open up to the 30-minute boundary', async () => {
+    const s = await scenario(); const { sr } = await approve(s);
+    const createdAt = new Date(Date.now() - 29 * 60000);
+    await ServiceRequest.collection.updateOne({ _id: sr._id }, { $set: { createdAt } });
+    await expireStaleServiceRequests(new Date(createdAt.getTime() + 30 * 60000 - 1));
+    expect((await ServiceRequest.findById(sr._id)).status).toBe('New');
+    await expireStaleServiceRequests(new Date(createdAt.getTime() + 30 * 60000));
+    expect((await ServiceRequest.findById(sr._id)).status).toBe('Cancelled');
   });
 
   it('respects service pincodes, radius, and city', async () => {

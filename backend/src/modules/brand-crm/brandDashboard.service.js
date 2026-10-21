@@ -1,3 +1,4 @@
+import { canonicalStateExpression } from '../shared/indianStates.js';
 import mongoose from 'mongoose';
 import { WarrantyClaim } from '../partner-warranty/warrantyClaim.model.js';
 import { Escalation } from '../super-admin/escalation.model.js';
@@ -172,7 +173,7 @@ export async function getBrandDashboard(user, query = {}, {
     $match: filter
   }, {
     $group: {
-      _id: '$address.state',
+      _id: canonicalStateExpression('$address.state'),
       value: {
         $sum: 1
       }
