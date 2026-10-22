@@ -33,8 +33,14 @@ History uses explicit `ServiceRequest.appliance` links scoped to the signed-in c
 
 Deleting an appliance archives its record so historical booking/job references survive, hides it from customer lookup and new service/plan selection, and deletes its private documents. Existing bookings are neither deleted nor cancelled by removing an appliance.
 
+## Dialog and responsive layout
+
+The collection uses compact product cards, category-specific placeholders, a clear search/filter panel and responsive columns. Registration keeps its header, step indicator and footer visible while the form body scrolls. Inputs use a mobile-friendly font size to avoid automatic zoom.
+
+Registration/editing, document previews and both deletion confirmations share `ApplianceDialog`. It renders above the app through a portal, locks body/root scrolling (including fixed-body locking for mobile Safari), prevents scroll chaining, keeps keyboard focus inside and restores the original styles, focus and page scroll position when closed. Locks remain active until the last nested appliance dialog closes. Escape and backdrop dismissal are disabled during saves/deletes; successful registration stays open for the customer's next action.
+
 ## Validation
 
 - `backend/tests/myAppliances.test.js`: arbitrary categories, distinct units, ownership, private documents, invalid/oversized files, exact booking links, unsaved bookings, cancellation/history and deletion.
-- `e2e/ui/myAppliances.spec.js`: mobile Account navigation, two-step registration, upload failure/retry without duplicate products, confirmation/Register another, category tiles/manual entry, search/brand/date filters, authenticated photo thumbnails, CRUD, real private PDF/image preview, saved/unsaved service booking, inline registration, service history, deletion and desktop layout.
+- `e2e/ui/myAppliances.spec.js`: mobile Account navigation, two-step registration, upload failure/retry without duplicate products, confirmation/Register another, category tiles/manual entry, fixed background with independently scrolling form body and pinned header/footer, keyboard focus wrapping/Escape, preview scroll restoration, deletion-dialog locks, search/brand/date filters, authenticated photo thumbnails, CRUD, real private PDF/image preview, saved/unsaved service booking, inline registration, service history, deletion and desktop layout.
 - Frontend CI's customer service flow job runs the real appliance and GST browser journeys against isolated MongoDB. Backend CI retains all four Jest shards and the API E2E gate.
