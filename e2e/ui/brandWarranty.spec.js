@@ -62,8 +62,7 @@ test('a brand reviews its warranty claims: request info, reject needs a reason, 
   };
   const brand = await makeBrand(`E2E Brand ${tag}`);
   const other = await makeBrand(`E2E Other ${tag}`);
-  const group = await call(request, 'post', '/super-admin/warranty-catalog/groups', admin, { name: `E2E BW ${tag}`, slug: `bw-${tag}`, categories: [ac.id] });
-  cleanups.push(() => call(request, 'put', `/super-admin/warranty-catalog/groups/${group.id}`, admin, { isActive: false }));
+
   const issue = await call(request, 'post', '/super-admin/warranty-catalog/issues', admin, { category: ac.id, name: `Leaking ${tag}` });
 
   const brandEmail = `bw-brand-${tag}@e2e.test`;
@@ -95,7 +94,7 @@ test('a brand reviews its warranty claims: request info, reject needs a reason, 
   await expect(page.getByRole('link', { name: mine.humanId })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(theirs.humanId)).toHaveCount(0);
   await expect(page.getByRole('tab', { name: /Pending Approval \(1\)/ })).toBeVisible();
-  await expect(page.getByRole('columnheader',{name:'SLA',exact:true})).toBeVisible();
+  await expect(page.getByRole('columnheader',{name:'Team / SLA',exact:true})).toBeVisible();
   await page.screenshot({ path: `${SHOTS}phase-13-queue.png` });
 
   // Open it → Brand Review; ask for more information.
@@ -146,7 +145,7 @@ test('a brand reviews its warranty claims: request info, reject needs a reason, 
 
   // Warranty Settings: coverage listed; saving a webhook issues the secret once; the test ping reports failure for a dead endpoint.
   await page.goto('/brand-admin/warranty-settings');
-  await expect(page.getByText('Your brand is listed in the customer app’s Partner Warranty.')).toBeVisible();
+  await expect(page.getByText('Customers can select your brand directly in Partner Warranty.')).toBeVisible();
   await expect(page.getByRole('checkbox', { name: ac.name, exact: true })).toBeChecked();
   await page.goto('/brand-admin/settings');
   await page.getByRole('button', { name: 'Integrations', exact: true }).click();

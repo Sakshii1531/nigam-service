@@ -109,6 +109,7 @@ function commercialSnapshot(quote, line) {
  * is no fallback to "some service in the category" any more (client Test 12).
  */
 export async function createBooking(userId, data) {
+  if (data.applianceId && (data.quantity ?? 1) !== 1) throw new ApiError(400, 'Book one saved appliance per service booking');
   const isInstant = Boolean(data.isInstant || data.timeGroup === 'ASAP' || data.timeSlot?.time === 'ASAP' || data.timeSlot?.time?.includes?.('ASAP'));
   // An ASAP booking is an express booking (assumption A3): it pays the express
   // fee, and an offering with express disabled cannot be booked ASAP.
@@ -126,7 +127,7 @@ export async function createBooking(userId, data) {
   const { coverageType, detection } = await detectCoverage({
     userId,
     categoryKey,
-    warranty: { brand: data.brand, serialNo: data.serialNo, purchaseDate: data.purchaseDate, applianceId: data.applianceId },
+    warranty: { brand: data.brand, serialNo: data.serialNo, purchaseDate: data.purchaseDate, applianceId: data.applianceId, newAppliance: data.newAppliance },
   });
   const { warrantyStatus, brandId, applianceId, amcSubscriptionId, extendedWarrantyOrderId } = detection;
 
@@ -149,6 +150,7 @@ export async function createBooking(userId, data) {
   }
 
   const commercial = commercialSnapshot(quote, line);
+  commercial.sacCode = offering.tax?.sacCode || null;
   const totalPrice = commercial.finalAmount;
   const serviceName = line.offering.name;
 
@@ -185,6 +187,7 @@ export async function createBooking(userId, data) {
         user: userId,
         offering: offering._id,
         commercial,
+        businessBilling: data.businessBilling,
         isExpress,
         requiredInfo,
         category: categoryKey,

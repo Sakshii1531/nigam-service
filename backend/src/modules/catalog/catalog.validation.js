@@ -51,6 +51,7 @@ export const quoteSchema = z.object({
   warranty: z
     .object({
       brand: z.string().trim().max(80).optional(),
+      newAppliance: z.boolean().optional(),
       applianceId: z.string().max(40).optional(),
       serialNo: z.string().trim().max(80).optional(),
       purchaseDate: z.coerce.date().optional(),

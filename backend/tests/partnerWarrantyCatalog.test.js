@@ -320,3 +320,19 @@ describe('Phase 2 — brand edits its own coverage', () => {
     await api().put('/api/v1/brand/warranty-coverage').set(bearer(token)).send({ logoUrl: 'data:image/png;base64,AAAA' }).expect(400);
   });
 });
+
+
+describe('brand-first catalogue', () => {
+  it('lists partner brands and all covered products without any warranty groups', async () => {
+    const w = await world();
+    await WarrantyGroup.deleteMany({});
+    const brands = await api().get('/api/v1/partner-warranty/brands').expect(200);
+    expect(brands.body.data.map(b => b.name)).toEqual(['LG', 'Voltas']);
+    const searched = await api().get('/api/v1/partner-warranty/brands?q=volt').expect(200);
+    expect(searched.body.data.map(b => b.name)).toEqual(['Voltas']);
+    const products = await api().get(`/api/v1/partner-warranty/brands/${w.lg._id}/products`).expect(200);
+    expect(products.body.data.products.map(p => p.key)).toEqual(['AC', 'Refrigerator']);
+    await api().get(`/api/v1/partner-warranty/brands/${w.samsung._id}/products`).expect(404);
+    await api().get(`/api/v1/partner-warranty/brands/${w.pending._id}/products`).expect(404);
+  });
+});

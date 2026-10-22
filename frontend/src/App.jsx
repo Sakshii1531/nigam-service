@@ -65,7 +65,7 @@ const Coupons = lazy(() => import("./pages/Coupons"));
 const RewardsPlayZone = lazy(() => import("./pages/RewardsPlayZone"));
 const MyBookings = lazy(() => import("./pages/MyBookings"));
 const MyOrders = lazy(() => import("./pages/MyOrders"));
-const ExchangeDetails = lazy(() => import("./pages/ExchangeDetails"));
+const MyAppliances = lazy(() => import("./pages/MyAppliances"));
 const ReferEarn = lazy(() => import("./pages/ReferEarn"));
 const ServicePartner = lazy(() => import("./pages/ServicePartner"));
 const PaymentMethods = lazy(() => import("./pages/PaymentMethods"));
@@ -426,7 +426,7 @@ const ScrollToTop = () => {
           defaultAddress?.city ||
           "";
         // Existing brand tickets remain readable/respondable even where new NCC bookings are unavailable.
-        if (customerCity && !pathname.startsWith("/partner-warranty/claims")) {
+        if (customerCity && !pathname.startsWith("/partner-warranty/claims") && pathname !== "/profile" && pathname !== "/exchange-details" && !pathname.startsWith("/my-appliances")) {
           getActiveCities()
             .then((cities) => {
               const serviceable = isCityServiceable(customerCity, cities);
@@ -643,9 +643,10 @@ function App() {
                             path="/partner-warranty"
                             element={<PartnerWarranty />}
                           />
-                          {/* Partner Warranty (docs/partner-warranty Phase 12) —
-                              :group is a warranty group slug ("all" from brand
-                              search); :brandId / :categoryId are real ids. */}
+                          {/* Brand-first routes. Keep old group URLs working for saved links. */}
+                          <Route path="/partner-warranty/products/:brandId" element={<SelectProduct />} />
+                          <Route path="/partner-warranty/issues/:brandId/:categoryId" element={<SelectIssue />} />
+                          <Route path="/partner-warranty/raise-request/:brandId/:categoryId" element={<RaiseWarrantyRequest />} />
                           <Route
                             path="/partner-warranty/brands/:group"
                             element={<SelectBrand />}
@@ -918,8 +919,10 @@ function App() {
                           <Route path="/my-orders" element={<MyOrders />} />
                           <Route
                             path="/exchange-details"
-                            element={<ExchangeDetails />}
+                            element={<Navigate to="/my-appliances" replace />}
                           />
+                          <Route path="/my-appliances" element={<MyAppliances />} />
+                          <Route path="/my-appliances/:id" element={<MyAppliances />} />
                           <Route path="/refer-earn" element={<ReferEarn />} />
                           <Route
                             path="/service-partner"

@@ -1,3 +1,4 @@
+import BusinessInvoiceCard from '../components/booking/BusinessInvoiceCard';
 import { useState, useEffect, useCallback } from "react";
 import { formatRupees } from "../lib/catalogueApi";
 import { useParams, useNavigate } from "react-router-dom";
@@ -834,6 +835,8 @@ const BookingDetails = () => {
             </div>
           </div>
         </div>
+
+        <BusinessInvoiceCard booking={booking} />
 
         {/* Bottom Actions Area */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">

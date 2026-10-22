@@ -6,6 +6,7 @@ import { watchCatalogueWrites } from '../catalog/catalogCache.js';
 // surfaced across super-admin's Settings.jsx tabs.
 const platformSettingsSchema = new mongoose.Schema(
   {
+    customerInvoiceIssuer: { type: mongoose.Schema.Types.Mixed, default: undefined },
     platformName: { type: String, default: 'Nigam Care' },
     logoUrl: String,
     supportEmail: String,

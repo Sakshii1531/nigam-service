@@ -1,3 +1,5 @@
+import ApplianceForm from '../components/appliances/ApplianceForm';
+import BusinessBillingFields, { emptyBusinessBilling, isValidBusinessBilling } from '../components/booking/BusinessBillingFields';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
@@ -323,9 +325,11 @@ const BookingFlow = () => {
   const [tree, setTree] = useState(null);
   const [treeError, setTreeError] = useState("");
 
+  const applianceLink = new URLSearchParams(location.search).get("appliance");
   const resumeBooking =
     location.state?.resumeBooking ||
     location.state?.bookingMeta ||
+    (applianceLink ? null :
     (() => {
       try {
         const raw = sessionStorage.getItem("ncc_last_booking_flow");
@@ -342,7 +346,7 @@ const BookingFlow = () => {
         // ignore session storage read errors
       }
       return null;
-    })();
+    })());
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [step, setStep] = useState(
@@ -382,18 +386,22 @@ const BookingFlow = () => {
   const [quoteNonce, setQuoteNonce] = useState(0);
 
   // Step 3
-  const [brand, setBrand] = useState(() => resumeBooking?.brand || "");
+  const [brand, setBrand] = useState(() => resumeBooking?.brand || location.state?.appliance?.brand || "");
 
   const [ownedAppliances, setOwnedAppliances] = useState([]);
-  const [selectedApplianceId, setSelectedApplianceId] = useState(() => resumeBooking?.applianceId || "");
+  const [selectedApplianceId, setSelectedApplianceId] = useState(() => resumeBooking?.applianceId || applianceLink || "");
+  const [addAppliance, setAddAppliance] = useState(false);
+  const [appliancesError, setAppliancesError] = useState("");
   useEffect(() => {
     if (!user) return;
     let alive = true;
     apiRequest(`/appliances?category=${encodeURIComponent(category)}`, { auth: true })
-      .then((items) => alive && setOwnedAppliances(items || []))
-      .catch(() => alive && setOwnedAppliances([]));
+      .then((items) => { if (!alive) return; setOwnedAppliances(items || []);
+        if (applianceLink) { const saved = items.find(a => a.id === applianceLink); if (saved) { setBrand(saved.brand || ""); setSelectedApplianceId(saved.id); } else setAppliancesError("This saved appliance is unavailable. Choose another appliance or book a new one."); }
+      })
+      .catch(e => alive && setAppliancesError(e.message));
     return () => { alive = false; };
-  }, [user, category]);
+  }, [user, category, applianceLink]);
 
   // Step 4
   const [selectedDate, setSelectedDate] = useState(
@@ -404,6 +412,8 @@ const BookingFlow = () => {
   );
 
   // Step 5
+  const [needsGstInvoice, setNeedsGstInvoice] = useState(Boolean(resumeBooking?.businessBilling));
+  const [businessBilling, setBusinessBilling] = useState(() => resumeBooking?.businessBilling || { ...emptyBusinessBilling });
   const [fullName, setFullName] = useState(() => resumeBooking?.fullName || "");
   const [mobile, setMobile] = useState(() => resumeBooking?.mobile || "");
   const [address, setAddress] = useState(
@@ -412,6 +422,7 @@ const BookingFlow = () => {
         house: "",
         area: "",
         city: "",
+        state: "",
         pincode: "",
         latitude: null,
         longitude: null,
@@ -437,6 +448,7 @@ const BookingFlow = () => {
       house: prev.house || addressDetails?.house || "",
       area: prev.area || addressDetails?.area || "",
       city: prev.city || addressDetails?.city || currentLocation?.city || "",
+      state: addressDetails?.state || prev.state || currentLocation?.state || "",
       pincode: prev.pincode || addressDetails?.pincode || "",
     }));
   };
@@ -459,6 +471,7 @@ const BookingFlow = () => {
       if (resume.date) setSelectedDate(resume.date);
       if (resume.timeGroup) setTimeGroup(resume.timeGroup);
       if (resume.fullName) setFullName(resume.fullName);
+      if (resume.businessBilling) { setNeedsGstInvoice(true); setBusinessBilling(resume.businessBilling); }
       if (resume.mobile) setMobile(resume.mobile);
       if (resume.address) setAddress(resume.address);
       if (resume.paymentMode) setPaymentMode(resume.paymentMode);
@@ -482,6 +495,9 @@ const BookingFlow = () => {
           area:
             defaultAddr.landmark || defaultAddr.area || defaultAddr.city || "",
           city: defaultAddr.city || currentLocation?.city || user.city || "",
+          state: defaultAddr.state || currentLocation?.state || "",
+          latitude: defaultAddr.latitude ?? null,
+          longitude: defaultAddr.longitude ?? null,
           pincode:
             defaultAddr.pincode ||
             defaultAddr.house?.match(/\b\d{6}\b/)?.[0] ||
@@ -583,8 +599,8 @@ const BookingFlow = () => {
   // (docs/master-catalogue Phase 19) — a standalone service never carries one.
   const bookingBrand = isStandalone ? "" : brand;
   const brandAppliances = isStandalone ? [] : ownedAppliances.filter((a) => a.category === category && a.brand?.toLowerCase() === brand.toLowerCase());
-  const bookingApplianceId = brandAppliances.find((a) => a.id === selectedApplianceId)?.id
-    || (brandAppliances.length === 1 ? brandAppliances[0].id : undefined);
+  const bookingApplianceId = brandAppliances.find((a) => a.id === selectedApplianceId)?.id;
+  const newAppliance = !bookingApplianceId;
   const serviceChoices = selectedPT ? servicesFor(tree, { productTypeId, variantId: variantId || null }) : [];
   const serviceId =
     chosenServiceId ||
@@ -642,7 +658,7 @@ const BookingFlow = () => {
         // The appliance's brand lets the server detect warranty / AMC / EW
         // coverage for a signed-in customer — the same check the booking
         // runs — so a covered visit shows ₹0 here before confirming.
-        warranty: signedIn && bookingBrand ? { brand: bookingBrand, applianceId: bookingApplianceId } : undefined,
+        warranty: signedIn && bookingBrand ? { brand: bookingBrand, applianceId: bookingApplianceId, newAppliance } : undefined,
       })
     : "";
 
@@ -992,12 +1008,14 @@ const BookingFlow = () => {
     useCoins: quote.coinsApplied > 0,
     brand: bookingBrand,
     applianceId: bookingApplianceId,
+    newAppliance,
     date: selectedDate,
     timeGroup,
     isInstant: isExpress,
     address,
     fullName,
     mobile,
+    ...(needsGstInvoice ? { businessBilling } : {}),
     paymentMode,
     quote,
     selection: {
@@ -1115,7 +1133,7 @@ const BookingFlow = () => {
   const step2Valid = Boolean(primaryOffering && quote && !quoteError);
   const hasBrands = Boolean(data.brands && data.brands.length > 0);
   const timeSlotValid = Boolean(timeGroup) && (timeGroup !== "ASAP" || expressAvailable);
-  const step3Valid = (brandAppliances.length < 2 || !!bookingApplianceId) && (!hasBrands || !!brand) && !!selectedDate && timeSlotValid && Boolean(quote);
+  const step3Valid = (!bookingApplianceId || (quantity === 1 && extraLines.length === 0)) && (!hasBrands || !!brand) && !!selectedDate && timeSlotValid && Boolean(quote);
 
   const isMobileValid = !!mobile?.trim() && /^\d{10}$/.test(mobile.trim());
   const isPincodeValid =
@@ -1127,7 +1145,8 @@ const BookingFlow = () => {
   const answersValid = requiredQuestions.every(
     (q) => !q.required || String(answers[q.key] || "").trim(),
   );
-  const step4Valid = isAddressValid && isContactValid && answersValid && Boolean(quote) && !quoteError;
+  const gstDetailsValid = !needsGstInvoice || (isValidBusinessBilling(businessBilling) && Boolean(address.state?.trim()));
+  const step4Valid = gstDetailsValid && isAddressValid && isContactValid && answersValid && Boolean(quote) && !quoteError;
 
   // ── Step config ────────────────────────────────────────────────────────────
   const stepConfig = {
@@ -1183,6 +1202,7 @@ const BookingFlow = () => {
         : "Continue — Address & Payment";
     if (submitting) return "Processing Booking...";
     if (!answersValid) return "Answer the service questions";
+    if (!gstDetailsValid) return "Complete Business GST Details";
     if (!step4Valid) return quoteLoading ? "Getting price…" : "Enter Address & Mobile Details";
     if (paymentMode === "after") return "Confirm Booking (Pay After Service)";
     return `Pay ${formatRupees(quote.payableNow)} & Confirm Booking`;
@@ -1604,7 +1624,8 @@ const BookingFlow = () => {
                     <div className="relative">
                       <select
                         value={brand}
-                        onChange={(e) => setBrand(e.target.value)}
+                        aria-label="Appliance brand"
+                        onChange={(e) => { setBrand(e.target.value); setSelectedApplianceId(""); }}
                         className={`w-full appearance-none px-3.5 sm:px-4 py-2.5 sm:py-3 pr-10 bg-slate-50 border rounded-xl text-[12px] sm:text-[13px] font-bold outline-none transition-all cursor-pointer ${
                           brand
                             ? "text-slate-900 border-brand-blue bg-blue-50/20"
@@ -1618,6 +1639,7 @@ const BookingFlow = () => {
                             {b}
                           </option>
                         ))}
+                        {brand && !data.brands.includes(brand) && brand !== "Other" && <option value={brand}>{brand}</option>}
                         <option value="Other">Other / Not Listed</option>
                       </select>
                       <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -1631,15 +1653,21 @@ const BookingFlow = () => {
                   </div>
                 )}
 
-                {brandAppliances.length > 1 && (
-                  <label className="bg-white border border-slate-200 rounded-2xl p-4 text-xs font-bold">
-                    Select your appliance to apply AMC or warranty coverage
-                    <select value={selectedApplianceId} onChange={(e) => setSelectedApplianceId(e.target.value)} className="w-full mt-2 p-3 bg-slate-50 rounded-xl">
-                      <option value="">Choose registered appliance</option>
-                      {brandAppliances.map((a) => <option key={a.id} value={a.id}>{[a.brand, a.modelNumber || a.model, a.serialNumber].filter(Boolean).join(' · ')}</option>)}
-                    </select>
-                  </label>
-                )}
+                {user && !isStandalone && <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-slate-900">Which appliance needs service?</h3><button type="button" onClick={() => setAddAppliance(true)} className="text-xs font-bold text-blue-800">+ Add appliance</button></div>
+                  {appliancesError && <p role="alert" className="mt-2 text-xs text-red-600">{appliancesError}</p>}
+                  <select aria-label="Select saved appliance" value={bookingApplianceId || ""} onChange={e => {
+                    const saved = ownedAppliances.find(a => a.id === e.target.value);
+                    setSelectedApplianceId(saved?.id || "");
+                    if (saved) { setBrand(saved.brand || ""); setQuantity(1); setExtraLines([]); }
+                    setAppliancesError("");
+                  }} className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+                    <option value="">New / unsaved appliance — don't add to My Appliances</option>
+                    {ownedAppliances.map(a => <option key={a.id} value={a.id}>{[a.nickname, a.brand, a.modelNumber || a.model, a.serialNumber].filter(Boolean).join(' · ') || a.category}</option>)}
+                  </select>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">Saved appliances keep their own service history. You can also book a new appliance without saving it.</p>
+                  {bookingApplianceId && (quantity !== 1 || extraLines.length > 0) && <p role="alert" className="mt-2 text-xs text-amber-700">A saved appliance represents one product. <button type="button" onClick={() => { setQuantity(1); setExtraLines([]); }} className="font-bold underline">Book just this appliance</button></p>}
+                </section>}
 
                 {/* Date picker */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
@@ -1925,6 +1953,7 @@ const BookingFlow = () => {
                                     addr.city ||
                                     "",
                                   city: addr.city || "",
+                                  state: addr.state || "",
                                   pincode:
                                     addr.pincode ||
                                     addr.house?.match(/\b\d{6}\b/)?.[0] ||
@@ -2265,6 +2294,7 @@ const BookingFlow = () => {
                         </span>
                         {q.type === "select" && q.options?.length ? (
                           <select
+                            aria-label={`${q.label}${q.required ? ' *' : ''}`}
                             value={answers[q.key] || ""}
                             onChange={(e) => setAnswers((a) => ({ ...a, [q.key]: e.target.value }))}
                             className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-brand-blue">
@@ -2343,6 +2373,9 @@ const BookingFlow = () => {
                     )}
                   </div>
                 )}
+
+                {needsGstInvoice && <label className="block rounded-2xl border border-slate-200 bg-white p-4 text-xs font-semibold text-slate-600">Service state / Union Territory<input aria-label="Service state / Union Territory" required value={address.state || ''} onChange={e => setAddress(p => ({ ...p, state: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /><span className="mt-2 block text-[11px] font-normal text-slate-500">State where the technician will perform this service.</span></label>}
+                <BusinessBillingFields enabled={needsGstInvoice} onEnabledChange={setNeedsGstInvoice} value={businessBilling} onChange={setBusinessBilling} />
 
                 {/* Payment Options */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">
@@ -2674,6 +2707,11 @@ const BookingFlow = () => {
         }
         initialCity={address.city || currentLocation?.city || ""}
       />
+      {addAppliance && <ApplianceForm category={category} onClose={() => setAddAppliance(false)} onSaved={saved => {
+        setOwnedAppliances(p => [saved, ...p.filter(a => a.id !== saved.id)]);
+        if (saved.category === category) { setSelectedApplianceId(saved.id); setBrand(saved.brand || ""); setQuantity(1); setExtraLines([]); }
+        setAddAppliance(false);
+      }} />}
     </div>
   );
 };

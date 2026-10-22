@@ -18,9 +18,6 @@ export const adminWarrantyApi = {
   slaSummary: (params) => apiRequest(`/super-admin/warranty-claims/sla-summary${qs(params)}`, { auth: true }),
 
   // Catalogue (Phase 2)
-  groups: () => apiRequest('/super-admin/warranty-catalog/groups', { auth: true }),
-  createGroup: (body) => post('/super-admin/warranty-catalog/groups', body),
-  updateGroup: (id, body) => put(`/super-admin/warranty-catalog/groups/${id}`, body),
   issues: (params) => apiRequest(`/super-admin/warranty-catalog/issues${qs(params)}`, { auth: true }),
   createIssue: (body) => post('/super-admin/warranty-catalog/issues', body),
   updateIssue: (id, body) => put(`/super-admin/warranty-catalog/issues/${id}`, body),

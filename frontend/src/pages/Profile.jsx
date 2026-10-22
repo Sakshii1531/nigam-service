@@ -16,7 +16,7 @@ import {
   Shield,
   FileText,
   Package,
-  RefreshCw,
+  Boxes,
   Ticket,
   Heart,
   Sparkles,
@@ -261,16 +261,16 @@ const Profile = () => {
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
 
-                {/* Exchange Details */}
+                {/* My Appliances */}
                 <div 
-                  onClick={() => navigate('/exchange-details')}
+                  onClick={() => navigate('/my-appliances')}
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-amber-50 text-amber-600 rounded-xl shrink-0">
-                      <RefreshCw className="h-4 w-4" />
+                      <Boxes className="h-4 w-4" />
                     </div>
-                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">Exchange Details</span>
+                    <span className="text-xs sm:text-[13px] font-bold text-slate-800">My Appliances</span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </div>
@@ -724,16 +724,16 @@ const Profile = () => {
                 </div>
 
                 <div 
-                  onClick={() => navigate('/exchange-details')}
+                  onClick={() => navigate('/my-appliances')}
                   className="p-3.5 bg-slate-50 hover:bg-[#EAF4FF]/60 rounded-2xl border border-slate-100 flex items-center justify-between cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white text-amber-600 rounded-xl shadow-2xs">
-                      <RefreshCw className="h-5 w-5" />
+                      <Boxes className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">Exchange Details</h4>
-                      <p className="text-[11px] text-slate-400 font-medium">Old appliance trade-in status</p>
+                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-brand-blue">My Appliances</h4>
+                      <p className="text-[11px] text-slate-400 font-medium">Manage products, documents & service history</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform" />

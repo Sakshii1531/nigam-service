@@ -1,3 +1,4 @@
+import { issueInvoice } from '../booking/customerInvoice.service.js';
 import { searchHasExpired } from '../shared/dispatchPolicy.js';
 import { inWarrantyServiceArea } from '../shared/assignmentEngine.js';
 import { assertJobEligible, eligibilityFor } from '../provider-onboarding/eligibility.service.js';
@@ -89,7 +90,7 @@ function ensureTransition(job, toStep) {
 }
 
 async function findOwnedJob(serviceProviderId, jobId) {
-  const job = await Job.findById(jobId).populate({ path: 'serviceRequest', populate: { path: 'user booking appliance' } });
+  const job = await Job.findById(jobId).populate({ path: 'serviceRequest', populate: [{path:'user'},{path:'booking',select:'-businessBilling'},{path:'appliance'}] });
   if (!job) throw new ApiError(404, 'Job not found');
   if (String(job.serviceProvider) !== serviceProviderId) throw new ApiError(403, 'Not authorized to access this job');
   if (job.serviceRequest?.status === 'Cancelled' || job.serviceRequest?.booking?.status === 'Cancelled') job.activeStep = 'cancelled';
@@ -242,7 +243,7 @@ export async function listAvailableJobs(serviceProviderId) {
     ],
     _id: { $nin: acceptedServiceRequestIds },
   })
-    .populate('user booking')
+    .populate('user').populate({path:'booking',select:'-businessBilling'})
     .populate(AMC_POPULATE)
     .populate(EW_POPULATE)
     .sort({ createdAt: -1 });
@@ -343,7 +344,7 @@ export async function getJobSummary(serviceProviderId) {
 
 export async function listActiveJobs(serviceProviderId) {
   const candidates = await Job.find({ serviceProvider: serviceProviderId, activeStep: { $nin: ['completed', 'idle', 'cancelled'] } })
-    .populate({ path: 'serviceRequest', populate: { path: 'user booking appliance' } })
+    .populate({ path: 'serviceRequest', populate: [{path:'user'},{path:'booking',select:'-businessBilling'},{path:'appliance'}] })
     .sort({ createdAt: -1 });
   // Also hide legacy jobs whose parent was cancelled before Job cancellation
   // was synchronized, so an already-cancelled booking cannot remain active.
@@ -417,7 +418,7 @@ export async function listJobHistory(serviceProviderId, { status = 'all', type =
         path: 'serviceRequest',
         populate: [
           { path: 'user', select: 'name phone' },
-          { path: 'booking' },
+          { path: 'booking', select: '-businessBilling' },
           { path: 'brand', select: 'name' },
           { path: 'amcSubscription', populate: { path: 'plan', select: 'name' } },
           { path: 'extendedWarrantyOrder' },
@@ -1038,6 +1039,8 @@ export async function addJobAddOn(serviceProviderId, jobId, { offeringId, quanti
     name: line.offering.name,
     quantity: line.quantity,
     unitPrice: toRupees(line.unitPrice),
+    sacCode: (await ServiceOffering.findById(offeringId).select('tax').lean())?.tax?.sacCode || null,
+    gstPercent: line.gstPercent,
     taxableAmount: toRupees(line.taxableAmount),
     gstAmount: toRupees(line.gstAmount),
     finalAmount: toRupees(line.finalAmount),
@@ -1400,6 +1403,10 @@ async function finalizeJobCompletion(job, payment) {
       updatedBooking.completedAt = new Date();
       if (updatedBooking.isInstant) updatedBooking.instantStatus = 'COMPLETED';
       await updatedBooking.save();
+      if (updatedBooking.businessBilling) {
+        try { await issueInvoice(updatedBooking._id, { automatic: true }); }
+        catch (error) { if (error.statusCode !== 409) console.warn('[customer invoice] Issuance deferred:', error.message); }
+      }
     }
   }
 

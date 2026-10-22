@@ -1,5 +1,7 @@
 # Partner Warranty (B2B2C) — Implementation Plan
 
+**Current flow (22 October 2026):** customers choose a partner brand directly, then its covered product and issue. The top-level warranty groups have been removed from the customer and admin interfaces. See [brand-first-flow.md](brand-first-flow.md); older phase logs below describe the original grouped design.
+
 This folder is the plan **and** the progress record for turning the customer
 app's Partner Warranty screens into a complete **B2B2C Warranty + After-Sales
 Service workflow**. It is updated at the end of every phase — open a phase file

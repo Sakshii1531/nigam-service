@@ -89,7 +89,7 @@ function CoverageCard({ canEdit }) {
   };
 
   return (
-    <Card title="Warranty coverage" subtitle="The products customers can raise a warranty claim for under your brand.">
+    <Card title="Warranty coverage" subtitle="Customers choose your brand first, then one of these covered products to raise a warranty claim.">
       {res.loading ? (
         <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />
       ) : d ? (
@@ -97,7 +97,7 @@ function CoverageCard({ canEdit }) {
           <div className={`text-xs font-semibold rounded-xl px-3 py-2 flex items-center gap-2 ${d.warrantyEnabled ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
             <ShieldCheck size={14} aria-hidden="true" />
             {d.warrantyEnabled
-              ? 'Your brand is listed in the customer app’s Partner Warranty.'
+              ? 'Customers can select your brand directly in Partner Warranty.'
               : 'Your brand is not listed to customers yet — NCC switches this on.'}
           </div>
 

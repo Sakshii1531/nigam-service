@@ -1,3 +1,4 @@
+import { customerInvoiceAdminRouter } from './modules/booking/customerInvoice.routes.js';
 import { intakeRouter } from './modules/brand-crm/intake.routes.js';
 import { apiKeyRouter } from './modules/brand-crm/apiKey.routes.js';
 import { brandReportsRouter } from './modules/brand-crm/brandReports.routes.js';
@@ -190,6 +191,7 @@ export function createApp() {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/catalog', catalogRouter);
   app.use('/api/v1/bookings', bookingRouter);
+  app.use('/api/v1/super-admin/customer-invoices', customerInvoiceAdminRouter);
   app.use('/api/v1/service-requests', serviceRequestRouter);
   app.use('/api/v1/appliances', applianceRouter);
   app.use('/api/v1/products', productRouter);

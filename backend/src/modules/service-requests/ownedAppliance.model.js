@@ -11,6 +11,17 @@ const ownedApplianceSchema = new mongoose.Schema(
     brand: String,
     brandRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
     identityKey: String,
+    nickname: String,
+    notes: String,
+    // Customer-entered reminder, never an entitlement to free warranty service.
+    manufacturerWarrantyEndsOn: Date,
+    deletedAt: { type: Date, default: null },
+    registryKey: String,
+    documents: [{
+      fileId: { type: mongoose.Schema.Types.ObjectId, required: true },
+      name: String, kind: { type: String, enum: ['invoice', 'warranty', 'photo', 'other'] },
+      mimeType: String, size: Number, uploadedAt: Date,
+    }],
     model: String,
     modelNumber: String,
     serialNumber: String,

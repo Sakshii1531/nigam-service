@@ -8,18 +8,18 @@ import { warrantyApi } from '../lib/partnerWarrantyApi';
 // Issues for the chosen product, from the API (admin-managed per category).
 const SelectIssue = () => {
   const navigate = useNavigate();
-  const { group, brandId, categoryId } = useParams();
+  const { brandId, categoryId } = useParams();
   const res = useApiData(() => warrantyApi.issues(categoryId), [categoryId]);
   const issues = res.data?.issues || [];
 
   const choose = (issue) =>
-    navigate(`/partner-warranty/raise-request/${group}/${brandId}/${categoryId}`, {
+    navigate(`/partner-warranty/raise-request/${brandId}/${categoryId}`, {
       state: { issueId: issue.id, issueName: issue.name, productName: res.data?.product?.name },
     });
 
   return (
     <div className="min-h-screen bg-blue-50/50 flex flex-col pb-8">
-      <WarrantyHeader title={res.data?.product?.name || 'Select Issue'} back={`/partner-warranty/products/${group}/${brandId}`} />
+      <WarrantyHeader title={res.data?.product?.name || 'Select Issue'} back={`/partner-warranty/products/${brandId}`} />
       <div className="flex-1 p-4 sm:p-6 flex flex-col gap-5 max-w-lg mx-auto w-full">
         <h2 className="text-lg font-black text-black tracking-wide pl-1">Select Issue</h2>
         <ErrorNote message={res.error ? 'Could not load issues.' : ''} onRetry={res.reload} />

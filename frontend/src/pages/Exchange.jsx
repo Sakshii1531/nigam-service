@@ -677,10 +677,10 @@ const Exchange = () => {
             {/* Back Buttons */}
             <div className="w-full flex flex-col gap-3 mt-4">
               <button 
-                onClick={() => navigate('/buy')} 
+                onClick={() => navigate('/my-appliances')}
                 className="w-full bg-[#072C63] hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98"
               >
-                View Exchange Details
+                View My Appliances
               </button>
               <button 
                 onClick={() => navigate('/dashboard')} 

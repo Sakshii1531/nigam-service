@@ -1,3 +1,4 @@
+import CustomerInvoiceSettings from '../../components/super-admin/CustomerInvoiceSettings';
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
@@ -590,6 +591,7 @@ const Settings = () => {
                       onChange={(e) => setDefaultGst(e.target.value)} 
                     />
                   </div>
+                  <CustomerInvoiceSettings />
                 </div>
               )}
 
@@ -602,7 +604,7 @@ const Settings = () => {
                 disabled={loading || saving}
                 className="bg-[#0D47A1] text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Save size={16} /> {saving ? 'Saving…' : 'Save Changes'}
+                <Save size={16} /> {saving ? 'Saving…' : activeTab === 'Tax' ? 'Save default GST rate' : 'Save Changes'}
               </button>
             </div>
           </div>

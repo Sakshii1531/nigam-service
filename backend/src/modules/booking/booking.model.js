@@ -30,6 +30,7 @@ const commercialSchema = new mongoose.Schema(
     isExpress: Boolean,
     expressFee: Number,
     taxableAmount: Number,
+    sacCode: String,
     gstPercent: Number,
     gstAmount: Number,
     finalAmount: Number,
@@ -55,6 +56,7 @@ export const INTERNAL_COMMERCIAL_FIELDS = Object.freeze(['spPayoutUnit', 'expres
 
 const bookingSchema = new mongoose.Schema(
   {
+    businessBilling: { type: new mongoose.Schema({ gstin: String, legalName: String, address: String, city: String, pincode: String }, { _id: false }), default: undefined },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     // The catalogue offering booked, its full commercial snapshot, and the
     // customer's answers to the offering's required-info questions.

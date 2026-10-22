@@ -31,6 +31,7 @@ export async function detectWarrantyForAppliance({
   serialNo,
   purchaseDate,
   applianceId,
+  newAppliance = false,
 }) {
   let appliance = null;
   let brandDoc = brandName
@@ -38,16 +39,18 @@ export async function detectWarrantyForAppliance({
     : null;
 
   // 1. Resolve OwnedAppliance
+  if (newAppliance && applianceId) throw new ApiError(400, 'Choose a saved appliance or a new appliance, not both');
   if (applianceId) {
-    appliance = await OwnedAppliance.findOne({ _id: applianceId, user: userId });
+    appliance = await OwnedAppliance.findOne({ _id: applianceId, user: userId, deletedAt: null });
     if (!appliance) throw new ApiError(404, 'Appliance not found');
     if (category && appliance.category !== category) throw new ApiError(400, 'Appliance category does not match this service');
     if (brandName && appliance.brand?.toLowerCase() !== brandName.trim().toLowerCase()) throw new ApiError(400, 'Appliance brand does not match this service');
-  } else if (serialNo) {
-    appliance = await OwnedAppliance.findOne({ user: userId, serialNumber: serialNo });
-  } else if (brandName && category) {
+  } else if (!newAppliance && serialNo) {
+    appliance = await OwnedAppliance.findOne({ user: userId, serialNumber: serialNo, deletedAt: null });
+  } else if (!newAppliance && brandName && category) {
     const candidates = await OwnedAppliance.find({
       user: userId,
+      deletedAt: null,
       category,
       brand: { $regex: `^${String(brandName).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
     }).limit(2);

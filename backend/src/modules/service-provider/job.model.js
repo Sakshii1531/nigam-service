@@ -125,6 +125,8 @@ const addOnSchema = new mongoose.Schema(
     name: String,
     quantity: { type: Number, default: 1 },
     unitPrice: Number,
+    sacCode: String,
+    gstPercent: Number,
     taxableAmount: Number,
     gstAmount: Number,
     finalAmount: Number,

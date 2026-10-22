@@ -4,15 +4,12 @@ import { apiRequest, apiUpload } from './apiClient';
 // Browsing needs no login; everything under /claims is the customer's own.
 
 export const warrantyApi = {
-  groups: () => apiRequest('/partner-warranty/groups'),
-  brands: ({ group, q } = {}) => {
+  brands: ({ q } = {}) => {
     const qs = new URLSearchParams();
-    if (group) qs.set('group', group);
     if (q) qs.set('q', q);
     return apiRequest(`/partner-warranty/brands${qs.toString() ? `?${qs}` : ''}`);
   },
-  products: (brandId, group) =>
-    apiRequest(`/partner-warranty/brands/${brandId}/products${group ? `?group=${encodeURIComponent(group)}` : ''}`),
+  products: (brandId) => apiRequest(`/partner-warranty/brands/${brandId}/products`),
   issues: (categoryId) => apiRequest(`/partner-warranty/products/${categoryId}/issues`),
 
   intakeOptions: () => apiRequest('/partner-warranty/claims/intake-options', {auth:true}),

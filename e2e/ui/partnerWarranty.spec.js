@@ -51,10 +51,6 @@ test('a customer raises, answers, tracks and closes a Partner Warranty claim', a
   const brand = await call(request, 'post', '/super-admin/brands', admin, { name: `E2E Cool ${tag}`, status: 'Active' });
   const ac = (await call(request, 'get', '/super-admin/catalogue/categories', admin)).find((c) => c.key === 'AC');
   await call(request, 'put', `/super-admin/warranty-catalog/brands/${brand.id}`, admin, { warrantyEnabled: true, coverage: [ac.id] });
-  const groupName = `E2E Care ${tag}`;
-  const group = await call(request, 'post', '/super-admin/warranty-catalog/groups', admin, { name: groupName, slug: `e2e-${tag}`, tagline: 'Test group', categories: [ac.id] });
-  // Groups aren't purged by the suite's teardown; switch this one off afterwards.
-  cleanups.push(() => call(request, 'put', `/super-admin/warranty-catalog/groups/${group.id}`, admin, { isActive: false }));
   const issueName = `Not Cooling ${tag}`;
   await call(request, 'post', '/super-admin/warranty-catalog/issues', admin, { category: ac.id, name: issueName });
 
@@ -74,10 +70,10 @@ test('a customer raises, answers, tracks and closes a Partner Warranty claim', a
   await signIn(page, customer);
 
   await page.goto('/partner-warranty');
-  await expect(page.getByRole('button', { name: new RegExp(groupName) })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Choose your brand', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: new RegExp(brand.name) })).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(800); // let the cards finish fading in
   await page.screenshot({ path: `${SHOTS}phase-12-landing.png`, fullPage: true });
-  await page.getByRole('button', { name: new RegExp(groupName) }).click();
   await page.getByRole('button', { name: new RegExp(brand.name) }).click();
   await page.getByRole('button', { name: new RegExp(`^${ac.name}$`) }).click();
   await page.getByRole('button', { name: new RegExp(issueName) }).click();

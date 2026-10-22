@@ -65,9 +65,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   const ac = (await call(request, 'get', '/super-admin/catalogue/categories', admin)).find((c) => c.key === 'AC');
   const brand = await call(request, 'post', '/super-admin/brands', admin, { name: `E2E Journey ${tag}`, status: 'Active' });
   await call(request, 'put', `/super-admin/warranty-catalog/brands/${brand.id}`, admin, { warrantyEnabled: true, coverage: [ac.id] });
-  const groupName = `E2E Journey ${tag}`;
-  const group = await call(request, 'post', '/super-admin/warranty-catalog/groups', admin, { name: groupName, slug: `wj-${tag}`, tagline: 'Journey', categories: [ac.id] });
-  cleanups.push(() => call(request, 'put', `/super-admin/warranty-catalog/groups/${group.id}`, admin, { isActive: false }));
+
   const issueName = `Not Cooling ${tag}`;
   await call(request, 'post', '/super-admin/warranty-catalog/issues', admin, { category: ac.id, name: issueName });
 
@@ -96,7 +94,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
 
   // ── 1. Customer: brand → product → issue → documents → details → submit ──
   await customer.goto('/partner-warranty');
-  await customer.getByRole('button', { name: new RegExp(groupName) }).click({ timeout: 15_000 });
+  await expect(customer.getByRole('heading', { name: 'Choose your brand', exact: true })).toBeVisible();
   await customer.getByRole('button', { name: new RegExp(brand.name) }).click();
   await customer.getByRole('button', { name: new RegExp(`^${ac.name}$`) }).click();
   await customer.getByRole('button', { name: new RegExp(issueName) }).click();

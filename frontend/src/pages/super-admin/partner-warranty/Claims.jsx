@@ -34,7 +34,7 @@ function useDebounced(value, ms = 300) {
   return v;
 }
 
-const EMPTY = { brand: '', group: '', category: '', status: '', from: '', to: '', city: '', pincode: '',jobStage:'',source:'',priority:'',warrantyStatus:'' };
+const EMPTY = { brand: '', category: '', status: '', from: '', to: '', city: '', pincode: '',jobStage:'',source:'',priority:'',warrantyStatus:'' };
 
 export default function AdminWarrantyClaims() {
   const navigate = useNavigate();
@@ -50,13 +50,10 @@ export default function AdminWarrantyClaims() {
   const options=useApiData(()=>apiRequest('/super-admin/warranty-claims/queue-options',{auth:true}),[]);
   const brands = useApiData(() => adminWarrantyApi.brands(), [], { initial: [] });
   const categories = useApiData(() => adminWarrantyApi.categories(), [], { initial: [] });
-  // Client #3 "Category": the warranty group the customer picked first.
-  const groups = useApiData(() => adminWarrantyApi.groups(), [], { initial: [] });
 
   const params = {
     ...(VIEWS.find((v) => v.key === view)?.filter || {}),
     brand: filters.brand,jobStage:filters.jobStage,source:filters.source,priority:filters.priority,warrantyStatus:filters.warrantyStatus,
-    group: filters.group,
     category: filters.category,
     status: filters.status,
     from: filters.from || undefined,
@@ -101,9 +98,9 @@ export default function AdminWarrantyClaims() {
       }
       exportCsv(
         `warranty-claims-${new Date().toISOString().slice(0, 10)}.csv`,
-        ['Master ticket', 'Brand ticket', 'Source', 'Registrant', 'Priority', 'Warranty', 'Coverage decision', 'Brand', 'Customer', 'Phone', 'Category', 'Product', 'Issue', 'City', 'Pincode', 'Submitted', 'Status', 'Job stage', 'Service Job', 'Assigned Partner', 'SLA', 'Escalated', 'Allocation Failed'],
+        ['Master ticket', 'Brand ticket', 'Source', 'Registrant', 'Priority', 'Warranty', 'Coverage decision', 'Brand', 'Customer', 'Phone', 'Product', 'Issue', 'City', 'Pincode', 'Submitted', 'Status', 'Job stage', 'Service Job', 'Assigned Partner', 'SLA', 'Escalated', 'Allocation Failed'],
         all.map((c) => [
-          c.humanId,c.brandTicketNo,c.source,c.registeredBy?.name,c.priority,c.warranty?.status,c.coverageDecision, c.brand?.name, c.customer?.name, c.customer?.phone, c.category?.name, c.productName, c.issueName, c.location?.city, c.location?.pincode,
+          c.humanId,c.brandTicketNo,c.source,c.registeredBy?.name,c.priority,c.warranty?.status,c.coverageDecision, c.brand?.name, c.customer?.name, c.customer?.phone, c.productName, c.issueName, c.location?.city, c.location?.pincode,
           formatDateTime(c.createdAt), c.status, c.jobStage, c.serviceJob?.humanId, c.assignedPartner?.name, c.slaState, c.flags.escalated ? 'Yes' : '', c.flags.allocationFailed ? 'Yes' : '',
         ]),
       );
@@ -156,7 +153,6 @@ export default function AdminWarrantyClaims() {
           </div>
           {[
             ['brand', 'Brand', brands.data.map((b) => [b.id, b.name])],
-            ['group', 'Category', (Array.isArray(groups.data) ? groups.data : []).map((g) => [g.id, g.name])],
             ['category', 'Product', categories.data.map((c) => [c.key, c.name])],
             ['status', 'Status', CLAIM_STATUSES.map((s) => [s, s])],
             ['source','Source',(options.data?.sources||[]).map(v=>[v,v.replaceAll('_',' ')])],
@@ -166,7 +162,7 @@ export default function AdminWarrantyClaims() {
           ].map(([k, label, options]) => (
             <label key={k} className="text-[10px] font-semibold text-[#64748B] flex flex-col gap-1">
               {label}
-              <select value={filters[k]} onChange={set(k)} className="px-2 py-2 border border-[#E2E8F0] rounded-xl text-xs bg-[#F8FAFC]">
+              <select aria-label={label} value={filters[k]} onChange={set(k)} className="px-2 py-2 border border-[#E2E8F0] rounded-xl text-xs bg-[#F8FAFC]">
                 <option value="">All</option>
                 {options.map(([value, text]) => (
                   <option key={value} value={value}>
@@ -259,7 +255,6 @@ export default function AdminWarrantyClaims() {
                       <td className="px-3 py-3">
                         <p className="font-semibold">{c.productName}</p>
                         <p className="text-[10px] text-[#64748B]">{c.issueName}</p>
-                        {c.category && <p className="text-[10px] text-[#94A3B8]">{c.category.name}</p>}
                       </td>
                       <td className="px-3 py-3 text-[#64748B] whitespace-nowrap">
                         {c.location?.city} · {c.location?.pincode}

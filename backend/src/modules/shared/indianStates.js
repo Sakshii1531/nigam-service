@@ -34,3 +34,5 @@ export function stateFilter(value) {
   const padding = aliases ? '[\\s._-]*' : '\\s*';
   return new RegExp(`^${padding}(?:${patterns.join('|')})${padding}$`, 'i');
 }
+
+export function canonicalStateName(value) { return states.find(names => names.some(name => key(name) === key(value)))?.[0] || String(value || '').trim(); }

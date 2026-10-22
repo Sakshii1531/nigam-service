@@ -1,3 +1,4 @@
+import { addCustomerInvoiceRoutes } from './customerInvoice.routes.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
@@ -7,6 +8,7 @@ import * as bookingService from './booking.service.js';
 import { createBookingSchema, listBookingsQuerySchema, idParamSchema, verifyBookingPaymentSchema, rescheduleBookingSchema, respondPartRequestSchema } from './booking.validation.js';
 export const bookingRouter = Router();
 bookingRouter.use(requireAuth, requireRole(ROLES.CUSTOMER));
+addCustomerInvoiceRoutes(bookingRouter);
 
 bookingRouter.post('/', validate(createBookingSchema), async (req, res, next) => {
   try {

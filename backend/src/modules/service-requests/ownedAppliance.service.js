@@ -1,3 +1,7 @@
+import { Job } from '../service-provider/job.model.js';
+import { randomUUID } from 'node:crypto';
+import { ServiceRequest } from './serviceRequest.model.js';
+import { deleteApplianceFiles } from './applianceDocuments.js';
 import { OwnedAppliance } from './ownedAppliance.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { addMonths } from '../shared/warrantyEngine.js';
@@ -55,7 +59,7 @@ export async function withWarranty(appliance) {
 }
 
 export async function listAppliances(userId, { category } = {}) {
-  const query = { user: userId };
+  const query = { user: userId, deletedAt: null };
   if (category) query.category = category;
   const items = await OwnedAppliance.find(query).sort({ createdAt: -1 });
   return Promise.all(items.map(withWarranty));
@@ -63,7 +67,7 @@ export async function listAppliances(userId, { category } = {}) {
 
 export async function getAppliance(userId, id) {
   const appliance = await OwnedAppliance.findById(id);
-  if (!appliance) throw new ApiError(404, 'Appliance not found');
+  if (!appliance || appliance.deletedAt) throw new ApiError(404, 'Appliance not found');
   if (String(appliance.user) !== String(userId)) throw new ApiError(403, 'Not authorized to view this appliance');
   return withWarranty(appliance);
 }
@@ -74,7 +78,7 @@ export async function getAppliance(userId, id) {
  * a serial the platform has never seen is a normal first-time case, not an error.
  */
 export async function findByIdentifiers(userId, { modelNumber, serialNumber }) {
-  const query = { user: userId };
+  const query = { user: userId, deletedAt: null };
   if (serialNumber) query.serialNumber = serialNumber;
   if (modelNumber) query.modelNumber = modelNumber;
   const appliance = await OwnedAppliance.findOne(query);
@@ -82,7 +86,10 @@ export async function findByIdentifiers(userId, { modelNumber, serialNumber }) {
 }
 
 export async function registerAppliance(userId, data) {
-  data = await resolveBrand(data);
+  const separate = data.createSeparateUnit;
+  const { createSeparateUnit: _separate, ...fields } = data;
+  data = await resolveBrand(fields);
+  if (separate && !data.serialNumber) data.registryKey = randomUUID();
   // Use the same identity as ticket intake, including the no-serial fallback.
   const identity = data.brandRef
     ? { user: userId, brandRef: data.brandRef, identityKey: applianceIdentity(data) }
@@ -90,7 +97,8 @@ export async function registerAppliance(userId, data) {
   if (identity) {
     const existing = await OwnedAppliance.findOne(identity);
     if (existing) {
-      Object.assign(existing, data);
+      if (separate && !existing.deletedAt) throw new ApiError(409, 'This appliance is already saved. Edit the existing appliance instead.');
+      Object.assign(existing, data, { deletedAt: null });
       await existing.save();
       return withWarranty(existing);
     }
@@ -101,7 +109,8 @@ export async function registerAppliance(userId, data) {
     // Another registration or ticket may have inserted this identity first.
     appliance = await OwnedAppliance.findOne(identity);
     if (!appliance) throw err;
-    Object.assign(appliance, data);
+    if (separate && !appliance.deletedAt) throw new ApiError(409, 'This appliance is already saved. Edit the existing appliance instead.');
+    Object.assign(appliance, data, { deletedAt: null });
     await appliance.save();
   }
   return withWarranty(appliance);
@@ -110,7 +119,7 @@ export async function registerAppliance(userId, data) {
 export async function updateAppliance(userId, id, updates) {
   updates = await resolveBrand(updates);
   const appliance = await OwnedAppliance.findById(id);
-  if (!appliance) throw new ApiError(404, 'Appliance not found');
+  if (!appliance || appliance.deletedAt) throw new ApiError(404, 'Appliance not found');
   if (String(appliance.user) !== String(userId)) throw new ApiError(403, 'Not authorized to update this appliance');
   Object.assign(appliance, updates);
   await appliance.save();
@@ -121,7 +130,8 @@ export async function deleteAppliance(userId, id) {
   const appliance = await OwnedAppliance.findById(id);
   if (!appliance) throw new ApiError(404, 'Appliance not found');
   if (String(appliance.user) !== String(userId)) throw new ApiError(403, 'Not authorized to delete this appliance');
-  await appliance.deleteOne();
+  if (!appliance.deletedAt) { appliance.deletedAt = new Date(); await appliance.save(); }
+  await deleteApplianceFiles(appliance);
 }
 
 /** Atomic CRM identity, with fill-only purchase/invoice updates on repeat tickets. */
@@ -148,4 +158,26 @@ export async function upsertTicketAppliance(ticket, brand, { session = null } = 
   if (ticket.purchaseDate) await OwnedAppliance.updateOne({ ...filter, purchaseDate: null }, { $set: { purchaseDate: ticket.purchaseDate } }, { session });
   if (invoice) await OwnedAppliance.updateOne({ ...filter, $or: [{ invoiceFileUrl: null }, { invoiceFileUrl: '' }] }, { $set: { invoiceFileUrl: invoice.url } }, { session });
   return appliance;
+}
+
+/** Only explicit appliance links; a shared brand/model is never proof of service history. */
+export async function applianceHistory(userId, id, { before, beforeId } = {}) {
+  await getAppliance(userId, id);
+  const query = { user: userId, appliance: id };
+  if (before && beforeId) query.$or = [{ createdAt: { $lt: before } }, { createdAt: before, _id: { $lt: beforeId } }];
+  const requests = await ServiceRequest.find(query)
+    .select('humanId category description status createdAt updatedAt booking warrantyClaim')
+    .populate({ path: 'booking', select: 'humanId serviceTitle status totalPrice scheduledDate completedAt commercial.offeringName' })
+    .populate({ path: 'warrantyClaim', select: 'humanId productName issueName status' })
+    .sort({ createdAt: -1, _id: -1 }).limit(100).lean();
+  const jobs = await Job.find({ serviceRequest: { $in: requests.map(r => r._id) }, activeStep: 'completed' }).select('serviceRequest billingEstimate.total').lean();
+  const finalTotals = new Map(jobs.filter(j => Number.isFinite(j.billingEstimate?.total)).map(j => [String(j.serviceRequest), j.billingEstimate.total]));
+  return requests.map(r => ({ id: String(r._id), number: r.booking?.humanId || r.humanId,
+    title: r.booking?.serviceTitle || r.booking?.commercial?.offeringName || r.description || r.category,
+    status: r.booking?.status || r.status, date: r.createdAt,
+    total: finalTotals.get(String(r._id)) ?? r.booking?.totalPrice ?? null,
+    amountType: finalTotals.has(String(r._id)) ? 'final' : 'booked',
+    bookingId: r.booking?._id ? String(r.booking._id) : null,
+    claimId: r.warrantyClaim?._id ? String(r.warrantyClaim._id) : null,
+  }));
 }

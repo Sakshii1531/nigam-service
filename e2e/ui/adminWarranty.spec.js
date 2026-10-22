@@ -53,8 +53,7 @@ test('Super Admin runs a stuck warranty claim to settlement', async ({ browser, 
   const ac = (await call(request, 'get', '/super-admin/catalogue/categories', admin)).find((c) => c.key === 'AC');
   const brand = await call(request, 'post', '/super-admin/brands', admin, { name: `E2E AW ${tag}`, status: 'Active' });
   await call(request, 'put', `/super-admin/warranty-catalog/brands/${brand.id}`, admin, { warrantyEnabled: true, coverage: [ac.id] });
-  const group = await call(request, 'post', '/super-admin/warranty-catalog/groups', admin, { name: `E2E AW ${tag}`, slug: `aw-${tag}`, categories: [ac.id] });
-  cleanups.push(() => call(request, 'put', `/super-admin/warranty-catalog/groups/${group.id}`, admin, { isActive: false }));
+
   const issue = await call(request, 'post', '/super-admin/warranty-catalog/issues', admin, { category: ac.id, name: `Tripping ${tag}` });
 
   const phone = uniquePhone();
@@ -62,7 +61,6 @@ test('Super Admin runs a stuck warranty claim to settlement', async ({ browser, 
   const customer = (await session(request, 'customer', phone)).accessToken;
   const claim = await call(request, 'post', '/partner-warranty/claims', customer, {
     brandId: brand.id,
-    groupId: group.id,
     categoryId: ac.id,
     issueId: issue.id,
     modelNumber: 'AS-Q18',
@@ -80,10 +78,10 @@ test('Super Admin runs a stuck warranty claim to settlement', async ({ browser, 
   await page.goto('/super-admin/partner-warranty/claims?view=allocation');
   await expect(page.getByRole('link', { name: claim.humanId })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText('No partner').first()).toBeVisible();
-  // Client #3 "Category" = the warranty group: filtering by it keeps this claim.
-  await page.getByLabel('Category').selectOption(group.id);
+  // Filter directly by the product covered by the brand.
+  await page.getByLabel('Product', { exact: true }).selectOption(ac.key);
   await expect(page.getByRole('link', { name: claim.humanId })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('row').filter({ hasText: claim.humanId })).toContainText(group.name);
+  await expect(page.getByRole('row').filter({ hasText: claim.humanId })).toContainText(ac.name);
   await page.screenshot({ path: `${SHOTS}phase-14-claims-attention.png` });
 
   // A partner who is offline in that city: the shortlist still offers them.
@@ -196,7 +194,7 @@ test('Super Admin configures all-product warranty terms and serials for a select
     await page.goto('/super-admin/partner-warranty/catalogue?tab=brands');
     await page.getByRole('cell', { name: brand.name, exact: true }).click();
     await page.getByRole('button', { name: 'Select all products', exact: true }).click();
-    await page.getByRole('checkbox', { name: /List this brand/ }).check();
+    await page.getByRole('checkbox', { name: 'Show this brand directly in Partner Warranty', exact: true }).check();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
     const configured = (await call(request, 'get', '/super-admin/warranty-catalog/brands', admin.accessToken)).find(b => b.id === brand.id);

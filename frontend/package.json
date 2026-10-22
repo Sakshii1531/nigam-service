@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "security:scan": "node ../scripts/scan-malware.mjs",
@@ -22,6 +22,7 @@
     "firebase": "^12.18.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.15.0",

@@ -242,7 +242,7 @@ export const LocationProvider = ({ children }) => {
       setIsModalOpen(false);
 
       if (!serviceable) {
-        if (routerLocation.pathname !== "/area-not-serviceable") {
+        if (routerLocation.pathname !== "/area-not-serviceable" && routerLocation.pathname !== "/profile" && !routerLocation.pathname.startsWith("/my-appliances")) {
           navigate("/area-not-serviceable", { replace: true });
         }
       } else {
@@ -323,7 +323,7 @@ export const LocationProvider = ({ children }) => {
             setDetectingLocation(false);
 
             if (!serviceable) {
-              if (routerLocation.pathname !== "/area-not-serviceable") {
+              if (routerLocation.pathname !== "/area-not-serviceable" && routerLocation.pathname !== "/profile" && !routerLocation.pathname.startsWith("/my-appliances")) {
                 navigate("/area-not-serviceable", { replace: true });
               }
             } else {

@@ -1,3 +1,4 @@
+import { businessBillingSchema } from './gst.js';
 import { z } from 'zod';
 
 const addressSchema = z.object({
@@ -5,6 +6,7 @@ const addressSchema = z.object({
   house: z.string().optional(),
   landmark: z.string().optional(),
   city: z.string().optional(),
+  state: z.string().trim().max(100).optional(),
   pincode: z.string().optional(),
   name: z.string().optional(),
 }).passthrough();
@@ -20,6 +22,7 @@ const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
 export const createBookingSchema = z
   .object({
     offeringId: objectId,
+    businessBilling: businessBillingSchema.optional(),
     variantId: objectId.nullish(),
     quantity: z.coerce.number().int().positive().default(1),
     isExpress: z.boolean().optional(),
@@ -43,9 +46,13 @@ export const createBookingSchema = z
     paymentMethod: z.enum(['Card', 'UPI', 'NetBanking', 'Cash', 'Wallet']).optional(),
     purchaseDate: z.coerce.date().optional(),
     serialNo: z.string().optional(),
-    applianceId: z.string().optional(),
+    applianceId: objectId.optional(),
+    newAppliance: z.boolean().optional(),
   })
-  .strict();
+  .strict().superRefine((v, ctx) => {
+    if (v.newAppliance && v.applianceId) ctx.addIssue({code:'custom',path:['applianceId'],message:'Choose a saved appliance or a new appliance'});
+    if (v.businessBilling && !v.address?.state?.trim()) ctx.addIssue({code:'custom',path:['address','state'],message:'Service state is required for a business GST invoice'});
+  });
 
 export const listBookingsQuerySchema = z.object({
   status: z.enum(['Upcoming', 'Ongoing', 'Completed', 'Cancelled']).optional(),

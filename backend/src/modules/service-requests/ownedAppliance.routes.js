@@ -1,7 +1,8 @@
+import { addApplianceDocumentRoutes } from './applianceDocuments.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middleware/validate.js';
-import { requireAuth } from '../../middleware/auth.js';
+import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { ok, created } from '../../utils/respond.js';
 import * as applianceService from './ownedAppliance.service.js';
 
@@ -10,27 +11,32 @@ import * as applianceService from './ownedAppliance.service.js';
 // invented a purchase date and an expiry, so the warranty dates a customer saw
 // were fiction; they now come from what the customer actually registered.
 export const applianceRouter = Router();
-applianceRouter.use(requireAuth);
+applianceRouter.use(requireAuth, requireRole('customer'));
+addApplianceDocumentRoutes(applianceRouter);
 
 const applianceBodySchema = z.object({
-  category: z.string().min(1),
-  brand: z.string().optional(),
-  model: z.string().optional(),
-  modelNumber: z.string().optional(),
-  serialNumber: z.string().optional(),
-  purchaseDate: z.coerce.date().optional(),
-  invoiceFileUrl: z.string().optional(),
-  dealer: z.string().optional(),
+  category: z.string().trim().min(1).max(100),
+  nickname: z.string().trim().max(100).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  manufacturerWarrantyEndsOn: z.coerce.date().nullish(),
+  createSeparateUnit: z.boolean().optional(),
+  brand: z.string().trim().max(200).optional(),
+  model: z.string().trim().max(200).optional(),
+  modelNumber: z.string().trim().max(200).optional(),
+  serialNumber: z.string().trim().max(200).optional(),
+  purchaseDate: z.coerce.date().nullable().optional(),
+  invoiceFileUrl: z.string().max(2048).optional(),
+  dealer: z.string().trim().max(200).optional(),
 });
 
-const listQuerySchema = z.object({ category: z.string().optional() });
+const listQuerySchema = z.object({ category: z.string().trim().max(200).optional() });
 
 // At least one identifier, or the lookup would match an arbitrary appliance.
 const lookupQuerySchema = z
-  .object({ modelNumber: z.string().optional(), serialNumber: z.string().optional() })
+  .object({ modelNumber: z.string().trim().max(200).optional(), serialNumber: z.string().trim().max(200).optional() })
   .refine((q) => q.modelNumber || q.serialNumber, 'modelNumber or serialNumber is required');
 
-const idParamSchema = z.object({ id: z.string().length(24) });
+const idParamSchema = z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i) });
 
 applianceRouter.get('/', validate(listQuerySchema, 'query'), async (req, res, next) => {
   try {
@@ -55,6 +61,11 @@ applianceRouter.post('/', validate(applianceBodySchema), async (req, res, next) 
   } catch (err) {
     next(err);
   }
+});
+
+const historyQuerySchema = z.object({ before: z.coerce.date().optional(), beforeId: z.string().regex(/^[a-f0-9]{24}$/i).optional() }).refine(q => Boolean(q.before) === Boolean(q.beforeId), 'Supply both history cursor fields');
+applianceRouter.get('/:id/history', validate(idParamSchema, 'params'), validate(historyQuerySchema, 'query'), async (req, res, next) => {
+  try { ok(res, await applianceService.applianceHistory(req.user.id, req.params.id, req.query)); } catch (error) { next(error); }
 });
 
 applianceRouter.get('/:id', validate(idParamSchema, 'params'), async (req, res, next) => {

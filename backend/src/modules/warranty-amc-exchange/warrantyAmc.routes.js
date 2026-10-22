@@ -235,7 +235,7 @@ router.post('/extended-warranty/orders', async (req, res) => {
     // customer — otherwise a policy could be attached to someone else's unit.
     let applianceId = null;
     if (appliance) {
-      const owned = await OwnedAppliance.findOne({ _id: appliance, user: req.user.id });
+      const owned = await OwnedAppliance.findOne({ _id: appliance, deletedAt: null, user: req.user.id });
       if (!owned) return res.status(404).json({ error: { message: 'Appliance not found' } });
       if (owned.category !== category || owned.brand !== brand) return res.status(400).json({ error: { message: 'Appliance does not match this purchase' } });
       applianceId = owned._id;
@@ -313,7 +313,7 @@ router.post('/amc/subscriptions', async (req, res) => {
     }
     let applianceId = null;
     if (appliance) {
-      const owned = await OwnedAppliance.findOne({ _id: appliance, user: req.user.id, category: applianceCategory });
+      const owned = await OwnedAppliance.findOne({ _id: appliance, deletedAt: null, user: req.user.id, category: applianceCategory });
       if (!owned || owned.brand !== brand) return res.status(400).json({ error: { message: 'Appliance does not match this purchase' } });
       applianceId = owned._id;
     }

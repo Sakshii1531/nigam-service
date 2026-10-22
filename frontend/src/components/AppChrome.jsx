@@ -54,6 +54,7 @@ const CUSTOMER_TABS = [
   ["/payment-methods", "account"],
   ["/notification-settings", "account"],
   ["/my-orders", "account"],
+  ["/my-appliances", "account"],
   ["/my-wishlist", "account"],
   ["/wishlist", "account"],
   ["/coupons", "account"],

@@ -43,6 +43,7 @@ export async function detectCoverage({ userId, categoryKey, warranty = {} }) {
     serialNo: warranty.serialNo,
     purchaseDate: warranty.purchaseDate,
     applianceId: warranty.applianceId,
+    newAppliance: warranty.newAppliance,
   });
   return { coverageType: COVERAGE_BY_WARRANTY_STATUS[detection.warrantyStatus] || null, detection };
 }
