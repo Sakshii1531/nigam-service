@@ -10,7 +10,8 @@ test('customer requests a business GST invoice, completes service and saves the 
  const cities=await call(request,'get','/super-admin/cities',admin.accessToken);if(!(cities.items||cities).some(c=>c.name==='Indore'))await call(request,'post','/super-admin/cities',admin.accessToken,{name:'Indore',state:'Madhya Pradesh',status:'Active'});
  const png=Buffer.from(await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=100;canvas.height=32;const context=canvas.getContext('2d');context.fillStyle='white';context.fillRect(0,0,100,32);context.strokeStyle='navy';context.beginPath();context.moveTo(10,22);context.lineTo(30,8);context.lineTo(50,22);context.stroke();return canvas.toDataURL('image/png').split(',')[1];}),'base64');
  const upload=await request.post(`${API}/uploads`,{headers:{Authorization:`Bearer ${admin.accessToken}`},multipart:{file:{name:'test-signature.png',mimeType:'image/png',buffer:png}}});expect(upload.ok()).toBe(true);const signatureUrl=(await upload.json()).data.url;
- await call(request,'put','/super-admin/customer-invoices/settings',admin.accessToken,{enabled:true,legalName:'GST Test Supplier',gstin:'23AAAAA0000A1ZA',address:'10 Supplier Street, Indore',signatoryName:'Test Accounts',signatureUrl,defaultSac:'998719',defaultPartsHsn:'',autoIssue:true,eInvoiceRequired:false});
+ const realIssuer={sample:false,enabled:true,legalName:'GST Test Supplier',gstin:'23AAAAA0000A1ZA',address:'10 Supplier Street, Indore',signatoryName:'Test Accounts',signatureUrl,defaultSac:'998719',defaultPartsHsn:'',autoIssue:true,eInvoiceRequired:false};
+ await call(request,'put','/super-admin/customer-invoices/settings',admin.accessToken,{...realIssuer,enabled:false,legalName:'',gstin:'',address:'',signatoryName:'',signatureUrl:'',defaultSac:''});
  const phone=`9${String(Math.floor(Math.random()*1e9)).padStart(9,'0')}`;
  await request.post(`${API}/_dev/test-user`,{data:{role:'customer',phone,name:'GST Test Customer',password:'password123',walletCoins:0}});const customer=await login(request,'customer',phone);
  customer.user.walletCoins=999; // A stale cached balance must not expose coins the wallet does not have.
@@ -37,6 +38,28 @@ test('customer requests a business GST invoice, completes service and saves the 
  await call(request,'post',`/service-provider/jobs/${job.id}/diagnosis`,partner.accessToken,{notes:'Completed requested installation'});await call(request,'post',`/service-provider/jobs/${job.id}/spare-parts`,partner.accessToken,{parts:[]});await call(request,'post',`/service-provider/jobs/${job.id}/repair-complete`,partner.accessToken);await call(request,'post',`/service-provider/jobs/${job.id}/billing`,partner.accessToken);
  const current=await call(request,'get',`/bookings/${booking.id}`,customer.accessToken);await call(request,'post',`/service-provider/jobs/${job.id}/collect-payment`,partner.accessToken,{paymentMethod:'Cash',otp:current.completionOtp});
  await page.goto(`/bookings/${booking.id}`);await expect(page.getByText('Test Business Services',{exact:true})).toBeVisible();
+ await expect(page.getByText('Awaiting accounts setup',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'View / save GST invoice',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Check invoice availability',exact:true}).click();
+ await expect(page.getByText('Awaiting accounts setup',{exact:true})).toBeVisible();
+ const configured=await call(request,'get','/super-admin/customer-invoices/settings',admin.accessToken);
+ expect(configured.readiness).toMatchObject({enabled:false,configured:false});
+ await store(page,admin);await page.goto('/super-admin/settings?tab=tax');
+ await page.getByRole('button',{name:'Use sample supplier for testing',exact:true}).click();
+ await expect(page.getByText('Sample supplier saved.',{exact:false})).toBeVisible();
+ await expect(page.getByLabel('Supplier legal name',{exact:true})).toHaveValue('NCC Sample Supplier — TEST ONLY');
+ const adminSamplePopup=page.waitForEvent('popup');await page.getByRole('button',{name:'View sample invoice',exact:true}).first().click();
+ const adminSample=await adminSamplePopup;await expect(adminSample.getByRole('heading',{name:'Sample Invoice',exact:true})).toBeVisible();await adminSample.close();
+ await page.goto(`/bookings/${booking.id}`);
+ const samplePopup=page.waitForEvent('popup');
+ await page.getByRole('button',{name:'View / save sample invoice',exact:true}).click();
+ const sample=await samplePopup;
+ await expect(sample.getByRole('heading',{name:'Sample Invoice',exact:true})).toBeVisible();
+ await expect(sample.getByText('SAMPLE — NOT A TAX INVOICE.',{exact:false})).toBeVisible();
+ await sample.screenshot({path:'/tmp/gst-sample-invoice.png',fullPage:true});await sample.close();
+ await call(request,'put','/super-admin/customer-invoices/settings',admin.accessToken,realIssuer);
+ await page.reload();
+ await expect(page.getByRole('button',{name:'View / save GST invoice',exact:true})).toBeVisible();
  const popup=page.waitForEvent('popup');await page.getByRole('button',{name:'View / save GST invoice',exact:true}).click();const invoice=await popup;await expect(invoice.getByRole('heading',{name:'Tax Invoice',exact:true})).toBeVisible();await expect(invoice.getByText('Bill to: Test Business Services',{exact:true})).toBeVisible();await expect(invoice.getByRole('columnheader',{name:'CGST',exact:true})).toBeVisible();await expect(invoice.getByRole('button',{name:'Print / Save as PDF',exact:true})).toBeVisible();await expect.poll(()=>invoice.getByAltText('Authorised signature').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);await invoice.screenshot({path:'/tmp/gst-customer-invoice.png',fullPage:true});
  await page.setViewportSize({width:1440,height:1050});await store(page,admin);await page.goto('/super-admin/settings?tab=tax');await expect(page.getByLabel('Supplier legal name',{exact:true})).toHaveValue('GST Test Supplier');await expect(page.getByText(booking.humanId,{exact:false}).first()).toBeVisible();await page.screenshot({path:'/tmp/gst-admin-invoices.png',fullPage:true});
 });

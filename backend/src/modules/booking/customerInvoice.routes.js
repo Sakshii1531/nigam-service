@@ -16,18 +16,27 @@ customerInvoiceAdminRouter.post('/:id/issue',validate(invoices.issueSchema),hand
   const invoice=await invoices.issueInvoice(req.params.id,{...req.body,actorId:req.user.id});ok(res,{invoiceNo:invoice.invoiceNo});
 }));
 customerInvoiceAdminRouter.get('/:id/print',handle(async(req,res)=>{
-  const invoice=await CustomerInvoice.findOne({booking:req.params.id});
+  let invoice=await CustomerInvoice.findOne({booking:req.params.id});
+  const {issuer}=await invoices.invoiceSettings();
+  if(!invoice && issuer.enabled && issuer.sample)invoice=await invoices.issueInvoice(req.params.id);
   if(!invoice)return res.status(404).json({error:{message:'Invoice not yet issued'}});
   res.set('Cache-Control','no-store').type('html').send(invoices.invoiceHtml(invoice));
 }));
 export function addCustomerInvoiceRoutes(router) {
+  router.get('/:id/invoice/status',handle(async(req,res)=>{
+    const booking=await invoices.ownedBooking(req.user.id,req.params.id);
+    res.set('Cache-Control','private, no-store');
+    ok(res,await invoices.invoiceStatus(booking));
+  }));
   router.post('/:id/invoice',handle(async(req,res)=>{
     const booking=await invoices.ownedBooking(req.user.id,req.params.id);
     const invoice=await invoices.issueInvoice(booking._id,{automatic:true});ok(res,{invoiceNo:invoice.invoiceNo});
   }));
   router.get('/:id/invoice',handle(async(req,res)=>{
     const booking=await invoices.ownedBooking(req.user.id,req.params.id);
-    const invoice=await CustomerInvoice.findOne({booking:booking._id});
+    let invoice=await CustomerInvoice.findOne({booking:booking._id});
+    const {issuer}=await invoices.invoiceSettings();
+    if(!invoice && issuer.enabled && issuer.sample)invoice=await invoices.issueInvoice(booking._id,{automatic:true});
     if(!invoice)return res.status(404).json({error:{message:'Your business invoice is not yet issued. Accounts can review it after service completion.'}});
     res.set('Cache-Control','no-store').type('html').send(invoices.invoiceHtml(invoice));
   }));

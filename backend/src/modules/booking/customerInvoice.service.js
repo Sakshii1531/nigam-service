@@ -16,15 +16,17 @@ import { businessBillingSchema, gstinSchema, GST_STATES, serviceStateCode } from
 
 const text = max => z.string().trim().max(max);
 export const issuerSchema = z.object({
+  sample: z.boolean().default(false),
   enabled: z.boolean(), legalName: text(160), gstin: z.union([z.literal(''), gstinSchema]),
   address: text(500), signatoryName: text(100), signatureUrl: z.union([z.literal(''), invoiceImage()]),
   defaultSac: z.union([z.literal(''), z.string().regex(/^\d{6}$/)]),
   defaultPartsHsn: z.union([z.literal(''), z.string().regex(/^\d{4}(\d{2})?(\d{2})?$/)]),
   eInvoiceRequired: z.boolean(), autoIssue: z.boolean(),
 }).strict().superRefine((v, ctx) => {
+  if(v.sample && v.eInvoiceRequired)ctx.addIssue({code:'custom',path:['eInvoiceRequired'],message:'Sample invoices cannot use live IRP acknowledgments'});
   if (v.enabled) for (const field of ['legalName','gstin','address','signatoryName','signatureUrl']) if (!v[field]) ctx.addIssue({ code:'custom', path:[field], message:'Required before enabling customer invoices' });
 });
-export const EMPTY_ISSUER = { enabled:false, legalName:'', gstin:'', address:'', signatoryName:'', signatureUrl:'', defaultSac:'', defaultPartsHsn:'', eInvoiceRequired:false, autoIssue:true };
+export const EMPTY_ISSUER = { sample:false, enabled:false, legalName:'', gstin:'', address:'', signatoryName:'', signatureUrl:'', defaultSac:'', defaultPartsHsn:'', eInvoiceRequired:false, autoIssue:true };
 export const issueSchema = z.object({
   placeOfSupply: z.string().refine(v => Boolean(GST_STATES[v]), 'Choose a place of supply').optional(),
   classifications: z.array(z.object({ index:z.number().int().nonnegative(), code:z.string().regex(/^\d{4}(\d{2})?(\d{2})?$/) }).strict()).max(100).optional(),
@@ -40,7 +42,9 @@ const amount = n => n/100;
 const pending = message => { throw new ApiError(409,message); };
 export async function invoiceSettings() {
   const settings=await getSettings();
-  return { issuer:{...EMPTY_ISSUER,...settings.customerInvoiceIssuer}, states:GST_STATES };
+  const issuer={...EMPTY_ISSUER,...settings.customerInvoiceIssuer};
+  const validation=issuerSchema.safeParse({...issuer,enabled:true});
+  return { issuer, states:GST_STATES, readiness:{enabled:issuer.enabled,configured:validation.success,missingFields:validation.success?[]:[...new Set(validation.error.issues.map(issue=>issue.path[0]).filter(Boolean))]} };
 }
 export async function saveInvoiceSettings(body, userId) {
   const issuer=issuerSchema.parse(body), settings=await getSettings();
@@ -80,51 +84,78 @@ export function invoiceLines(booking, job, issuer, classifications=[]) {
   for(const entry of classifications) { if(!lines[entry.index]) pending('Unknown invoice line'); lines[entry.index].code=entry.code; }
   return lines;
 }
-export async function issueInvoice(bookingId, {actorId=null, automatic=false, ...options}={}) {
-  const existing=await CustomerInvoice.findOne({booking:bookingId}); if(existing)return existing;
-  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'numeric'}).formatToParts(new Date());
-  const year=Number(parts.find(p=>p.type==='year').value), fy=Number(parts.find(p=>p.type==='month').value)<4?year-1:year;
-  const counterKey=`customerTaxInvoice:${fy}`;
-  await Counter.updateOne({_id:counterKey},{$setOnInsert:{seq:0}},{upsert:true}).catch(error=>{if(error.code!==11000)throw error;});
-  return runInTransaction(async session=>{
-    const previous=await CustomerInvoice.findOne({booking:bookingId}).session(session); if(previous)return previous;
-    const booking=await Booking.findById(bookingId).session(session);
-    if(!booking)throw new ApiError(404,'Booking not found');
+function prepareInvoice(booking, issuer, job, {automatic=false, ...options}={}) {
+    if(issuer.sample && (issuer.eInvoiceRequired || options.irn || options.externalInvoiceNo))pending('Sample invoices cannot use live IRP acknowledgments');
     if(booking.status!=='Completed')pending('A final invoice is available after service completion');
     if(!booking.businessBilling)pending('Business GST details were not supplied for this booking');
-    const recipient=businessBillingSchema.parse(booking.businessBilling.toObject());
-    const settings=await PlatformSettings.findOne().session(session), issuer={...EMPTY_ISSUER,...settings?.customerInvoiceIssuer};
+    const recipient=businessBillingSchema.parse(booking.businessBilling.toObject?.() || booking.businessBilling);
     if(!issuer.enabled)pending('Accounts has not enabled customer tax invoices yet. Please contact support.');
     issuerSchema.parse(issuer);
     if(automatic&&!issuer.autoIssue)pending('Accounts review is required');
     const state=serviceStateCode(booking.address?.state), recipientState=recipient.gstin.slice(0,2);
-    if(!options.placeOfSupply && state!==recipientState)pending('Accounts must confirm the place of supply for this billing address');
-    const placeOfSupply=options.placeOfSupply||recipientState;
+    if(!issuer.sample && !options.placeOfSupply && state!==recipientState)pending('Accounts must confirm the place of supply for this billing address');
+    const placeOfSupply=options.placeOfSupply||(issuer.sample?state||recipientState:recipientState);
     if(options.placeOfSupply && (state!==recipientState || options.placeOfSupply!==recipientState) && !options.reviewReason) pending('Record the accounts review reason for this place of supply');
     if(!GST_STATES[placeOfSupply])pending('Choose a valid place of supply');
     if(issuer.eInvoiceRequired&&(!options.externalInvoiceNo||!options.irn||!options.acknowledgmentNo||!options.acknowledgmentAt||!options.qrCodeUrl))pending('Accounts must add the IRP acknowledgment and signed QR code before issuing this e-invoice');
-    const job=await Job.findOne({serviceRequest:booking.serviceRequest}).session(session);
     if(!job)pending('The final service bill is not ready');
     const lines=invoiceLines(booking,job,issuer,options.classifications);
     if(!lines.length)pending('There are no customer charges to invoice');
     for(const l of lines)if(!(l.kind==='service'?/^\d{6}$/:/^\d{4}(\d{2})?(\d{2})?$/).test(l.code))pending('Accounts must supply SAC / HSN classification for every invoice line');
+    return {recipient, placeOfSupply, lines};
+}
+
+export async function issueInvoice(bookingId, {actorId=null, automatic=false, ...options}={}) {
+  const existing=await CustomerInvoice.findOne({booking:bookingId}); if(existing)return existing;
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'numeric'}).formatToParts(new Date());
+  const year=Number(parts.find(p=>p.type==='year').value), fy=Number(parts.find(p=>p.type==='month').value)<4?year-1:year;
+  const sample=Boolean((await invoiceSettings()).issuer.sample);
+  const counterKey=`${sample?'customerSampleInvoice':'customerTaxInvoice'}:${fy}`;
+  if(!sample)await Counter.updateOne({_id:counterKey},{$setOnInsert:{seq:0}},{upsert:true}).catch(error=>{if(error.code!==11000)throw error;});
+  return runInTransaction(async session=>{
+    const previous=await CustomerInvoice.findOne({booking:bookingId}).session(session); if(previous)return previous;
+    const booking=await Booking.findById(bookingId).session(session);
+    if(!booking)throw new ApiError(404,'Booking not found');
+    const settings=await PlatformSettings.findOne().session(session), issuer={...EMPTY_ISSUER,...settings?.customerInvoiceIssuer};
+    if(Boolean(issuer.sample)!==sample)pending('Supplier settings changed. Check invoice availability again.');
+    const job=await Job.findOne({serviceRequest:booking.serviceRequest}).session(session);
+    const {recipient,placeOfSupply,lines}=prepareInvoice(booking,issuer,job,{automatic,...options});
     const interState=issuer.gstin.slice(0,2)!==placeOfSupply, localTax=['04','26','31','35','38'].includes(placeOfSupply)?'UTGST':'SGST';
     for(const l of lines){const g=paise(l.gst);l.igst=interState?l.gst:0;l.cgst=interState?0:amount(Math.floor(g/2));l.sgst=interState?0:amount(g-Math.floor(g/2));}
     const sum=k=>amount(lines.reduce((s,l)=>s+paise(l[k]),0));
-    const counter=await Counter.findOneAndUpdate({_id:counterKey},{$inc:{seq:1}},{new:true,session});
-    if(counter.seq>999999)pending('Invoice sequence is exhausted; contact accounts');
-    const invoiceNo=options.externalInvoiceNo || `NC/${String(fy).slice(-2)}${String(fy+1).slice(-2)}/${String(counter.seq).padStart(6,'0')}`;
+    const counter=sample?null:await Counter.findOneAndUpdate({_id:counterKey},{$inc:{seq:1}},{new:true,session});
+    if(counter && counter.seq>999999)pending('Invoice sequence is exhausted; contact accounts');
+    const invoiceNo=sample?`SAMPLE/${booking.humanId}`:options.externalInvoiceNo || `NC/${String(fy).slice(-2)}${String(fy+1).slice(-2)}/${String(counter.seq).padStart(6,'0')}`;
     // Keep externally registered invoices in our namespace from colliding with a later automatic number.
     const externalSequence=options.externalInvoiceNo?.match(/^NC\/(\d{4})\/(\d{6})$/);
     if(externalSequence?.[1]===`${String(fy).slice(-2)}${String(fy+1).slice(-2)}`) await Counter.updateOne({_id:counterKey},{$max:{seq:Number(externalSequence[2])}},{session});
-    const [invoice]=await CustomerInvoice.create([{booking:booking._id,user:booking.user,invoiceNo,issuedAt:new Date(),issuedBy:actorId,snapshot:{
+    const payload={booking:booking._id,user:booking.user,invoiceNo,issuedAt:new Date(),issuedBy:actorId,snapshot:{
       reviewReason:options.reviewReason||null,bookingNo:booking.humanId,serviceDate:booking.completedAt,issuer,recipient,serviceAddress:booking.address?.toObject?.()||{},placeOfSupply,placeOfSupplyName:GST_STATES[placeOfSupply],interState,localTax,lines,
       subtotal:sum('taxable'),gst:sum('gst'),cgst:sum('cgst'),sgst:sum('sgst'),igst:sum('igst'),total:sum('total'),coinsApplied:booking.commercial.coinsApplied||0,advancePaid:booking.advancePaid?booking.advanceAmount:0,
       ...(options.irn?{eInvoice:{irn:options.irn,acknowledgmentNo:options.acknowledgmentNo,acknowledgmentAt:options.acknowledgmentAt,qrCodeUrl:options.qrCodeUrl}}:{}),
-    }}],{session});
+    }};
+    // A sample is a printable preview, never an issued tax record or number.
+    if(sample)return payload;
+    const [invoice]=await CustomerInvoice.create([payload],{session});
     await logAudit({user:actorId,type:'System',entityType:'CustomerInvoice',entityId:invoice._id,action:`Issued customer invoice ${invoiceNo}`,reason:options.reviewReason||null,meta:{bookingId:String(booking._id)}},{session});
     return invoice;
   },{required:true});
+}
+export async function invoiceStatus(booking) {
+  const existing=await CustomerInvoice.findOne({booking:booking._id}).select('invoiceNo snapshot.issuer.sample').lean();
+  if(existing)return {state:'issued',invoiceNo:existing.invoiceNo,sample:Boolean(existing.snapshot?.issuer?.sample)};
+  if(booking.status!=='Completed')return {state:booking.status==='Cancelled'?'cancelled':'waiting',message:booking.status==='Cancelled'?'No final service invoice is issued for a cancelled booking.':'Your final invoice will be available after service completion.'};
+  if(!booking.businessBilling)return {state:'not-requested',message:'Business GST details were not supplied for this booking.'};
+  const {issuer}=await invoiceSettings();
+  if(!issuer.enabled || !issuerSchema.safeParse(issuer).success)return {state:'setup-required',message:'Your invoice request is saved. NCC accounts needs to complete and enable GST invoice setup before your invoice can be issued.'};
+  const job=await Job.findOne({serviceRequest:booking.serviceRequest});
+  try {
+    prepareInvoice(booking,issuer,job,{automatic:true});
+    return {state:'ready',sample:Boolean(issuer.sample),message:'Your invoice is ready to prepare.'};
+  }catch(error){
+    if(error.statusCode!==409 && error.name!=='ZodError')throw error;
+    return {state:'accounts-review',message:error.statusCode===409?error.message:'Accounts needs to review the invoice details.'};
+  }
 }
 export async function invoiceQueue() {
   const pending=await Booking.aggregate([
@@ -144,5 +175,5 @@ export async function invoicePreview(bookingId) {
 const h=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function invoiceHtml(invoice) {
   const d=invoice.snapshot, r=d.recipient, s=d.issuer, money=n=>Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><title>${h(invoice.invoiceNo)}</title><style>body{font:14px system-ui;max-width:980px;margin:32px auto;padding:16px;color:#17243a}table{width:100%;border-collapse:collapse}th,td{padding:10px;border:1px solid #ddd;text-align:left}dl{display:grid;grid-template-columns:1fr 1fr;gap:20px}small{color:#506078}img{max-width:180px;max-height:90px}@media print{button{display:none}body{margin:0}}</style><body><button onclick="window.print()">Print / Save as PDF</button><h1>Tax Invoice</h1><p><b>${h(invoice.invoiceNo)}</b> · Issued ${h(new Date(invoice.issuedAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}))} · Booking ${h(d.bookingNo)}</p><dl><div><h2>${h(s.legalName)}</h2><p>GSTIN: ${h(s.gstin)}<br>${h(s.address)}</p></div><div><h2>Bill to: ${h(r.legalName)}</h2><p>GSTIN: ${h(r.gstin)}<br>${h(r.address)}, ${h(r.city)}, ${h(GST_STATES[r.gstin.slice(0,2)])} ${h(r.pincode)}</p></div></dl><p>Place of supply: ${h(d.placeOfSupplyName)} (${h(d.placeOfSupply)}) · Reverse charge: No</p><p>Service address: ${h([d.serviceAddress.house,d.serviceAddress.city,d.serviceAddress.state,d.serviceAddress.pincode].filter(Boolean).join(', '))}</p><table><thead><tr><th>Service / goods</th><th>SAC / HSN</th><th>Qty</th><th>Taxable value</th><th>GST rate</th>${d.interState?'<th>IGST</th>':`<th>CGST</th><th>${h(d.localTax)}</th>`}<th>Total</th></tr></thead><tbody>${d.lines.map(l=>`<tr><td>${h(l.name)}</td><td>${h(l.code)}</td><td>${h(l.quantity)}</td><td>₹${money(l.taxable)}</td><td>${h(l.rate)}%</td>${d.interState?`<td>₹${money(l.igst)}</td>`:`<td>₹${money(l.cgst)} (${h(l.rate/2)}%)</td><td>₹${money(l.sgst)} (${h(l.rate/2)}%)</td>`}<td>₹${money(l.total)}</td></tr>`).join('')}</tbody></table><h3>Taxable value (excluding GST): ₹${money(d.subtotal)}</h3><p>GST: ₹${money(d.gst)} · <b>Invoice total: ₹${money(d.total)}</b></p><p>Paid: ₹${money(d.total)} · Balance due: ₹0.00</p><small>Advance payments and NCC coins are included in the paid amount; they do not reduce the taxable value. Input tax credit is subject to applicable GST eligibility.</small>${d.eInvoice?`<p>IRN: ${h(d.eInvoice.irn)}<br>Acknowledgment: ${h(d.eInvoice.acknowledgmentNo)} · ${h(new Date(d.eInvoice.acknowledgmentAt).toLocaleDateString('en-IN'))}</p><img alt="IRP signed QR code" src="${h(d.eInvoice.qrCodeUrl)}">`:''}<p><img alt="Authorised signature" src="${h(s.signatureUrl)}"><br>${h(s.signatoryName)}<br>Authorised signatory</p></body></html>`;
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><title>${h(invoice.invoiceNo)}</title><style>body{font:14px system-ui;max-width:980px;margin:32px auto;padding:16px;color:#17243a}table{width:100%;border-collapse:collapse}th,td{padding:10px;border:1px solid #ddd;text-align:left}dl{display:grid;grid-template-columns:1fr 1fr;gap:20px}small{color:#506078}img{max-width:180px;max-height:90px}@media print{button{display:none}body{margin:0}}</style><body><button onclick="window.print()">Print / Save as PDF</button>${s.sample?'<aside style="border:3px solid #b45309;padding:16px;margin:16px 0;font-weight:bold;color:#92400e">SAMPLE — NOT A TAX INVOICE. Test supplier details only; not valid for GST or input tax credit.</aside>':''}<h1>${s.sample?'Sample Invoice':'Tax Invoice'}</h1><p><b>${h(invoice.invoiceNo)}</b> · Issued ${h(new Date(invoice.issuedAt).toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}))} · Booking ${h(d.bookingNo)}</p><dl><div><h2>${h(s.legalName)}</h2><p>GSTIN: ${h(s.gstin)}<br>${h(s.address)}</p></div><div><h2>Bill to: ${h(r.legalName)}</h2><p>GSTIN: ${h(r.gstin)}<br>${h(r.address)}, ${h(r.city)}, ${h(GST_STATES[r.gstin.slice(0,2)])} ${h(r.pincode)}</p></div></dl><p>Place of supply: ${h(d.placeOfSupplyName)} (${h(d.placeOfSupply)}) · Reverse charge: No</p><p>Service address: ${h([d.serviceAddress.house,d.serviceAddress.city,d.serviceAddress.state,d.serviceAddress.pincode].filter(Boolean).join(', '))}</p><table><thead><tr><th>Service / goods</th><th>SAC / HSN</th><th>Qty</th><th>Taxable value</th><th>GST rate</th>${d.interState?'<th>IGST</th>':`<th>CGST</th><th>${h(d.localTax)}</th>`}<th>Total</th></tr></thead><tbody>${d.lines.map(l=>`<tr><td>${h(l.name)}</td><td>${h(l.code)}</td><td>${h(l.quantity)}</td><td>₹${money(l.taxable)}</td><td>${h(l.rate)}%</td>${d.interState?`<td>₹${money(l.igst)}</td>`:`<td>₹${money(l.cgst)} (${h(l.rate/2)}%)</td><td>₹${money(l.sgst)} (${h(l.rate/2)}%)</td>`}<td>₹${money(l.total)}</td></tr>`).join('')}</tbody></table><h3>Taxable value (excluding GST): ₹${money(d.subtotal)}</h3><p>GST: ₹${money(d.gst)} · <b>Invoice total: ₹${money(d.total)}</b></p><p>Paid: ₹${money(d.total)} · Balance due: ₹0.00</p><small>Advance payments and NCC coins are included in the paid amount; they do not reduce the taxable value. ${s.sample?'This sample is for testing only and cannot be used to claim input tax credit.':'Input tax credit is subject to applicable GST eligibility.'}</small>${d.eInvoice?`<p>IRN: ${h(d.eInvoice.irn)}<br>Acknowledgment: ${h(d.eInvoice.acknowledgmentNo)} · ${h(new Date(d.eInvoice.acknowledgmentAt).toLocaleDateString('en-IN'))}</p><img alt="IRP signed QR code" src="${h(d.eInvoice.qrCodeUrl)}">`:''}<p><img alt="Authorised signature" src="${h(s.signatureUrl)}"><br>${h(s.signatoryName)}<br>Authorised signatory</p></body></html>`;
 }

@@ -91,6 +91,49 @@ it('does not issue before issuer setup or without the required IRP acknowledgmen
   const invoice=await issueInvoice(w.booking.id,{externalInvoiceNo:registeredNumber,irn:'a'.repeat(64),acknowledgmentNo:'123456789012345',acknowledgmentAt:new Date(),qrCodeUrl:'/uploads/test-qr.png'});
   expect(invoice.snapshot.eInvoice.irn).toBe('a'.repeat(64));expect(invoice.invoiceNo).toBe(registeredNumber);expect((await Counter.findById(`customerTaxInvoice:${fy}`)).seq).toBe(50);
 });
+it('reports disabled issuance without an error and recovers an existing completed booking after setup',async()=>{
+  const w=await fixture({enabled:false});await flow.billAndCollect(w);
+  const path=`/api/v1/bookings/${w.booking.id}/invoice`;
+  const before=await Counter.findOne({_id:/^customerTaxInvoice:/}).lean();
+  const pending=await request(app).get(`${path}/status`).set(auth(w.cust.token)).expect(200);
+  expect(pending.body.data.state).toBe('setup-required');
+  expect(pending.headers['cache-control']).toBe('private, no-store');
+  expect(JSON.stringify(pending.body.data)).not.toContain('Test Registered Supplier');
+  expect((await Counter.findOne({_id:/^customerTaxInvoice:/}).lean())?.seq).toBe(before?.seq);
+  await PlatformSettings.updateOne({},{$set:{'customerInvoiceIssuer.enabled':true}});
+  expect((await request(app).get(`${path}/status`).set(auth(w.cust.token)).expect(200)).body.data.state).toBe('ready');
+  await request(app).post(path).set(auth(w.cust.token)).send({}).expect(200);
+  const issued=(await request(app).get(`${path}/status`).set(auth(w.cust.token)).expect(200)).body.data;
+  expect(issued.state).toBe('issued');expect(issued.invoiceNo).toBeTruthy();
+  await PlatformSettings.updateOne({},{$set:{'customerInvoiceIssuer.enabled':false}});
+  expect((await request(app).get(`${path}/status`).set(auth(w.cust.token)).expect(200)).body.data).toEqual(issued);
+  await request(app).get(path).set(auth(w.cust.token)).expect(200);
+  const other=await flow.customer();
+  await request(app).get(`${path}/status`).set(auth(other.token)).expect(403);
+  await request(app).get(`${path}/status`).expect(401);
+});
+it('reports accounts review when automatic issuance is disabled',async()=>{
+  const w=await fixture({autoIssue:false});await flow.billAndCollect(w);
+  const response=await request(app).get(`/api/v1/bookings/${w.booking.id}/invoice/status`).set(auth(w.cust.token)).expect(200);
+  expect(response.body.data).toMatchObject({state:'accounts-review',message:'Accounts review is required'});
+  expect(await CustomerInvoice.countDocuments()).toBe(0);
+});
+it('prints labelled samples without consuming legal invoice numbers or blocking later real issuance',async()=>{
+  const w=await fixture({enabled:false});await flow.billAndCollect(w);
+  await PlatformSettings.updateOne({},{$set:{'customerInvoiceIssuer.enabled':true,'customerInvoiceIssuer.sample':true}});
+  const path=`/api/v1/bookings/${w.booking.id}/invoice`;
+  const sample=(await request(app).get(path).set(auth(w.cust.token)).expect(200)).text;
+  expect(sample).toContain('SAMPLE — NOT A TAX INVOICE');
+  expect(sample).toContain('Sample Invoice');
+  expect(await CustomerInvoice.countDocuments()).toBe(0);
+  expect((await Counter.findOne({_id:/^customerTaxInvoice:/}))?.seq || 0).toBe(0);
+  expect((await request(app).get(`${path}/status`).set(auth(w.cust.token))).body.data).toMatchObject({state:'ready',sample:true});
+  await PlatformSettings.updateOne({},{$set:{'customerInvoiceIssuer.sample':false}});
+  await request(app).post(path).set(auth(w.cust.token)).send({}).expect(200);
+  const real=await CustomerInvoice.findOne({booking:w.booking.id});
+  expect(real.invoiceNo).toMatch(/\/000001$/);
+  expect(invoiceHtml(real)).not.toContain('SAMPLE — NOT A TAX INVOICE');
+});
 it('reconciles add-ons and parts and retains their frozen taxes',async()=>{
   const w=await fixture();await seedSimpleOffering({code:'EXTRA-CLEAN',serviceName:'Extra clean',price:200,gstPercent:5});
   await flow.addAddOn(w,'EXTRA-CLEAN');await flow.billAndCollect({...w,parts:[{name:'Replacement component',price:100,checked:true}]});

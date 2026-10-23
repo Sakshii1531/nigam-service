@@ -14,12 +14,17 @@ In **Super admin → Settings → Tax → Customer GST invoices**:
 
 There is no default real supplier identity, GSTIN, signature or tax classification. A MongoDB replica set is required for atomic invoice numbering and persistence.
 
+## Sample setup for testing
+
+When no supplier is configured, Super admin → Settings → Tax → Customer GST invoices offers **Use sample supplier for testing**. It saves a clearly marked sample name, checksum-valid synthetic GSTIN, test address, sample signature and example classifications. Downloaded previews prominently say **SAMPLE — NOT A TAX INVOICE**. Samples do not consume official invoice numbers or create issued tax records, so the same booking can receive its real invoice once actual supplier details are saved. **Enter real supplier details** clears the sample profile for replacement; save and enable the actual registered supplier before issuing tax invoices.
+
 ## Customer journey
 
 - Select **I need a business GST invoice** during booking and provide the business details. Saved service addresses must include their state/UT.
 - Complete booking and service as usual. Advance payments and NCC coins continue through the existing payment flow.
 - After service completion and final payment confirmation, open **Bookings → booking details → Business GST invoice → View / save GST invoice**.
 - Use **Print / Save as PDF** in the opened invoice. The app supplies authenticated printable HTML; it does not generate a PDF attachment on the server.
+- Invoice availability is checked before offering the download button. Disabled/incomplete supplier setup shows an inline pending state with a check-availability action, rather than a failed download/toast. Existing completed bookings become issuable after setup; invoices already issued remain accessible even if issuance is later disabled.
 - If accounts review is required, the customer sees a pending message. The completed service/payment is not rolled back by a deferred invoice.
 
 GSTIN validation checks structure, state code and checksum. It does not look up the business's registration, legal name, status or tax-credit eligibility with the GST portal.
