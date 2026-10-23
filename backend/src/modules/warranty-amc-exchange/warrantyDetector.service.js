@@ -32,6 +32,7 @@ export async function detectWarrantyForAppliance({
   purchaseDate,
   applianceId,
   newAppliance = false,
+  protection,
 }) {
   let appliance = null;
   let brandDoc = brandName
@@ -86,12 +87,21 @@ export async function detectWarrantyForAppliance({
       claimsRemaining: { $gt: 0 }, validTill: { $gt: now },
     }).sort({ createdAt: -1 }),
   ]);
-  const amcSubscription = amcCandidates.find((sub) => sub.plan && matchesAppliance(
+  let amcSubscription = amcCandidates.find((sub) => sub.plan && matchesAppliance(
     sub, sub.applianceCategory || sub.plan.applianceCategory, sub.model,
   )) || null;
-  const extendedWarrantyOrder = ewCandidates.find((order) => matchesAppliance(
+  let extendedWarrantyOrder = ewCandidates.find((order) => matchesAppliance(
     order, order.applianceCategory, order.modelNumber,
   )) || null;
+
+  if (protection) {
+    const chosen = protection.kind === 'amc' ? amcCandidates.find(p => String(p._id) === protection.id) : ewCandidates.find(p => String(p._id) === protection.id);
+    const owned = protection.kind === 'amc' ? await AMCSubscription.exists({ _id:protection.id, user:userId }) : await ExtendedWarrantyOrder.exists({ _id:protection.id, user:userId });
+    if (!owned) throw new ApiError(404, 'Protection plan not found');
+    if (!chosen || (protection.kind === 'amc' && !chosen.plan) || !matchesAppliance(chosen, chosen.applianceCategory || chosen.plan?.applianceCategory, chosen.model || chosen.modelNumber)) throw new ApiError(400, 'This plan is unavailable, exhausted or does not cover the selected appliance');
+    amcSubscription = protection.kind === 'amc' ? chosen : null;
+    extendedWarrantyOrder = protection.kind === 'extended-warranty' ? chosen : null;
+  }
 
   // 4. Compute status
   // The brand's own warranty length — not a flat 12 months for every brand.
@@ -114,10 +124,13 @@ export async function detectWarrantyForAppliance({
     jobType,
     brandId: brandDoc?._id || null,
     applianceId: appliance?._id || null,
-    amcSubscriptionId: amcSubscription?._id || null,
-    extendedWarrantyOrderId: extendedWarrantyOrder?._id || null,
+    amcSubscriptionId: warrantyStatus === 'AMC' ? amcSubscription?._id || null : null,
+    extendedWarrantyOrderId: warrantyStatus === 'Extended Warranty' ? extendedWarrantyOrder?._id || null : null,
     purchaseDate: resolvedPurchaseDate || null,
     extendedWarrantyValidTill: extendedWarrantyOrder?.validTill || null,
     amcExpiryDate: amcSubscription?.expiryDate || null,
+    coverageSource: warrantyStatus === 'AMC' ? { kind:'amc', id:String(amcSubscription._id), name:amcSubscription.plan.name, number:amcSubscription.humanId }
+      : warrantyStatus === 'Extended Warranty' ? { kind:'extended-warranty', id:String(extendedWarrantyOrder._id), name:extendedWarrantyOrder.planName || 'Extended Warranty', number:extendedWarrantyOrder.humanId }
+      : warrantyStatus === 'In Warranty' ? { kind:'brand', name:`${resolvedBrand || 'Manufacturer'} warranty` } : null,
   };
 }

@@ -193,6 +193,8 @@ const jobSchema = new mongoose.Schema(
 );
 
 jobSchema.index({ serviceProvider: 1, activeStep: 1 });
+jobSchema.index({ 'amc.amcSubscription':1, serviceRequest:1 });
+jobSchema.index({ 'ew.extendedWarrantyOrder':1, serviceRequest:1 });
 
 jobSchema.post('save', async function syncWarrantyStage(job) {
   if (!job.warrantyClaim || job.$session() || job.$locals.deferWarrantyStageSync) return;

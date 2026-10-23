@@ -79,6 +79,8 @@ serviceRequestSchema.index({ brand: 1, status: 1, createdAt: -1 });
 serviceRequestSchema.index({ serviceProvider: 1, status: 1 });
 serviceRequestSchema.index({ booking: 1, status: 1, isAccepted: 1, createdAt: 1 });
 serviceRequestSchema.index({brand:1,appliance:1});
+serviceRequestSchema.index({ user:1, amcSubscription:1, createdAt:-1, _id:-1 });
+serviceRequestSchema.index({ user:1, extendedWarrantyOrder:1, createdAt:-1, _id:-1 });
 
 applyStandardPlugins(serviceRequestSchema, { prefix: ID_PREFIXES.SERVICE_REQUEST });
 

@@ -86,6 +86,7 @@ export function toCustomerQuote(quote) {
   const { totals } = quote;
   return {
     lines: quote.lines.map(lineView),
+    coverageSource:quote.coverageSource || null,
     totals: {
       base: toRupees(totals.base),
       discount: toRupees(totals.discount),

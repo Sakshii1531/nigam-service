@@ -119,6 +119,7 @@ export async function createBooking(userId, data) {
   const [entry] = await loadBookableOfferings({ _id: data.offeringId }, location);
   if (!entry) throw catalogError(CATALOG_ERROR_CODES.OFFERING_NOT_BOOKABLE, 'This service is not available right now.', 400, { offeringId: data.offeringId });
   const { offering } = entry;
+  if (data.protection && data.quantity !== 1) throw new ApiError(400, 'Book one appliance per protection request');
   const categoryKey = offering.category.key;
   const requiredInfo = resolveRequiredInfo(offering, data.requiredInfo);
 
@@ -127,7 +128,7 @@ export async function createBooking(userId, data) {
   const { coverageType, detection } = await detectCoverage({
     userId,
     categoryKey,
-    warranty: { brand: data.brand, serialNo: data.serialNo, purchaseDate: data.purchaseDate, applianceId: data.applianceId, newAppliance: data.newAppliance },
+    warranty: { brand: data.brand, serialNo: data.serialNo, purchaseDate: data.purchaseDate, applianceId: data.applianceId, newAppliance: data.newAppliance, protection:data.protection },
   });
   const { warrantyStatus, brandId, applianceId, amcSubscriptionId, extendedWarrantyOrderId } = detection;
 
@@ -232,7 +233,7 @@ export async function createBooking(userId, data) {
         booking: booking._id,
         completionOtp: booking.completionOtp,
         category: categoryKey,
-        description: displayServiceTitle,
+        description: data.issueDescription ? `${displayServiceTitle}: ${data.issueDescription}` : displayServiceTitle,
         requestMode: 'B2C',
         zone: data.address?.city || undefined,
         warranty: warrantyStatus === 'Out of Warranty' ? 'Out of Warranty' : 'In Warranty',

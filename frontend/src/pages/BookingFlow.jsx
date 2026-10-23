@@ -326,6 +326,8 @@ const BookingFlow = () => {
   const [treeError, setTreeError] = useState("");
 
   const applianceLink = new URLSearchParams(location.search).get("appliance");
+  const protectionKind = new URLSearchParams(location.search).get('planKind');
+  const protectionId = new URLSearchParams(location.search).get('planId');
   const resumeBooking =
     location.state?.resumeBooking ||
     location.state?.bookingMeta ||
@@ -385,8 +387,10 @@ const BookingFlow = () => {
   );
   const [quoteNonce, setQuoteNonce] = useState(0);
 
+  const protection = protectionId ? { kind:protectionKind, id:protectionId } : resumeBooking?.protection;
+  const issueDescription = location.state?.issueDescription || resumeBooking?.issueDescription;
   // Step 3
-  const [brand, setBrand] = useState(() => resumeBooking?.brand || location.state?.appliance?.brand || "");
+  const [brand, setBrand] = useState(() => resumeBooking?.brand || location.state?.appliance?.brand || new URLSearchParams(location.search).get("brand") || "");
 
   const [ownedAppliances, setOwnedAppliances] = useState([]);
   const [selectedApplianceId, setSelectedApplianceId] = useState(() => resumeBooking?.applianceId || applianceLink || "");
@@ -658,7 +662,7 @@ const BookingFlow = () => {
         // The appliance's brand lets the server detect warranty / AMC / EW
         // coverage for a signed-in customer — the same check the booking
         // runs — so a covered visit shows ₹0 here before confirming.
-        warranty: signedIn && bookingBrand ? { brand: bookingBrand, applianceId: bookingApplianceId, newAppliance } : undefined,
+        warranty: signedIn && bookingBrand ? { brand: bookingBrand, applianceId: bookingApplianceId, newAppliance, protection } : undefined,
       })
     : "";
 
@@ -804,7 +808,7 @@ const BookingFlow = () => {
           label: `${l.name} × ${l.quantity}${shownQuote.lines.length > 1 ? " · separate booking" : ""}`,
           amount: l.baseAmount,
         })),
-        ...(shownQuote.totals.coverage > 0 ? [{ label: "Covered by warranty", amount: -shownQuote.totals.coverage }] : []),
+        ...(shownQuote.totals.coverage > 0 ? [{ label: `Covered by ${shownQuote.coverageSource?.name || ({ 'AMC Visit':'AMC plan', 'NCC Extended Warranty':'NCC extended warranty', 'Brand Warranty':'manufacturer warranty' }[shownQuote.lines.find(l => l.coverage?.amount > 0)?.coverage?.type] || 'protection plan')}${shownQuote.coverageSource?.number ? ` (${shownQuote.coverageSource.number})` : ''}`, amount: -shownQuote.totals.coverage }] : []),
         ...(shownQuote.totals.discount > 0 ? [{ label: `Coupon ${shownQuote.couponCode || ""}`.trim(), amount: -shownQuote.totals.discount }] : []),
         ...(shownQuote.totals.expressFee > 0 ? [{ label: "Express fee", amount: shownQuote.totals.expressFee }] : []),
         { label: gstLabel, amount: shownQuote.totals.gst },
@@ -1009,6 +1013,8 @@ const BookingFlow = () => {
     brand: bookingBrand,
     applianceId: bookingApplianceId,
     newAppliance,
+    protection,
+    issueDescription,
     date: selectedDate,
     timeGroup,
     isInstant: isExpress,
@@ -2376,6 +2382,8 @@ const BookingFlow = () => {
 
                 {needsGstInvoice && <label className="block rounded-2xl border border-slate-200 bg-white p-4 text-xs font-semibold text-slate-600">Service state / Union Territory<input aria-label="Service state / Union Territory" required value={address.state || ''} onChange={e => setAddress(p => ({ ...p, state: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /><span className="mt-2 block text-[11px] font-normal text-slate-500">State where the technician will perform this service.</span></label>}
                 <BusinessBillingFields enabled={needsGstInvoice} onEnabledChange={setNeedsGstInvoice} value={businessBilling} onChange={setBusinessBilling} />
+
+                {shownQuote?.totals.coverage > 0 && <section aria-label="Applied protection" className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" /><div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">{shownQuote.lines.find(l => l.coverage?.amount > 0)?.coverage?.type === 'AMC Visit' ? 'AMC coverage applied' : shownQuote.lines.find(l => l.coverage?.amount > 0)?.coverage?.type === 'NCC Extended Warranty' ? 'Extended warranty applied' : 'Manufacturer warranty applied'}</p><p className="mt-1 break-words text-sm font-extrabold text-slate-900">{shownQuote.coverageSource?.name || 'Warranty coverage'}</p><p className="mt-1 text-xs text-emerald-800">{formatRupees(shownQuote.totals.coverage)} covered{shownQuote.coverageSource?.number ? ` · ${shownQuote.coverageSource.number}` : ''}</p>{shownQuote.coverageSource?.id && <button type="button" onClick={() => navigate(`/protection-plans/${shownQuote.coverageSource.kind}/${shownQuote.coverageSource.id}`)} className="mt-2 text-xs font-bold text-blue-800 underline">View covering plan</button>}</div></section>}
 
                 {/* Payment Options */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs">

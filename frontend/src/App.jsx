@@ -43,6 +43,7 @@ const HelpSupport = lazy(() => import("./pages/HelpSupport"));
 const SavedAddresses = lazy(() => import("./pages/SavedAddresses"));
 const EditProfile = lazy(() => import("./pages/EditProfile"));
 const Buy = lazy(() => import("./pages/Buy"));
+const ProtectionPlans = lazy(() => import("./pages/ProtectionPlans"));
 const AMC = lazy(() => import("./pages/AMC"));
 const Exchange = lazy(() => import("./pages/Exchange"));
 const BuyNew = lazy(() => import("./pages/BuyNew"));
@@ -736,15 +737,17 @@ function App() {
                             path="/buy/success/:appliance/:tierIndex"
                             element={<Buy />}
                           />
-                          <Route path="/buy/my-warranty" element={<Buy />} />
+                          <Route path="/buy/my-warranty" element={<ProtectionPlans />} />
+                          <Route path="/protection-plans" element={<ProtectionPlans />} />
+                          <Route path="/protection-plans/:kind/:id" element={<ProtectionPlans />} />
                           <Route path="/buy/how-it-works" element={<Buy />} />
                           <Route
                             path="/buy/warranty-details"
-                            element={<Buy />}
+                            element={<Navigate to="/protection-plans?kind=extended-warranty" replace />}
                           />
-                          <Route path="/buy/amc-details" element={<Buy />} />
-                          <Route path="/buy/file-claim" element={<Buy />} />
-                          <Route path="/buy/claim-success" element={<Buy />} />
+                          <Route path="/buy/amc-details" element={<Navigate to="/protection-plans?kind=amc" replace />} />
+                          <Route path="/buy/file-claim" element={<Navigate to="/protection-plans" replace />} />
+                          <Route path="/buy/claim-success" element={<Navigate to="/protection-plans" replace />} />
                           <Route path="/buy/all-appliances" element={<Buy />} />
                           <Route path="/buy/accessories" element={<Buy />} />
                           <Route path="/buy/amc" element={<AMC />} />

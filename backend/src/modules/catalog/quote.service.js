@@ -44,6 +44,7 @@ export async function detectCoverage({ userId, categoryKey, warranty = {} }) {
     purchaseDate: warranty.purchaseDate,
     applianceId: warranty.applianceId,
     newAppliance: warranty.newAppliance,
+    protection:warranty.protection,
   });
   return { coverageType: COVERAGE_BY_WARRANTY_STATUS[detection.warrantyStatus] || null, detection };
 }
@@ -120,6 +121,7 @@ async function walletPaise(userId, coinsPerRupee) {
  *                        `input.warranty` for a signed-in customer.
  */
 export async function buildQuote(input, { userId = null, coverageType: knownCoverage, at = new Date() } = {}) {
+  if (input.warranty?.protection && (input.lines.length !== 1 || input.lines[0].quantity !== 1)) throw new ApiError(400, 'Book one appliance per protection request');
   const loc = { at, city: input.location?.city || null, pincode: input.location?.pincode || null };
   const ids = [...new Set(input.lines.map((line) => line.offeringId))];
   const bookable = new Map(
@@ -134,10 +136,11 @@ export async function buildQuote(input, { userId = null, coverageType: knownCove
     selections.push({ ...entry, variant, quantity: line.quantity, isExpress: Boolean(line.isExpress) });
   }
 
+  const detected = knownCoverage === undefined && input.warranty ? await detectCoverage({ userId, categoryKey:selections[0].offering.category.key, warranty:input.warranty }) : null;
   const coverageType = knownCoverage !== undefined
     ? knownCoverage
     : input.warranty
-      ? (await detectCoverage({ userId, categoryKey: selections[0].offering.category.key, warranty: input.warranty })).coverageType
+      ? detected.coverageType
       : null;
 
   const settings = await platformPricingSettings();
@@ -159,6 +162,7 @@ export async function buildQuote(input, { userId = null, coverageType: knownCove
 
   return {
     ...priced,
+    coverageSource:detected?.detection?.coverageSource || null,
     lines: priced.lines.map((line, i) => {
       const { offering, rate, variant } = selections[i];
       return {

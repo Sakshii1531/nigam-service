@@ -33,6 +33,7 @@ export const createBookingSchema = z
     // (the rate changed meanwhile) the booking is refused with 409 PRICE_CHANGED.
     expectedFinalAmount: z.coerce.number().nonnegative(),
     brand: z.string().optional(),
+    issueDescription: z.string().trim().max(2000).optional(),
     scheduledDate: z.coerce.date().optional(),
     timeSlot: z.union([timeSlotSchema, z.string()]).optional(),
     timeGroup: z.string().optional(),
@@ -48,6 +49,7 @@ export const createBookingSchema = z
     serialNo: z.string().optional(),
     applianceId: objectId.optional(),
     newAppliance: z.boolean().optional(),
+    protection: z.object({ kind:z.enum(['amc','extended-warranty']), id:objectId }).optional(),
   })
   .strict().superRefine((v, ctx) => {
     if (v.newAppliance && v.applianceId) ctx.addIssue({code:'custom',path:['applianceId'],message:'Choose a saved appliance or a new appliance'});

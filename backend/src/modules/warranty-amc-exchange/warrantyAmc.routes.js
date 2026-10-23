@@ -72,7 +72,8 @@ async function confirmPayment({ userId, targetType, targetId, razorpayPaymentId,
   await pendingPayment.save();
   return pendingPayment;
 }
-import { requireAuth } from '../../middleware/auth.js';
+import { requireAuth, requireRole } from '../../middleware/auth.js';
+import { protectionDetails } from './protectionDetails.js';
 
 const router = express.Router();
 
@@ -175,6 +176,12 @@ router.get('/extended-warranty/appliances', async (req, res) => {
 
 // Authentication middleware for user-specific operations
 router.use(requireAuth);
+
+for (const kind of ['amc','extended-warranty']) {
+  router.get(`/${kind}/${kind === 'amc' ? 'subscriptions' : 'orders'}/:id`, requireRole('customer'), async (req,res,next) => {
+    try { res.json({ data:await protectionDetails(req.user.id,kind,req.params.id,req.query) }); } catch (err) { next(err); }
+  });
+}
 
 /**
  * @route   POST /api/v1/warranty-amc/extended-warranty/check-eligibility

@@ -23,6 +23,8 @@ function buildBookingBody(meta, line, index, extra) {
     brand: meta.brand || undefined,
     applianceId: index === 0 ? meta.applianceId || undefined : undefined,
     newAppliance: index > 0 || Boolean(meta.newAppliance),
+    ...(index === 0 && meta.protection ? { protection:meta.protection } : {}),
+    ...(meta.issueDescription ? { issueDescription:meta.issueDescription } : {}),
     scheduledDate: new Date().toISOString(),
     timeSlot: { date: meta.date || '', time: meta.timeGroup || '' },
     address: meta.address,
