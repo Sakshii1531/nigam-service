@@ -20,6 +20,7 @@ const UpiPayment = lazy(() => import("./pages/UpiPayment"));
 const NetBankingPayment = lazy(() => import("./pages/NetBankingPayment"));
 const PaymentFailure = lazy(() => import("./pages/PaymentFailure"));
 const Booking = lazy(() => import("./pages/Booking"));
+const ServiceRequestDetails = lazy(() => import("./pages/ServiceRequestDetails"));
 const OfferingLink = lazy(() => import("./pages/Booking").then((m) => ({ default: m.OfferingLink })));
 const BookingFlow = lazy(() => import("./pages/BookingFlow"));
 import { BookingProvider } from "./context/BookingContext";
@@ -860,6 +861,7 @@ function App() {
                             element={<BookingFlow />}
                           />
                           <Route path="/bookings" element={<Bookings />} />
+                          <Route path="/service-requests/:id" element={<ServiceRequestDetails />} />
                           <Route
                             path="/bookings/:id"
                             element={<BookingDetails />}
