@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
+import { openInvoice } from '../../components/booking/BusinessInvoiceCard';
 import { useServiceRequestUpdates } from '../../hooks/useServiceRequestUpdates';
 import { 
   Search, 
@@ -31,6 +32,7 @@ import {
   Camera,
   Image as ImageIcon,
   ZoomIn,
+  FileText,
 } from 'lucide-react';
 
 const STATUS_BUCKET = {
@@ -73,6 +75,26 @@ const Requests = () => {
   // undercount once there are more than 200 requests.
   const [stats, setStats] = useState({ open: 0, assigned: 0, inProgress: 0, completed: 0 });
   const [loadError, setLoadError] = useState('');
+  const [invoiceBusy, setInvoiceBusy] = useState(null);
+  const [invoiceError, setInvoiceError] = useState('');
+
+  const handleViewInvoice = async (request) => {
+    const customer = request.raw.user;
+    const customerId = typeof customer === 'string' ? customer : customer?.id || customer?._id;
+    if (!customerId || !request.id) {
+      setInvoiceError('The customer or service request ID is missing. Refresh the list and try again.');
+      return;
+    }
+    setInvoiceBusy(request.id);
+    setInvoiceError('');
+    try {
+      await openInvoice(`/super-admin/users/${encodeURIComponent(customerId)}/service-receipt/${encodeURIComponent(request.id)}`);
+    } catch (error) {
+      setInvoiceError(error.message || 'Could not open the service invoice. Please try again.');
+    } finally {
+      setInvoiceBusy(null);
+    }
+  };
 
   const loadRequests = React.useCallback(async () => {
     try {
@@ -85,7 +107,7 @@ const Requests = () => {
         const lng = addr?.longitude ?? item.customerLocation?.longitude ?? null;
 
         return {
-          id: item.id,
+          id: item.id || item._id,
           raw: item,
           ref: item.humanId || item.brandTicketNo || item.id,
           bookingId: bk?.humanId || (bk?._id ? String(bk._id) : null),
@@ -957,13 +979,22 @@ const Requests = () => {
                       <td className="px-6 py-4 text-[#1E293B] font-medium">{req.serviceProvider}</td>
                       <td className="px-6 py-4 text-[#64748B]">{req.date}</td>
                       <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-2 justify-center w-20 mx-auto">
+                        <div className="flex gap-2 justify-center min-w-28 mx-auto">
                           <button 
                             onClick={() => { setSelectedRequest(req); setShowDrawer(true); }}
                             className="p-1.5 text-[#64748B] hover:text-[#0D47A1] hover:bg-[#EEF4FF] rounded transition-colors" 
                             title="View Details"
                           >
                             <Eye size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleViewInvoice(req)}
+                            disabled={invoiceBusy !== null}
+                            className="p-1.5 text-[#0D47A1] hover:bg-[#EEF4FF] rounded transition-colors disabled:opacity-50 disabled:cursor-wait"
+                            title="View / Download Invoice"
+                            aria-label={`View / Download Invoice for ${req.ref}`}
+                          >
+                            <FileText size={16} />
                           </button>
                           
                           {req.bucket === 'Pending' ? (
@@ -1012,10 +1043,11 @@ const Requests = () => {
       </div>
 
       {/* Success Toast */}
-      {loadError && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-rose-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+      {(loadError || invoiceError) && (
+        <div role="alert" className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-rose-600 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" />
-          {loadError}
+          {invoiceError || loadError}
+          {invoiceError && <button onClick={() => setInvoiceError('')} className="underline">Dismiss</button>}
         </div>
       )}
 

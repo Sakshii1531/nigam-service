@@ -113,7 +113,7 @@ const Users = () => {
       );
       if (fullUser) {
         const formatted = {
-          _id: fullUser._id,
+          _id: fullUser._id || fullUser.id,
           id: fullUser.humanId || user.id,
           name: fullUser.name,
           email: fullUser.email,
@@ -128,9 +128,19 @@ const Users = () => {
           referrals: fullUser.referrals || [],
           amcSubscriptions: fullUser.amcSubscriptions || [],
           warrantyOrders: fullUser.warrantyOrders || [],
-          serviceRequests: fullUser.serviceRequests || [],
-          orders: fullUser.orders || [],
-          exchangeRequests: fullUser.exchangeRequests || [],
+          // Nested documents use `id` after the API's JSON serialization.
+          serviceRequests: (fullUser.serviceRequests || []).map((request) => ({
+            ...request,
+            _id: request.id || request._id,
+          })),
+          orders: (fullUser.orders || []).map((order) => ({
+            ...order,
+            _id: order.id || order._id,
+          })),
+          exchangeRequests: (fullUser.exchangeRequests || []).map((exchange) => ({
+            ...exchange,
+            _id: exchange.id || exchange._id,
+          })),
         };
         setSelectedUser(formatted);
       }
