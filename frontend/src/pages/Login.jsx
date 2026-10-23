@@ -321,7 +321,7 @@ const Login = ({ initialSignup = false }) => {
       const { destination } = useOtp
         ? await resendOtp({ role: 'customer', identifier, purpose: 'login' })
         : await login({ role: 'customer', identifier, password });
-      navigate('/verify-otp', { state: { destination, role: 'customer', identifier } });
+      navigate('/verify-otp', { state: { destination, role: 'customer', identifier, from:location.state?.from } });
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -359,6 +359,7 @@ const Login = ({ initialSignup = false }) => {
         navigate('/verify-otp', {
           state: {
             destination: response.destination,
+            from:location.state?.from,
             role: 'customer',
             identifier: signupForm.phone,
             purpose: 'signup',

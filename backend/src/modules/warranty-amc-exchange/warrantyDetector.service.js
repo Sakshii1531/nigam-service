@@ -129,7 +129,7 @@ export async function detectWarrantyForAppliance({
     purchaseDate: resolvedPurchaseDate || null,
     extendedWarrantyValidTill: extendedWarrantyOrder?.validTill || null,
     amcExpiryDate: amcSubscription?.expiryDate || null,
-    coverageSource: warrantyStatus === 'AMC' ? { kind:'amc', id:String(amcSubscription._id), name:amcSubscription.plan.name, number:amcSubscription.humanId }
+    coverageSource: warrantyStatus === 'AMC' ? { kind:'amc', id:String(amcSubscription._id), name:amcSubscription.planSnapshot?.name || amcSubscription.plan.name, number:amcSubscription.humanId }
       : warrantyStatus === 'Extended Warranty' ? { kind:'extended-warranty', id:String(extendedWarrantyOrder._id), name:extendedWarrantyOrder.planName || 'Extended Warranty', number:extendedWarrantyOrder.humanId }
       : warrantyStatus === 'In Warranty' ? { kind:'brand', name:`${resolvedBrand || 'Manufacturer'} warranty` } : null,
   };

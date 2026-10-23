@@ -5,6 +5,7 @@ import { AMCVisit } from './amcVisit.model.js';
 import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { Job } from '../service-provider/job.model.js';
+import { ProtectionCheckout } from './protectionCheckout.model.js';
 
 export async function protectionDetails(userId, kind, id, query = {}) {
   if (!mongoose.isValidObjectId(id)) throw new ApiError(400, 'Invalid protection plan id');
@@ -42,7 +43,10 @@ export async function protectionDetails(userId, kind, id, query = {}) {
   const state = !purchase.paid ? 'Payment pending' : isAmc && !purchase.plan ? 'Plan unavailable' : !isAmc && purchase.verificationStatus === 'Rejected' ? 'Verification rejected'
     : !expiry || new Date(expiry) <= new Date() || purchase.status === 'Expired' ? 'Expired' : remaining <= 0 ? 'Allowance used' : 'Active';
   const recordedVisits = isAmc ? await AMCVisit.find({ subscription:id }).sort({ visitNumber:-1 }).select('visitNumber scheduledDate status tasks.label tasks.done notes createdAt').limit(100) : [];
-  return { kind, purchase, state, eligible:state === 'Active', history, recordedVisits,
+  const json=purchase.toJSON();
+  const purchaseView=isAmc&&purchase.planSnapshot?{...json,plan:{...json.plan,...json.planSnapshot}}:json;
+  const invoice = purchase.checkoutKey ? await ProtectionCheckout.findOne({ key:purchase.checkoutKey, user:userId }).select('invoiceName').lean() : null;
+  return { kind, purchase:purchaseView, invoiceName:invoice?.invoiceName || null, state, eligible:state === 'Active', history, recordedVisits,
     nextCursor:rows.length > 100 ? { before:last.createdAt, beforeId:last.id } : null,
   };
 }

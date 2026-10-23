@@ -9,6 +9,8 @@ import { Modal, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton, St
 // benefits — is exactly this list.
 
 const BLANK = {
+  maxApplianceAgeMonths: '',
+  requiresInvoice: false,
   name: '',
   tier: '',
   applianceCategory: '',
@@ -30,6 +32,8 @@ const toForm = (plan) => ({
 });
 
 const toBody = (form) => ({
+  maxApplianceAgeMonths: form.maxApplianceAgeMonths === '' || form.maxApplianceAgeMonths == null ? null : Number(form.maxApplianceAgeMonths),
+  requiresInvoice: Boolean(form.requiresInvoice),
   name: form.name.trim(),
   tier: form.tier.trim(),
   applianceCategory: form.applianceCategory || null,
@@ -94,6 +98,7 @@ function PlanEditor({ plan, categories, onClose, onSaved }) {
           <Field label="Validity (months)">
             <input required type="number" min="1" max="60" step="1" value={form.durationMonths} onChange={set('durationMonths')} className={inputClass} />
           </Field>
+          <Field label="Maximum appliance age (months)" hint="Leave blank for no age limit."><input type="number" min="0" max="1200" step="1" value={form.maxApplianceAgeMonths ?? ''} onChange={set('maxApplianceAgeMonths')} className={inputClass} /></Field>
           <Field label="Display order" hint="Lower shows first.">
             <input type="number" step="1" value={form.displayOrder} onChange={set('displayOrder')} className={inputClass} />
           </Field>
@@ -105,6 +110,7 @@ function PlanEditor({ plan, categories, onClose, onSaved }) {
           </Field>
         </div>
         <div className="flex flex-wrap gap-5">
+          <Toggle checked={form.requiresInvoice} onChange={(v) => setForm((f) => ({ ...f, requiresInvoice:v }))} label="Purchase invoice required" />
           <Toggle checked={form.isPopular} onChange={(v) => setForm((f) => ({ ...f, isPopular: v }))} label="Mark as most popular" />
           <Toggle checked={form.isActive} onChange={(v) => setForm((f) => ({ ...f, isActive: v }))} label="Live (customers can buy it)" />
         </div>

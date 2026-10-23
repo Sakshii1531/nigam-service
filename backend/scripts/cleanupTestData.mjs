@@ -320,6 +320,7 @@ export async function cleanTestData({
     ],
     ["earningstallies", { serviceProvider: { $in: testProviderIds } }],
     ["ownedappliances", { user: { $in: testUserIds } }],
+    ["protectioncheckouts", { user: { $in: testUserIds } }],
     [
       "partorders",
       {

@@ -33,6 +33,7 @@ import { couponRouter } from './modules/rewards-loyalty/coupon.routes.js';
 import { exchangeRouter } from './modules/warranty-amc-exchange/exchange.routes.js';
 import { walletRouter } from './modules/payments-wallet/wallet.routes.js';
 import warrantyAmcRouter from './modules/warranty-amc-exchange/warrantyAmc.routes.js';
+import { protectionCheckoutRouter } from './modules/warranty-amc-exchange/protectionCheckout.routes.js';
 import { City } from './modules/super-admin/city.model.js';
 import { serviceProviderRouter } from './modules/service-provider/serviceProvider.routes.js';
 import { serviceProviderRegistrationRouter } from './modules/service-provider/serviceProviderRegistration.routes.js';
@@ -285,6 +286,7 @@ export function createApp() {
   app.use('/api/v1/super-admin/orders', adminOrderRouter);
   app.use('/api/v1/uploads', uploadRouter);
   app.use('/api/v1/super-admin/exchange-requests', superAdminExchangeRequestRouter);
+  app.use('/api/v1/warranty-amc/checkouts', protectionCheckoutRouter);
   app.use('/api/v1/warranty-amc', warrantyAmcRouter);
   app.use('/api/v1/partner-warranty/claims', warrantyClaimCustomerRouter);
   app.use('/api/v1/partner-warranty', warrantyCatalogPublicRouter);

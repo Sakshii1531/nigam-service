@@ -43,11 +43,12 @@ const HelpSupport = lazy(() => import("./pages/HelpSupport"));
 const SavedAddresses = lazy(() => import("./pages/SavedAddresses"));
 const EditProfile = lazy(() => import("./pages/EditProfile"));
 const Buy = lazy(() => import("./pages/Buy"));
+const ProtectionPurchase = lazy(() => import("./pages/ProtectionPurchase"));
 const ProtectionPlans = lazy(() => import("./pages/ProtectionPlans"));
 const AMC = lazy(() => import("./pages/AMC"));
 const Exchange = lazy(() => import("./pages/Exchange"));
 const BuyNew = lazy(() => import("./pages/BuyNew"));
-const ExtendWarranty = lazy(() => import("./pages/ExtendWarranty"));
+
 const BuyProduct = lazy(() => import("./pages/BuyProduct"));
 const PartnerWarranty = lazy(() => import("./pages/PartnerWarranty"));
 const SelectBrand = lazy(() => import("./pages/SelectBrand"));
@@ -286,9 +287,10 @@ const PageHandler = () => {
 };
 
 import { useAuth } from "./context/AuthContext";
+import { authReturnPath } from './utils/authReturnPath';
 
 const ScrollToTop = () => {
-  const { pathname } = useLocation();
+  const { pathname, search, state } = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -440,7 +442,7 @@ const ScrollToTop = () => {
                   pathname === "/area-not-serviceable" ||
                   customerAuthPages.includes(pathname)
                 ) {
-                  navigate("/dashboard", { replace: true });
+                  navigate(authReturnPath(state?.from), { replace: true });
                 }
               }
             })
@@ -449,7 +451,7 @@ const ScrollToTop = () => {
         }
 
         if (customerAuthPages.includes(pathname)) {
-          navigate("/dashboard", { replace: true });
+          navigate(authReturnPath(state?.from), { replace: true });
           return;
         }
       } else {
@@ -477,7 +479,7 @@ const ScrollToTop = () => {
           !customerAuthPages.includes(pathname) &&
           !publicInfoPages.includes(pathname)
         ) {
-          navigate("/login", { replace: true });
+          navigate("/login", { replace: true, state:{from:pathname+search} });
           return;
         }
       }
@@ -548,7 +550,7 @@ const ScrollToTop = () => {
     resetScroll();
     const timer = setTimeout(resetScroll, 100);
     return () => clearTimeout(timer);
-  }, [pathname, user, navigate]);
+  }, [pathname, search, state, user, navigate]);
 
   return null;
 };
@@ -715,32 +717,32 @@ function App() {
                           <Route path="/buy" element={<Buy />} />
                           <Route
                             path="/buy/select-appliance"
-                            element={<Buy />}
+                            element={<ProtectionPurchase />}
                           />
                           <Route
                             path="/buy/select-tier/:appliance"
-                            element={<Buy />}
+                            element={<ProtectionPurchase />}
                           />
                           <Route
                             path="/buy/enter-details/:appliance/:tierIndex"
-                            element={<Buy />}
+                            element={<ProtectionPurchase />}
                           />
                           <Route
                             path="/buy/review/:appliance/:tierIndex"
-                            element={<Buy />}
+                            element={<ProtectionPurchase />}
                           />
                           <Route
                             path="/buy/payment/:appliance/:tierIndex"
-                            element={<Buy />}
+                            element={<ProtectionPurchase />}
                           />
                           <Route
                             path="/buy/success/:appliance/:tierIndex"
-                            element={<Buy />}
+                            element={<ProtectionPurchase />}
                           />
                           <Route path="/buy/my-warranty" element={<ProtectionPlans />} />
                           <Route path="/protection-plans" element={<ProtectionPlans />} />
                           <Route path="/protection-plans/:kind/:id" element={<ProtectionPlans />} />
-                          <Route path="/buy/how-it-works" element={<Buy />} />
+                          <Route path="/buy/how-it-works" element={<ProtectionPurchase />} />
                           <Route
                             path="/buy/warranty-details"
                             element={<Navigate to="/protection-plans?kind=extended-warranty" replace />}
@@ -823,7 +825,7 @@ function App() {
                           <Route path="/buy-new/success" element={<BuyNew />} />
                           <Route
                             path="/extend-warranty"
-                            element={<ExtendWarranty />}
+                            element={<ProtectionPurchase />}
                           />
                           <Route path="/buy-product" element={<BuyProduct />} />
                           <Route

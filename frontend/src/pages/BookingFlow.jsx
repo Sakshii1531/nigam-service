@@ -382,6 +382,28 @@ const BookingFlow = () => {
   const [couponCode, setCouponCode] = useState(() => sel.couponCode || "");
   const [couponMessage, setCouponMessage] = useState("");
   const [useCoins, setUseCoins] = useState(() => Boolean(sel.useCoins));
+  const walletOwner = user?.id || user?._id;
+  const [walletBalance, setWalletBalance] = useState({ owner:null, coins:0 });
+  const availableCoins = walletBalance.owner === walletOwner ? walletBalance.coins : 0;
+  useEffect(() => {
+    if (!walletOwner) return;
+    let active = true, latestRequest = 0;
+    const refresh = async () => {
+      const request = ++latestRequest;
+      try {
+        const wallet = await apiRequest('/wallet', { auth:true });
+        if (!active || request !== latestRequest) return;
+        const coins = Number.isFinite(wallet.coins) ? Math.max(0, Math.floor(wallet.coins)) : 0;
+        setWalletBalance({ owner:walletOwner, coins });
+        if (!coins) setUseCoins(false);
+      } catch {
+        if (active && request === latestRequest) { setWalletBalance({ owner:walletOwner, coins:0 }); setUseCoins(false); }
+      }
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => { active = false; window.removeEventListener('focus', refresh); };
+  }, [walletOwner]);
   const [priceChangedNotice, setPriceChangedNotice] = useState(
     () => location.state?.priceChanged || "",
   );
@@ -656,7 +678,7 @@ const BookingFlow = () => {
     ? JSON.stringify({
         lines: quoteLines,
         couponCode: singleLine && couponCode ? couponCode : undefined,
-        useCoins: singleLine && signedIn && useCoins ? true : undefined,
+        useCoins: singleLine && signedIn && availableCoins > 0 && useCoins ? true : undefined,
         paymentMode,
         location: city ? { city } : undefined,
         // The appliance's brand lets the server detect warranty / AMC / EW
@@ -2366,10 +2388,11 @@ const BookingFlow = () => {
                       </form>
                     )}
                     {couponMessage && <p className="text-[11px] font-bold text-rose-600">{couponMessage}</p>}
-                    {signedIn && (
+                    {signedIn && availableCoins > 0 && (
                       <label className="flex items-center justify-between gap-2 text-[12px] font-bold text-slate-700 cursor-pointer">
                         <span className="flex items-center gap-1.5">
                           <Coins className="w-4 h-4 text-amber-500" /> Use NCC coins
+                          <span className="text-slate-500">({availableCoins.toLocaleString('en-IN')} available)</span>
                           {useCoins && shownQuote?.coinsApplied > 0 && (
                             <span className="text-emerald-700 font-black"> · −{formatRupees(shownQuote.coinsApplied)}</span>
                           )}

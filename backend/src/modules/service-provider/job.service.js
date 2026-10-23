@@ -761,13 +761,13 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
       throw new ApiError(403, 'That AMC subscription does not belong to this service request\'s customer');
     }
     jobData.amc = {
-      planName: subscription.plan ? subscription.plan.name : undefined,
+      planName: subscription.planSnapshot?.name || (subscription.plan ? subscription.plan.name : undefined),
       amcSubscription: subscription._id,
       visitsTotal: subscription.visitsTotal,
       visitsRemaining: subscription.visitsRemaining,
       visitNumber: subscription.visitNumber,
       planExpiry: subscription.expiryDate,
-      planType: subscription.plan ? subscription.plan.tier : undefined,
+      planType: subscription.planSnapshot?.tier || (subscription.plan ? subscription.plan.tier : undefined),
     };
   }
 

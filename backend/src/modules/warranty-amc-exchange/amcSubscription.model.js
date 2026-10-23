@@ -5,6 +5,9 @@ import { Brand } from '../super-admin/brand.model.js';
 
 const amcSubscriptionSchema = new mongoose.Schema(
   {
+    checkoutKey: String,
+    paidAt: Date,
+    planSnapshot: { type: mongoose.Schema.Types.Mixed, default: undefined },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     plan: { type: mongoose.Schema.Types.ObjectId, ref: 'AMCPlan', required: true },
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },

@@ -22,7 +22,10 @@ export async function listSubscriptions({ status, page, limit, sort } = {}) {
     AMCSubscription.countDocuments(query),
   ]);
 
-  return { items, meta: paginationMeta({ page: pg, limit: lim, total }) };
+  return { items:items.map(item => {
+    const json = item.toJSON();
+    return item.planSnapshot ? { ...json, plan:{ ...json.plan, ...json.planSnapshot } } : json;
+  }), meta: paginationMeta({ page: pg, limit: lim, total }) };
 }
 
 /**
@@ -30,8 +33,8 @@ export async function listSubscriptions({ status, page, limit, sort } = {}) {
  * current page, so the figures don't change as the operator pages through.
  *
  * `totalSales` is the sum of the plan prices actually subscribed to — the
- * subscription itself stores no amount, so an orphaned plan ref contributes
- * zero rather than dropping the row from the count.
+ * snapshot holds the price actually purchased. Legacy records fall back to the
+ * linked plan. Unpaid checkouts are not sales or active contracts.
  */
 export async function getSummary() {
   const expiringBefore = new Date();
@@ -39,17 +42,19 @@ export async function getSummary() {
 
   const [salesRows, statusRows, planRows, expiringSoon] = await Promise.all([
     AMCSubscription.aggregate([
+      { $match: { paid:true } },
       { $lookup: { from: 'amcplans', localField: 'plan', foreignField: '_id', as: 'planDoc' } },
-      { $group: { _id: null, total: { $sum: { $ifNull: [{ $first: '$planDoc.price' }, 0] } } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$planSnapshot.price', { $ifNull: [{ $first: '$planDoc.price' }, 0] }] } } } },
     ]),
-    AMCSubscription.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    AMCSubscription.aggregate([{ $match:{ paid:true } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     AMCSubscription.aggregate([
+      { $match: { paid:true } },
       { $lookup: { from: 'amcplans', localField: 'plan', foreignField: '_id', as: 'planDoc' } },
-      { $group: { _id: { $first: '$planDoc.name' }, count: { $sum: 1 } } },
+      { $group: { _id: { $ifNull: ['$planSnapshot.name', { $first: '$planDoc.name' }] }, count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 1 },
     ]),
-    AMCSubscription.countDocuments({ status: { $ne: 'Expired' }, expiryDate: { $lte: expiringBefore, $gte: new Date() } }),
+    AMCSubscription.countDocuments({ paid:true, status: { $ne: 'Expired' }, expiryDate: { $lte: expiringBefore, $gte: new Date() } }),
   ]);
 
   const byStatus = Object.fromEntries(statusRows.map((r) => [r._id, r.count]));

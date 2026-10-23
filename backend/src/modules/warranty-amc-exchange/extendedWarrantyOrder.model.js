@@ -5,6 +5,9 @@ import { Brand } from '../super-admin/brand.model.js';
 
 const extendedWarrantyOrderSchema = new mongoose.Schema(
   {
+    checkoutKey: String,
+    paidAt: Date,
+    planSnapshot: { type: mongoose.Schema.Types.Mixed, default: undefined },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     appliance: { type: mongoose.Schema.Types.ObjectId, ref: 'OwnedAppliance', default: null },
     applianceCategory: String, // e.g. "AC" — display label, kept even once `appliance` is linked

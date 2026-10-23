@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import OtpVerification from '../components/auth/OtpVerification';
 import { useAuth } from '../context/AuthContext';
+import { authReturnPath } from '../utils/authReturnPath';
 
 // Phase 13 — the customer login flow is real: identifier/role from Login.jsx's
 // navigation state, code entered here goes to the actual /auth/otp/verify
@@ -18,6 +19,7 @@ const VerifyOtp = () => {
 
   const hasRealSession = state?.role && state?.identifier;
   const isSignup = state?.purpose === 'signup';
+  const returnTo = authReturnPath(state?.from);
 
   const handleVerify = async (code) => {
     if (isSignup) {
@@ -28,7 +30,7 @@ const VerifyOtp = () => {
         navigate('/area-not-serviceable', { replace: true });
         return;
       }
-      navigate('/dashboard', { replace: true });
+      navigate(returnTo, { replace: true });
     } else {
       const sessionUser = await verifyOtp({ role: state.role, identifier: state.identifier, code });
       const city = sessionUser?.addresses?.[0]?.city || '';
@@ -39,7 +41,7 @@ const VerifyOtp = () => {
           return;
         }
       }
-      navigate('/dashboard', { replace: true });
+      navigate(returnTo, { replace: true });
     }
   };
 
@@ -53,9 +55,9 @@ const VerifyOtp = () => {
 
   const handleBack = () => {
     if (isSignup) {
-      navigate('/login', { state: { signupData: state.signupData, isSignup: true } });
+      navigate('/login', { state: { signupData: state.signupData, isSignup: true, from:state.from } });
     } else {
-      navigate('/login');
+      navigate('/login', {state:{from:state?.from}});
     }
   };
 

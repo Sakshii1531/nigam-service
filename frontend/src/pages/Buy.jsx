@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   useNavigate,
-  useParams,
   useLocation,
-  useSearchParams,
 } from "react-router-dom";
 import {
   ArrowLeft,
@@ -12,10 +10,7 @@ import {
   Check,
   ChevronRight,
   ShoppingCart,
-  Calendar,
   Wrench,
-  User,
-  Sparkles,
   Zap,
   MapPin,
   Bell,
@@ -23,22 +18,13 @@ import {
   Wind,
   Tv,
   ShieldCheck,
-  FileText,
   CheckCircle2,
-  HelpCircle,
   Phone,
-  Mail,
-  Lock,
-  Landmark,
-  Wallet,
-  Percent,
-  Upload,
   ChevronDown,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { apiRequest } from "../lib/apiClient";
-import { payWithRazorpay } from "../lib/razorpayCheckout";
 import { useAuth } from "../context/AuthContext";
 import { useLocationContext } from "../context/LocationContext";
 
@@ -61,65 +47,27 @@ import { Skeleton, SkeletonCardRow, SkeletonList } from '../components/common/Sk
 const Buy = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams();
   const { currentLocation, openLocationModal } = useLocationContext();
 
-  // Derive step from URL pathname
   const pathname = location.pathname;
-  let step = 1;
-  if (pathname.includes("/buy/select-appliance")) step = 2;
-  else if (pathname.includes("/buy/select-tier")) step = 3;
-  else if (pathname.includes("/buy/enter-details")) step = 5;
-  else if (pathname.includes("/buy/review")) step = 4;
-  else if (pathname.includes("/buy/payment")) step = 6;
-  else if (pathname.includes("/buy/success")) step = 7;
-  else if (pathname.includes("/buy/my-warranty")) step = 8;
-  else if (pathname.includes("/buy/how-it-works")) step = 9;
-  else if (pathname.includes("/buy/warranty-details")) step = 10;
-  else if (pathname.includes("/buy/amc-details")) step = 13;
-  else if (pathname.includes("/buy/file-claim")) step = 14;
-  else if (pathname.includes("/buy/claim-success")) step = 15;
-  // These two pages existed but had no URL mapping, so they always showed the hub.
-  else if (pathname.includes("/buy/accessories")) step = 11;
-  else if (pathname.includes("/buy/all-appliances")) step = 12;
-
-  // Appliance & tier from URL params + query string
-  const [searchParams] = useSearchParams();
-  const selectedAppliance = params.appliance
-    ? decodeURIComponent(params.appliance)
-    : null;
-  const selectedTierIndex = params.tierIndex
-    ? parseInt(params.tierIndex)
-    : searchParams.get("tier")
-      ? parseInt(searchParams.get("tier"))
-      : 0;
-
-  // Helper to navigate to a step with current context
-  const goTo = (targetStep, appliance, tierIndex) => {
-    const app = encodeURIComponent(appliance || selectedAppliance || "");
-    const ti = tierIndex !== undefined ? tierIndex : selectedTierIndex;
-    if (targetStep === 1) navigate("/buy");
-    else if (targetStep === 2) navigate("/buy/select-appliance");
-    else if (targetStep === 3) navigate(`/buy/select-tier/${app}`);
-    else if (targetStep === 5) navigate(`/buy/enter-details/${app}/${ti}`);
-    else if (targetStep === 4) navigate(`/buy/review/${app}/${ti}`);
-    else if (targetStep === 6) navigate(`/buy/payment/${app}/${ti}`);
-    else if (targetStep === 7) navigate(`/buy/success/${app}/${ti}`);
-    else if (targetStep === 8) navigate("/buy/my-warranty");
-    else if (targetStep === 9) navigate("/buy/how-it-works");
-    else if (targetStep === 10) navigate("/buy/warranty-details");
-    else if (targetStep === 11) navigate("/buy/accessories");
-    else if (targetStep === 12) navigate("/buy/all-appliances");
-    else if (targetStep === 13) navigate("/buy/amc-details");
-    else if (targetStep === 14) navigate("/buy/file-claim");
-    else if (targetStep === 15) navigate("/buy/claim-success");
+  const step = pathname.includes('/buy/accessories') ? 11 : pathname.includes('/buy/all-appliances') ? 12 : 1;
+  const goTo = (targetStep, appliance) => {
+    if (targetStep === 1) navigate('/buy');
+    else if (targetStep === 2) navigate('/buy/select-appliance');
+    else if (targetStep === 3) navigate(`/buy/select-appliance?category=${encodeURIComponent(appliance || '')}&view=plans`);
+    else if (targetStep === 8) navigate('/protection-plans');
+    else if (targetStep === 9) navigate('/buy/select-appliance');
+    else if (targetStep === 11) navigate('/buy/accessories');
+    else if (targetStep === 12) navigate('/buy/all-appliances');
   };
-
-  const setStep = (s) => goTo(s);
-
+  const setStep = s => goTo(s);
   // Carousel state for Banners
   const [activeBanner, setActiveBanner] = useState(0);
-  const [dynamicBrands, setDynamicBrands] = useState([]);
+  const [dynamicBrands,setDynamicBrands]=useState([]), [storeCategories,setStoreCategories]=useState([]);
+  useEffect(()=>{
+    apiRequest('/catalog/brands').then(setDynamicBrands).catch(()=>setDynamicBrands([]));
+    apiRequest('/product-categories').then(setStoreCategories).catch(()=>setStoreCategories([]));
+  },[]);
 
   useEffect(() => {
     // Auto-slide every 4 seconds
@@ -129,32 +77,7 @@ const Buy = () => {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    apiRequest('/catalog/brands')
-      .then((res) => {
-        if (Array.isArray(res) && res.length > 0) {
-          const colors = ['#1428A0', '#A50034', '#00205B', '#E31837', '#003087', '#0055A5', '#0B4EA2', '#000000'];
-          setDynamicBrands(res.map((b, i) => ({ name: b.name, categories: b.categories || [], color: colors[i % colors.length] })));
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Form states for Step 5 & 6 & 8. These used to default to a fake persona
-  // ("Rahul Sharma", "9876543210", "rahulsharma@gmail.com", "110054") — a
-  // customer who didn't notice and overwrite it would have their extended
-  // warranty registered under a stranger's contact details.
   const { user } = useAuth();
-  const [, setShowSuccess] = useState(false);
-  const [fullName, setFullName] = useState(user?.name || "");
-  const [mobileNumber, setMobileNumber] = useState(user?.phone || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [pincode, setPincode] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("");
-  const [modelNumber, setModelNumber] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState("");
-  const [invoiceFile, setInvoiceFile] = useState(null);
-  const [paymentMode, setPaymentMode] = useState("UPI");
   // Product-specific brands per appliance
   // Bundled artwork by appliance / part name — an uploaded product image wins.
   const applianceArt = (name = "") => {
@@ -176,69 +99,11 @@ const Buy = () => {
     return roPreFilterImg;
   };
 
-  // Brands offered for this appliance, as set in Super Admin → Categories &
-  // Brands → Catalogue Brands (docs/master-catalogue Phase 19); the full
-  // catalogue list when none is tagged for it.
-  const getBrandsForAppliance = (applianceKey) => {
-    const tagged = dynamicBrands.filter((b) => b.categories.includes(applianceKey)).map((b) => b.name);
-    return tagged.length > 0 ? tagged : dynamicBrands.map((b) => b.name);
-  };
-
-  // Product-specific model placeholder
-  const getModelPlaceholder = (appliance) => {
-    const n = appliance?.toLowerCase() || "";
-    if (n.includes("television") || n.includes("tv"))
-      return "e.g. UA32T4010ARXXL";
-    if (n.includes("refrigerator") || n.includes("fridge"))
-      return "e.g. RT28T3032S8";
-    if (n.includes("washing") || n.includes("machine"))
-      return "e.g. WA70T4262GG";
-    if (/\bac\b/.test(n) || n.includes("conditioner"))
-      return "e.g. 1.5T FTKY50";
-    if (n.includes("purifier")) return "e.g. KIM11PM";
-    return "Enter model number";
-  };
-
-
-  // Dynamic pricing tiers by product category
-  // The purchasable extension packs, from the admin-managed catalogue. This
-  // screen carried its own per-appliance price tables, so the packs on offer
-  // could not be changed without a redeploy — and the "Pay" button below simply
-  // navigated to a success page, creating no policy and taking no money.
-  const [ewPlans, setEwPlans] = useState([]);
-  const [, setPlansError] = useState("");
-
-  // Appliances that have warranty packs, with "from" prices (Super Admin → Plans).
   const [ewAppliances, setEwAppliances] = useState(null);
+  const [catalogError, setCatalogError] = useState('');
   useEffect(() => {
-    apiRequest("/warranty-amc/extended-warranty/appliances")
-      .then((res) => setEwAppliances(Array.isArray(res) ? res : []))
-      .catch(() => setEwAppliances([]));
+    apiRequest('/warranty-amc/extended-warranty/appliances').then(setEwAppliances).catch(e => { setCatalogError(e.message); setEwAppliances([]); });
   }, []);
-  const applianceName =
-    ewAppliances?.find((a) => a.appliance === selectedAppliance)?.name || selectedAppliance;
-
-  useEffect(() => {
-    const query = selectedAppliance ? `?category=${encodeURIComponent(selectedAppliance)}` : "";
-    apiRequest(`/warranty-amc/extended-warranty/plans${query}`)
-      .then((res) =>
-        setEwPlans(
-          (res || []).map((pl) => ({
-            id: pl.id,
-            label: pl.name,
-            price: pl.price,
-            durationYears: pl.durationYears,
-            description: pl.description || "",
-            popular: Boolean(pl.isPopular),
-            features: pl.features || [],
-          })),
-        ),
-      )
-      .catch((err) =>
-        setPlansError(err.message || "Could not load warranty plans."),
-      );
-  }, [selectedAppliance]);
-
   // Store products (Super Admin → NCC Products), one request per section so
   // each shows as soon as it lands. Spare parts are asked for by category —
   // filtering the first 100 products on the device dropped them once the
@@ -258,55 +123,6 @@ const Buy = () => {
   const popularProducts = (popularList || []).filter((p) => p.category !== "Spare Parts").slice(0, 8);
   const spareParts = sparePartList || [];
 
-  const [buying, setBuying] = useState(false);
-  const [buyError, setBuyError] = useState("");
-  const [boughtOrder, setBoughtOrder] = useState(null);
-
-  const selectedTiers = ewPlans;
-  const selectedTier =
-    selectedTiers[selectedTierIndex] || selectedTiers[0] || null;
-
-  // Creates the policy and collects payment before the success screen. It used
-  // to navigate straight to /buy/success — no policy, no charge.
-  const handleBuyWarranty = async () => {
-    if (!selectedTier) return;
-    setBuyError("");
-    setBuying(true);
-    try {
-      const res = await apiRequest("/warranty-amc/extended-warranty/orders", {
-        method: "POST",
-        auth: true,
-        body: {
-          plan: selectedTier.id,
-          category: selectedAppliance,
-          brand: activeBrand,
-          modelName: modelNumber || undefined,
-        },
-      });
-
-      if (res.razorpay) {
-        await payWithRazorpay({
-          razorpay: res.razorpay,
-          verifyPath: `/warranty-amc/extended-warranty/orders/${res.order.id}/verify-payment`,
-          description: selectedTier.label,
-        });
-      }
-      setBoughtOrder(res.order);
-      navigate(
-        `/buy/success/${encodeURIComponent(selectedAppliance || "")}/${selectedTierIndex}`,
-      );
-    } catch (err) {
-      setBuyError(
-        err.message ||
-          "The policy could not be activated. You have not been charged.",
-      );
-    } finally {
-      setBuying(false);
-    }
-  };
-  const applianceBrands = getBrandsForAppliance(selectedAppliance);
-  const defaultBrand = applianceBrands[0] || "";
-  const activeBrand = selectedBrand || defaultBrand;
 
   return (
     <div className="min-h-screen bg-bg-light flex flex-col pb-24 lg:pb-8 relative">
@@ -315,50 +131,21 @@ const Buy = () => {
         <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-border-color shadow-sm sticky top-0 z-30 lg:hidden">
           <button
             onClick={() => {
-              if (step === 2) navigate("/buy");
-              else if (step === 3) navigate("/buy/select-appliance");
-              else if (step === 5)
-                navigate(
-                  `/buy/select-tier/${encodeURIComponent(selectedAppliance || "")}`,
-                );
-              else if (step === 4)
-                navigate(
-                  `/buy/enter-details/${encodeURIComponent(selectedAppliance || "")}/${selectedTierIndex}`,
-                );
-              else if (step === 6)
-                navigate(
-                  `/buy/review/${encodeURIComponent(selectedAppliance || "")}/${selectedTierIndex}`,
-                );
-              else if (step === 8) navigate(-1);
-              else if (step === 9) navigate("/buy/select-appliance");
-              else if (step === 10) navigate("/buy/my-warranty");
-              else if (step === 11) navigate("/buy");
-              else if (step === 12) navigate("/buy/select-appliance");
-              else if (step === 13) navigate("/buy/my-warranty");
-
+              navigate(step === 12 || step === 11 ? '/buy' : -1);
             }}
             className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors flex items-center justify-center cursor-pointer border border-slate-100">
             <ArrowLeft className="h-5 w-5 text-text-primary" />
           </button>
 
           <h1 className="text-base font-extrabold text-brand-navy text-center flex-1 pr-9">
-            {step === 2 && "Select Appliance"}
-            {step === 3 && applianceName}
-            {step === 4 && "Review & Confirm"}
-            {step === 5 && "Enter Details"}
-            {step === 6 && "Payment"}
-            {step === 8 && "My Protection Plans"}
-            {step === 9 && "How it Works"}
-            {step === 10 && "Warranty Details"}
             {step === 11 && "Products & Accessories"}
             {step === 12 && "All Appliances"}
-            {step === 13 && "AMC Details"}
-            {step === 14 && "File a Claim"}
           </h1>
         </div>
       )}
 
       {/* Dynamic Content Pages */}
+      {catalogError && <p role="alert" className="mx-6 mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{catalogError}</p>}
       <div className="flex-1 p-3.5 sm:p-6 md:px-8 flex flex-col gap-4 sm:gap-6 md:gap-8 overflow-y-auto max-w-screen-2xl mx-auto w-full">
         {/* STEP 1: BUY SECTION - HOME */}
         {step === 1 && (
@@ -621,15 +408,15 @@ const Buy = () => {
                       <ul className="flex flex-col gap-0.5 mb-2">
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
-                          Genuine Parts
+                          Compare Coverage
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
-                          Expert Support
+                          Available Plans
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
-                          Hassle Free Claims
+                          Track Requests
                         </li>
                       </ul>
                       <button
@@ -668,7 +455,7 @@ const Buy = () => {
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
-                          1 Year Brand Warranty
+                          View product warranty
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
@@ -707,15 +494,15 @@ const Buy = () => {
                       <ul className="flex flex-col gap-0.5 mb-2">
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
-                          Regular Preventive Visits
+                          Compare visit allowances
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
-                          Free Spare Repairs
+                          Review included benefits
                         </li>
                         <li className="flex items-center gap-1.5 text-[8.5px] sm:text-[9px] font-semibold text-slate-700">
                           <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />{" "}
-                          Zero Labor & Service Charges
+                          View terms before you buy
                         </li>
                       </ul>
                       <button
@@ -763,29 +550,7 @@ const Buy = () => {
                 </button>
               </div>
               <div className="flex items-center gap-2.5 sm:gap-3 overflow-x-auto no-scrollbar pb-1 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible">
-                {[
-                  { name: "Television", img: tvImg, appliance: "Television" },
-                  {
-                    name: "Refrigerator",
-                    img: fridgeImg,
-                    appliance: "Refrigerator",
-                  },
-                  {
-                    name: "Washing Machine",
-                    img: washingImg,
-                    appliance: "Washing Machine",
-                  },
-                  {
-                    name: "Air Conditioner",
-                    img: splitAcImg,
-                    appliance: "Air Conditioner",
-                  },
-                  {
-                    name: "Water Purifier",
-                    img: waterPurifierImg,
-                    appliance: "Water Purifier",
-                  },
-                ].map((item, idx) => (
+                {storeCategories.map(c=>({name:c.name,appliance:c.name,img:applianceArt(c.name)})).map((item, idx) => (
                   <div
                     key={idx}
                     onClick={() => {
@@ -830,13 +595,7 @@ const Buy = () => {
               </div>
               <div className="bg-white border border-slate-200/80 rounded-2xl p-2.5 sm:p-3 shadow-2xs">
                 <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-0.5">
-                  {(dynamicBrands.length > 0 ? dynamicBrands : [
-                    { name: "SAMSUNG", color: "#1428A0" },
-                    { name: "LG", color: "#A50034" },
-                    { name: "Whirlpool", color: "#00205B" },
-                    { name: "VOLTAS", color: "#E31837" },
-                    { name: "PANASONIC", color: "#003087" },
-                  ]).map((brand, idx) => (
+                  {dynamicBrands.map((brand, idx) => (
                     <div
                       key={brand.name || idx}
                       onClick={() => navigate(`/buy-new?brand=${encodeURIComponent(brand.name)}`)}
@@ -855,993 +614,6 @@ const Buy = () => {
           </motion.div>
         )}
 
-        {/* STEP 2: EXTENDED WARRANTY - SELECT APPLIANCE */}
-        {step === 2 && (
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5">
-            <div className="flex justify-between items-center px-1">
-              <div>
-                <h2 className="text-lg font-black text-brand-navy">
-                  Extended Warranty
-                </h2>
-                <p className="text-xs text-text-secondary font-semibold">
-                  Select an appliance to buy
-                </p>
-              </div>
-              <span
-                onClick={() => setStep(9)}
-                className="text-xs font-bold text-[#0B4EA2] hover:text-blue-800 transition-colors cursor-pointer flex items-center gap-1 bg-blue-50/50 px-2.5 py-1.5 rounded-xl border border-blue-100 hover:border-blue-200">
-                <HelpCircle className="w-3.5 h-3.5" /> How it works?
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
-              {ewAppliances === null && <SkeletonList rows={4} className="contents" />}
-              {ewAppliances?.length === 0 && (
-                <p className="text-xs font-semibold text-slate-500">No warranty packs are on sale right now.</p>
-              )}
-              {(ewAppliances || []).map((a) => ({
-                id: a.appliance,
-                key: a.appliance,
-                name: a.name,
-                desc: `${a.planCount} warranty pack${a.planCount === 1 ? "" : "s"}`,
-                price: `₹${Number(a.fromPrice).toLocaleString("en-IN")}`,
-                img: a.imageUrl || applianceArt(a.name),
-              })).map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => {
-                    navigate(
-                      `/buy/select-tier/${encodeURIComponent(item.key)}`,
-                    );
-                  }}
-                  className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm hover:scale-[1.01] transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-slate-50/50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
-                      <img
-                        src={item.img}
-                        alt={item.name}
-                        className="w-full h-full object-contain mix-blend-multiply"
-                      />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-brand-navy leading-tight">
-                        {item.name}
-                      </h4>
-                      <p className="text-[11px] text-text-secondary mt-0.5 font-medium">
-                        {item.desc}
-                      </p>
-                      <span className="text-xs font-extrabold text-brand-blue block mt-1">
-                        From {item.price}
-                      </span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
-                </div>
-              ))}
-
-              {/* View More Appliances Button */}
-              <div
-                onClick={() => {
-                  navigate("/buy/all-appliances");
-                }}
-                className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-brand-blue/40 shadow-sm">
-                <span className="text-xs font-black text-brand-navy pl-2">
-                  View More Appliances
-                </span>
-                <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 3: SELECT PRODUCT & TIERS */}
-        {step === 3 && (
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5">
-            <div className="px-1">
-              <h2 className="text-lg font-black text-brand-navy">
-                {applianceName || "Appliance"}
-              </h2>
-              <p className="text-xs text-text-secondary font-semibold">
-                Select your{" "}
-                {/\btv\b|television/i.test(applianceName || "") ? "TV" : "appliance"}{" "}
-                category
-              </p>
-            </div>
-
-            {/* Tier Selector cards */}
-            <div className="flex flex-col gap-3">
-              {selectedTiers.map((tier, idx) => {
-                const isSelected = selectedTierIndex === idx;
-                return (
-                  <div
-                    key={tier.id}
-                    onClick={() =>
-                      navigate(
-                        `/buy/select-tier/${encodeURIComponent(selectedAppliance || "")}?tier=${idx}`,
-                      )
-                    }
-                    className={`bg-white border rounded-2xl p-4.5 flex items-center justify-between cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-brand-blue bg-blue-50/10 shadow-sm ring-1 ring-brand-blue"
-                        : "border-slate-250 hover:border-slate-350"
-                    }`}>
-                    <div>
-                      <span className="text-sm font-black text-brand-navy block">
-                        {tier.label}
-                      </span>
-                      <span className="text-xs font-extrabold text-brand-blue block mt-1">
-                        ₹{tier.price}{" "}
-                        <span className="text-text-secondary font-medium text-[10px]">
-                          for 1 Year
-                        </span>
-                      </span>
-                    </div>
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected
-                          ? "border-brand-blue bg-white"
-                          : "border-slate-300"
-                      }`}>
-                      {isSelected && (
-                        <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* What's Covered list */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 flex flex-col gap-3 shadow-sm">
-              <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider">
-                What's Covered?
-              </h4>
-              <div className="grid grid-cols-1 gap-2.5">
-                {[
-                  "Manufacturing Defects",
-                  "Repair & Replacement",
-                  "Expert Service Provider Support",
-                  "Hassle Free Claims",
-                ].map((benefit, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-600 shrink-0" />
-                    <span className="text-xs font-semibold text-slate-800">
-                      {benefit}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Continue button */}
-            <button
-              onClick={() =>
-                navigate(
-                  `/buy/enter-details/${encodeURIComponent(selectedAppliance || "")}/${selectedTierIndex}`,
-                )
-              }
-              className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-2 cursor-pointer active:scale-98">
-              Continue
-            </button>
-          </motion.div>
-        )}
-
-        {/* STEP 4: REVIEW & CONFIRM */}
-        {step === 4 && (
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col gap-4">
-            <div className="px-1">
-              <h2 className="text-lg font-black text-brand-navy">
-                Review & Confirm
-              </h2>
-              <p className="text-xs text-text-secondary font-semibold">
-                Please review your selection
-              </p>
-            </div>
-
-            {/* Product Card */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-              <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center p-1.5 shrink-0">
-                <img
-                  src={
-                    selectedAppliance?.toLowerCase().includes("tv") ||
-                    selectedAppliance?.toLowerCase().includes("television")
-                      ? tvImg
-                      : selectedAppliance?.toLowerCase().includes("fridge") ||
-                          selectedAppliance
-                            ?.toLowerCase()
-                            .includes("refrigerator")
-                        ? fridgeImg
-                        : selectedAppliance
-                              ?.toLowerCase()
-                              .includes("washing") ||
-                            selectedAppliance?.toLowerCase().includes("machine")
-                          ? washingImg
-                          : selectedAppliance?.toLowerCase().includes("ac") ||
-                              selectedAppliance
-                                ?.toLowerCase()
-                                .includes("conditioner")
-                            ? splitAcImg
-                            : selectedAppliance
-                                  ?.toLowerCase()
-                                  .includes("purifier")
-                              ? waterPurifierImg
-                              : kitchenApplianceImg
-                  }
-                  alt={selectedAppliance}
-                  className="w-full h-full object-contain mix-blend-multiply"
-                />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-brand-navy leading-tight">
-                  {selectedAppliance}
-                </h4>
-                <p className="text-xs text-text-secondary mt-0.5">
-                  {selectedTier?.label}
-                </p>
-                <span className="text-xs text-text-secondary font-medium block mt-0.5">
-                  1 Year Extended Warranty
-                </span>
-              </div>
-            </div>
-
-            {/* Pricing Breakdown */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-text-secondary">
-                  Warranty Price (1 Year)
-                </span>
-                <span className="font-bold text-text-primary">
-                  ₹{selectedTier?.price}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                {/* Same as AMC: the server bills the tier price, so a 10% line
-                    here quoted the customer more than they were charged. */}
-                <span className="text-text-secondary">Taxes</span>
-                <span className="font-bold text-text-primary">Included</span>
-              </div>
-              <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
-                <span className="text-base font-black text-text-primary">
-                  Total Amount
-                </span>
-                <span className="text-xl font-black text-brand-blue">
-                  ₹{Number(selectedTier.price || 0).toLocaleString("en-IN")}
-                </span>
-              </div>
-            </div>
-
-            {/* Benefits Included */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-2.5 shadow-sm">
-              <h4 className="text-xs font-black text-brand-navy mb-0.5">
-                Benefits Included?
-              </h4>
-              {[
-                "Manufacturing Defects",
-                "Repair & Replacement",
-                "Genuine Spare Parts",
-                "Expert Service Provider Support",
-                "Hassle Free Claims",
-              ].map((benefit, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                  <span className="text-xs text-slate-700">{benefit}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Action button + disclaimer */}
-            <div className="flex flex-col items-center gap-2 mt-1">
-              <button
-                onClick={() => setStep(6)}
-                className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98">
-                Proceed to Payment
-              </button>
-              <p className="text-[10px] text-text-secondary text-center font-medium">
-                ⓘ Warranty starts after the manufacturer warranty ends.
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 5: ENTER DETAILS */}
-        {step === 5 && (
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5 pb-8">
-            <div className="px-1 -mt-2">
-              <h2 className="text-lg font-black text-brand-navy">
-                Enter Details
-              </h2>
-              <p className="text-xs text-text-secondary font-semibold">
-                Please provide accurate details
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {/* Full Name */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <User className="h-5 w-5 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5"
-                    placeholder="Enter full name"
-                  />
-                </div>
-              </div>
-
-              {/* Mobile Number */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Phone className="h-5 w-5 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                    Mobile Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value)}
-                    className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5"
-                    placeholder="Enter mobile number"
-                  />
-                </div>
-              </div>
-
-              {/* Email Address */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Mail className="h-5 w-5 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5"
-                    placeholder="Enter email address"
-                  />
-                </div>
-              </div>
-
-              {/* Pincode */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <MapPin className="h-5 w-5 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                    Pincode
-                  </label>
-                  <input
-                    type="text"
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
-                    className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5"
-                    placeholder="Enter pincode"
-                  />
-                </div>
-              </div>
-
-              {/* Select Brand */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Sparkles className="h-5 w-5 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                    Select Brand
-                  </label>
-                  <select
-                    value={activeBrand}
-                    onChange={(e) => setSelectedBrand(e.target.value)}
-                    className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5 cursor-pointer appearance-none">
-                    {applianceBrands.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400 rotate-90" />
-              </div>
-
-              {/* Model Number */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Tv className="h-5 w-5 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                    Model Number
-                  </label>
-                  <input
-                    type="text"
-                    value={modelNumber}
-                    onChange={(e) => setModelNumber(e.target.value)}
-                    className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5"
-                    placeholder={getModelPlaceholder(selectedAppliance)}
-                  />
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400 rotate-90" />
-              </div>
-
-              {/* Purchase Date */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
-                <Calendar className="h-5 w-5 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                    Purchase Date
-                  </label>
-                  <input
-                    type="date"
-                    value={purchaseDate}
-                    onChange={(e) => setPurchaseDate(e.target.value)}
-                    className="text-xs font-bold text-slate-800 w-full outline-none bg-transparent mt-0.5 cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Upload Invoice */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
-                    <FileText className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-extrabold text-slate-800 block">
-                      Upload Invoice
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
-                      {invoiceFile
-                        ? invoiceFile.name
-                        : "JPG, PNG or PDF (Max 5MB)"}
-                    </span>
-                  </div>
-                </div>
-                <label className="border border-brand-blue hover:bg-blue-50/50 text-brand-blue font-extrabold text-[10px] px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm select-none">
-                  Upload
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => {
-                      if (e.target.files[0]) {
-                        setInvoiceFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Action Button */}
-            <button
-              onClick={() => setStep(4)}
-              className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm mt-3 cursor-pointer active:scale-98">
-              Continue
-            </button>
-          </motion.div>
-        )}
-
-        {/* STEP 6: PAYMENT */}
-        {step === 6 && (
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col gap-5 pb-8">
-            <div className="px-1 -mt-2">
-              <h2 className="text-lg font-black text-brand-navy">Payment</h2>
-              <p className="text-xs text-text-secondary font-semibold">
-                Select a payment method
-              </p>
-            </div>
-
-            {/* Recommended Section */}
-            <div className="flex flex-col gap-3">
-              <span className="text-[11px] font-black text-brand-navy uppercase tracking-wider block px-1">
-                Recommended
-              </span>
-
-              <div
-                onClick={() => setPaymentMode("UPI")}
-                className={`bg-white border rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all shadow-sm ${
-                  paymentMode === "UPI"
-                    ? "border-brand-blue bg-blue-50/10 ring-1 ring-brand-blue"
-                    : "border-slate-200"
-                }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-brand-blue shrink-0">
-                    <Zap className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-brand-navy block">
-                      UPI
-                    </span>
-                    <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">
-                      Pay using any UPI app
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    paymentMode === "UPI"
-                      ? "border-brand-blue bg-white"
-                      : "border-slate-300"
-                  }`}>
-                  {paymentMode === "UPI" && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Other Options Section */}
-            <div className="flex flex-col gap-3">
-              <span className="text-[11px] font-black text-brand-navy uppercase tracking-wider block px-1">
-                Other Options
-              </span>
-
-              {/* Debit/Credit Card */}
-              <div
-                onClick={() => setPaymentMode("Card")}
-                className={`bg-white border rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all shadow-sm ${
-                  paymentMode === "Card"
-                    ? "border-brand-blue bg-blue-50/10 ring-1 ring-brand-blue"
-                    : "border-slate-200"
-                }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
-                    <Lock className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-brand-navy block">
-                      Debit / Credit Card
-                    </span>
-                    <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">
-                      Visa, Mastercard, Rupay
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    paymentMode === "Card"
-                      ? "border-brand-blue bg-white"
-                      : "border-slate-300"
-                  }`}>
-                  {paymentMode === "Card" && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Net Banking */}
-              <div
-                onClick={() => setPaymentMode("NetBanking")}
-                className={`bg-white border rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all shadow-sm ${
-                  paymentMode === "NetBanking"
-                    ? "border-brand-blue bg-blue-50/10 ring-1 ring-brand-blue"
-                    : "border-slate-200"
-                }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
-                    <Landmark className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-brand-navy block">
-                      Net Banking
-                    </span>
-                    <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">
-                      All major banks
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    paymentMode === "NetBanking"
-                      ? "border-brand-blue bg-white"
-                      : "border-slate-300"
-                  }`}>
-                  {paymentMode === "NetBanking" && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Wallets */}
-              <div
-                onClick={() => setPaymentMode("Wallets")}
-                className={`bg-white border rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all shadow-sm ${
-                  paymentMode === "Wallets"
-                    ? "border-brand-blue bg-blue-50/10 ring-1 ring-brand-blue"
-                    : "border-slate-200"
-                }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
-                    <Wallet className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-brand-navy block">
-                      Wallets
-                    </span>
-                    <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">
-                      Paytm, PhonePe, Amazon Pay
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    paymentMode === "Wallets"
-                      ? "border-brand-blue bg-white"
-                      : "border-slate-300"
-                  }`}>
-                  {paymentMode === "Wallets" && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>
-                  )}
-                </div>
-              </div>
-
-              {/* EMI Options */}
-              <div
-                onClick={() => setPaymentMode("EMI")}
-                className={`bg-white border rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all shadow-sm ${
-                  paymentMode === "EMI"
-                    ? "border-brand-blue bg-blue-50/10 ring-1 ring-brand-blue"
-                    : "border-slate-200"
-                }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
-                    <Percent className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-brand-navy block">
-                      EMI Options
-                    </span>
-                    <span className="text-[10px] text-text-secondary font-semibold block mt-0.5">
-                      Easy EMI available
-                    </span>
-                  </div>
-                </div>
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    paymentMode === "EMI"
-                      ? "border-brand-blue bg-white"
-                      : "border-slate-300"
-                  }`}>
-                  {paymentMode === "EMI" && (
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand-blue"></div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Total Payable Summary Box */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm mt-2">
-              <div>
-                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">
-                  Total Payable
-                </span>
-                <span className="text-lg font-black text-brand-navy block mt-0.5">
-                  ₹{Number(selectedTier.price || 0).toLocaleString("en-IN")}
-                </span>
-              </div>
-              <span className="text-xs font-bold text-brand-blue hover:underline cursor-pointer">
-                View Details
-              </span>
-            </div>
-
-            {/* Action Pay Button */}
-            <div className="flex flex-col gap-2.5 mt-2">
-              <button
-                onClick={handleBuyWarranty}
-                disabled={buying || !selectedTier}
-                className="w-full bg-brand-yellow hover:bg-yellow-400 disabled:opacity-60 text-brand-navy font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98 flex items-center justify-center gap-2">
-                <Lock className="h-4.5 w-4.5" />
-                {buying
-                  ? "Opening secure checkout…"
-                  : `Pay ₹${Number(selectedTier?.price || 0).toLocaleString("en-IN")} Securely`}
-              </button>
-              {buyError && (
-                <p className="text-[11px] font-bold text-red-600 text-center px-2">
-                  {buyError}
-                </p>
-              )}
-              <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <ShieldCheck className="h-4 w-4 text-green-600" />
-                100% Secure Payment
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 7: PAYMENT SUCCESS / CERTIFICATE ISSUANCE */}
-        {step === 7 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
-            className="flex flex-col items-center gap-6 py-6 pb-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 shadow-md">
-              <CheckCircle2 className="h-10 w-10 animate-bounce" />
-            </div>
-
-            <div className="text-center">
-              <h3 className="text-lg font-black text-brand-navy leading-tight">
-                Payment Successful!
-              </h3>
-              <p className="text-xs text-text-secondary mt-1.5 font-medium">
-                Your appliance is now covered under Nigam Shield.
-              </p>
-            </div>
-
-            {/* Glassmorphic Policy Certificate Card */}
-            <div className="w-full bg-linear-to-br from-brand-navy via-[#0C3F85] to-brand-blue rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden border border-white/10">
-              <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
-
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <span className="text-[9px] bg-brand-yellow text-black font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                    NIGAM SHIELD
-                  </span>
-                  <h4 className="text-base font-black mt-2.5 truncate w-48">
-                    {selectedBrand} {selectedAppliance}
-                  </h4>
-                </div>
-                <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 backdrop-blur-md">
-                  <Shield className="h-5 w-5 text-brand-yellow" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3.5 border-t border-white/10 pt-4 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-white/60">Policy Plan:</span>
-                  <span className="font-bold text-brand-yellow">
-                    {selectedTier?.label}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Policy ID:</span>
-                  {/* The real policy reference — a random NCCEW###### was shown
-                      here, so the number the customer kept matched no policy. */}
-                  <span className="font-mono tracking-wider font-semibold">
-                    {boughtOrder?.humanId || boughtOrder?.id || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/60">Coverage Status:</span>
-                  <span className="font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-400/20 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>{" "}
-                    Active
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Duration:</span>
-                  <span className="font-bold text-white">
-                    1 Year Extended Cover
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/60">Valid Till:</span>
-                  <span className="font-bold text-white">12 May 2026</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="w-full flex flex-col gap-3 mt-4">
-              <button
-                onClick={() => setStep(8)}
-                className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98">
-                View My Warranty
-              </button>
-              <button
-                onClick={() => {
-                  navigate("/dashboard");
-                }}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-brand-navy font-bold py-3.5 rounded-xl transition-all text-xs cursor-pointer">
-                Back to Dashboard
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 9: HOW IT WORKS DETAIL PAGE */}
-        {step === 9 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="flex flex-col gap-6 pb-8">
-            {/* Top Intro Section */}
-            <div className="bg-linear-to-br from-[#E3F2FD] to-[#BBDEFB] rounded-3xl p-5 border border-blue-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-blue-300/20 rounded-full blur-xl"></div>
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-blue-200 shadow-sm shrink-0">
-                <ShieldCheck className="h-7 w-7 text-brand-blue animate-pulse" />
-              </div>
-              <div className="flex-1">
-                <span className="text-[9px] bg-brand-navy text-white font-extrabold px-2 py-0.5 rounded-full tracking-wider mb-1 uppercase">
-                  Nigam Shield
-                </span>
-                <h3 className="text-sm font-black text-brand-navy leading-tight mt-1">
-                  Extended Warranty Explained
-                </h3>
-                <p className="text-[10px] text-slate-700 leading-relaxed font-semibold mt-0.5">
-                  100% cashless, completely paperless protection for your
-                  favorite home appliances.
-                </p>
-              </div>
-            </div>
-
-            {/* Simple 4-Step Process Visual Journey */}
-            <div className="flex flex-col gap-3">
-              <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider px-1">
-                How it works in 4 easy steps
-              </h4>
-
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col gap-5">
-                {[
-                  {
-                    stepNum: "01",
-                    title: "Select Appliance & Price Tier",
-                    desc: "Choose from our supported appliances and pick the price bracket matching your original purchase invoice.",
-                    icon: <Wrench className="h-5 w-5 text-brand-blue" />,
-                  },
-                  {
-                    stepNum: "02",
-                    title: "Upload Purchase Details",
-                    desc: "Provide the brand, model, purchase date, and upload a snap of your purchase invoice or invoice receipt.",
-                    icon: <Upload className="h-5 w-5 text-brand-blue" />,
-                  },
-                  {
-                    stepNum: "03",
-                    title: "Instant Secure Payment",
-                    desc: "Pay a low, one-time policy premium seamlessly using UPI apps, card, net banking, or easy e-wallets.",
-                    icon: <Wallet className="h-5 w-5 text-brand-blue" />,
-                  },
-                  {
-                    stepNum: "04",
-                    title: "Enjoy Active Digital Shield",
-                    desc: "Your Digital Certificate is issued instantly. Extended coverage starts right after the brand warranty expires.",
-                    icon: <Award className="h-5 w-5 text-brand-blue" />,
-                  },
-                ].map((item, idx) => (
-                  <div key={idx} className="flex gap-4 relative">
-                    {idx !== 3 && (
-                      <div className="absolute left-5.5 top-10 -bottom-6 w-0.5 bg-slate-100"></div>
-                    )}
-                    <div className="w-11 h-11 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center shrink-0 shadow-sm relative z-10">
-                      {item.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-[#0B4EA2] bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-md">
-                          Step {item.stepNum}
-                        </span>
-                        <h5 className="text-xs font-black text-brand-navy">
-                          {item.title}
-                        </h5>
-                      </div>
-                      <p className="text-[10px] text-text-secondary leading-relaxed font-semibold mt-1">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Premium Benefits Grid Section */}
-            <div className="flex flex-col gap-3">
-              <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider px-1">
-                Why Choose Nigam Shield?
-              </h4>
-
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  {
-                    title: "100% Cashless Repairs",
-                    desc: "No out-of-pocket expenses when scheduling repair visits.",
-                    icon: <Lock className="h-4.5 w-4.5 text-brand-blue" />,
-                  },
-                  {
-                    title: "Brand Authorized",
-                    desc: "Only certified serviceProviders and genuine original brand parts are used.",
-                    icon: (
-                      <CheckCircle2 className="h-4.5 w-4.5 text-green-600" />
-                    ),
-                  },
-                  {
-                    title: "Completely Digital",
-                    desc: "Zero physical paperwork. File claims and view status on your app.",
-                    icon: <Sparkles className="h-4.5 w-4.5 text-yellow-500" />,
-                  },
-                  {
-                    title: "Unlimited Claims",
-                    desc: "Claim multiple times up to the original invoice value of product.",
-                    icon: (
-                      <ShieldCheck className="h-4.5 w-4.5 text-brand-navy" />
-                    ),
-                  },
-                ].map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col gap-2 shadow-xs">
-                    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-2xs">
-                      {item.icon}
-                    </div>
-                    <h5 className="text-[11px] font-extrabold text-brand-navy leading-snug">
-                      {item.title}
-                    </h5>
-                    <p className="text-[9px] text-text-secondary leading-relaxed font-medium">
-                      {item.desc}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Accordion FAQ Segment */}
-            <div className="flex flex-col gap-3">
-              <h4 className="text-xs font-black text-brand-navy uppercase tracking-wider px-1">
-                Frequently Asked Questions
-              </h4>
-
-              <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm flex flex-col gap-3.5">
-                {[
-                  {
-                    q: "When does my extended warranty coverage begin?",
-                    a: "It starts automatically the exact day after your manufacturer brand warranty expires, ensuring continuous protection without any coverage gap.",
-                  },
-                  {
-                    q: "What is covered under Nigam Shield?",
-                    a: "It mirrors the original brand manufacturer's warranty. It covers all internal mechanical and electrical defects, spare parts, and labor fees.",
-                  },
-                  {
-                    q: "Is there any limit on the number of repairs?",
-                    a: "Your purchased plan shows the available claim allowance and coverage. Review its details before requesting a repair; exclusions and separately approved parts may apply.",
-                  },
-                ].map((faq, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-col gap-1 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                    <span className="text-[10px] font-extrabold text-[#0B4EA2] uppercase tracking-wider">
-                      FAQ {idx + 1}
-                    </span>
-                    <h5 className="text-xs font-black text-brand-navy mt-0.5">
-                      {faq.q}
-                    </h5>
-                    <p className="text-[10px] text-text-secondary leading-relaxed font-semibold mt-1">
-                      {faq.a}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bottom CTA Block */}
-            <div className="w-full flex flex-col gap-2 mt-2">
-              <button
-                onClick={() => setStep(2)}
-                className="w-full bg-brand-navy hover:bg-blue-900 text-white font-black py-4 rounded-2xl transition-all shadow-md text-sm cursor-pointer active:scale-98">
-                Got It, Let's Protect
-              </button>
-            </div>
-          </motion.div>
-        )}
-
         {/* STEP 11: PRODUCTS & ACCESSORIES PAGE */}
         {step === 11 && (
           <motion.div
@@ -1855,16 +627,7 @@ const Buy = () => {
                 Shop by Category
               </h3>
               <div className="flex items-center gap-5 overflow-x-auto no-scrollbar pb-2.5 pt-1">
-                {[
-                  { name: "For You", isForYou: true },
-                  { name: "AC", appliance: "AC" },
-                  { name: "Washing Machine", appliance: "Washing Machine" },
-                  { name: "Refrigerator", appliance: "Refrigerator" },
-                  { name: "TV", appliance: "TV" },
-                  { name: "RO Water Purifier", appliance: "RO Water Purifier" },
-                  { name: "Geyser", appliance: "Geyser" },
-                  { name: "More", isMore: true },
-                ].map((item, idx) => (
+                {[{name:'For You',isForYou:true},...storeCategories.map(c=>({name:c.name,appliance:c.name})),{name:'More',isMore:true}].map((item, idx) => (
                   <div
                     key={idx}
                     className="shrink-0 flex flex-col items-center gap-0.5 cursor-pointer group"
@@ -2014,53 +777,9 @@ const Buy = () => {
             <div className="flex flex-col gap-2 px-1">
               <h3 className="text-sm font-black text-[#0B4EA2]">Top Brands</h3>
               <div className="flex items-center gap-3.5 overflow-x-auto no-scrollbar pb-2 pt-0.5">
-                {[
-                  { name: "LG", color: "text-[#C6004E]", logo: "LG" },
-                  {
-                    name: "SAMSUNG",
-                    color: "text-[#034694]",
-                    logo: "SAMSUNG",
-                    isText: true,
-                  },
-                  {
-                    name: "Haier",
-                    color: "text-[#005A9C]",
-                    logo: "Haier",
-                    isText: true,
-                  },
-                  {
-                    name: "Whirlpool",
-                    color: "text-[#1E306E]",
-                    logo: "Whirlpool",
-                    isText: true,
-                    special: "gold-ring",
-                  },
-                  {
-                    name: "VOLTAS",
-                    color: "text-[#0096C7]",
-                    logo: "VOLTAS",
-                    isText: true,
-                    italic: true,
-                  },
-                ].map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="shrink-0 bg-slate-50/50 border border-slate-150 rounded-2xl px-4 py-3 flex items-center justify-center min-w-18.75 h-12 shadow-sm hover:border-[#0B4EA2]/30 transition-all cursor-pointer">
-                    {item.isText ? (
-                      <span
-                        className={`text-[10px] font-black tracking-wider ${item.color} ${item.italic ? "italic font-black" : ""}`}>
-                        {item.logo}
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <div className="w-4.5 h-4.5 rounded-full bg-[#C6004E] flex items-center justify-center text-white text-[8px] font-bold">
-                          L
-                        </div>
-                        <span className="text-[10px] font-black text-slate-800">
-                          LG
-                        </span>
-                      </div>
-                    )}
+                {dynamicBrands.map(brand => (
+                  <div key={brand.id || brand.name} className="shrink-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-blue-900">
+                    {brand.name}
                   </div>
                 ))}
 
@@ -2174,7 +893,7 @@ const Buy = () => {
                   icon: <ShieldCheck className="h-5 w-5 text-brand-blue" />,
                 },
                 {
-                  title: "Expert Support",
+                  title: "Available Plans",
                   sub: "24/7 Assistance",
                   icon: <Phone className="h-5 w-5 text-brand-blue" />,
                 },
@@ -2268,7 +987,6 @@ const Buy = () => {
       {/* Sticky Bottom Tab Bar — mobile only */}
       <CustomerBottomNav
         onBuyClick={() => {
-          setShowSuccess(false);
           goTo(1);
         }}
       />

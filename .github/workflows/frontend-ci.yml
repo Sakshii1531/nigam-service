@@ -118,7 +118,7 @@ jobs:
           NODE_ENV: test
           OTP_PROVIDER: test
           E2E_MONGODB_URI: mongodb://127.0.0.1:27017/nigam_gst_invoice_e2e?replicaSet=rs0
-        run: npx playwright test --config=playwright.ui.config.js customerGstInvoice.spec.js myAppliances.spec.js protectionPlans.spec.js --workers=1
+        run: npx playwright test --config=playwright.ui.config.js customerGstInvoice.spec.js myAppliances.spec.js protectionPlans.spec.js protectionPurchase.spec.js --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

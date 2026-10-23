@@ -1120,7 +1120,7 @@ describe('platform-wide AMC console', () => {
       passwordHash: await hashPassword('password123'),
     });
     return AMCSubscription.create({
-      user: user._id, plan: plan._id, status, expiryDate, visitsTotal: 4, visitsRemaining: 4, brand: 'LG', model: 'X1',
+      user: user._id, plan: plan._id, paid:true, status, expiryDate, visitsTotal: 4, visitsRemaining: 4, brand: 'LG', model: 'X1',
     });
   }
 

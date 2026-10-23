@@ -9,6 +9,8 @@ const extendedWarrantyPlanSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     durationYears: { type: Number, required: true },
+    maxApplianceAgeMonths: { type:Number, default:36, min:0 },
+    requiresInvoice: { type:Boolean, default:true },
     price: { type: Number, required: true },
     description: String,
     features: [String],

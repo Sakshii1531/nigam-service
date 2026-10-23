@@ -30,8 +30,8 @@ function loadCheckoutScript() {
  * money had moved.
  *
  * @param razorpay  the { orderId, amount, currency, keyId } block the create
- *                  endpoint returned. Null means nothing to collect (a free or
- *                  cash-on-site job) — the caller should treat that as success.
+ *                  endpoint returned. Callers must handle free purchases or
+ *                  cash-on-site jobs before calling this function.
  * @param verifyPath the endpoint that verifies the signature, e.g.
  *                  `/bookings/<id>/verify-payment`.
  * @returns the verify endpoint's response data.
@@ -55,9 +55,9 @@ export async function payWithRazorpay({ razorpay, verifyPath, name, description,
       name: name || 'Nigam Care',
       description: description || 'Appliance Purchase',
       prefill: {
-        name: prefill.name || 'Customer',
-        email: prefill.email || 'customer@example.com',
-        contact: prefill.contact || prefill.phone || '9876543210',
+        ...(prefill.name ? { name:prefill.name } : {}),
+        ...(prefill.email ? { email:prefill.email } : {}),
+        ...(prefill.contact || prefill.phone ? { contact:prefill.contact || prefill.phone } : {}),
       },
       handler: (response) => resolve(response),
       modal: {

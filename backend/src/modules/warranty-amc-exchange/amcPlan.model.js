@@ -11,6 +11,8 @@ const amcPlanSchema = new mongoose.Schema(
     description: { type: String, default: '' },
     // What the customer gets, one line each ("3 scheduled visits", "Free gas top-up").
     benefits: { type: [String], default: [] },
+    maxApplianceAgeMonths: { type:Number, default:null, min:0 },
+    requiresInvoice: { type:Boolean, default:false },
     price: { type: Number, required: true, min: 0 },
     visitsTotal: { type: Number, required: true, min: 0 },
     durationMonths: { type: Number, default: 12, min: 1 },

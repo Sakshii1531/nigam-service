@@ -78,7 +78,10 @@ export async function getUser(id) {
       ...user.toObject(),
       addresses: cleanedAddresses,
       referrals,
-      amcSubscriptions,
+      amcSubscriptions:amcSubscriptions.map(item => {
+        const json = item.toJSON();
+        return item.planSnapshot ? { ...json, plan:{ ...json.plan, ...json.planSnapshot } } : json;
+      }),
       warrantyOrders,
       serviceRequests,
       orders,

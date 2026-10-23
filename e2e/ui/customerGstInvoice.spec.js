@@ -12,15 +12,23 @@ test('customer requests a business GST invoice, completes service and saves the 
  const upload=await request.post(`${API}/uploads`,{headers:{Authorization:`Bearer ${admin.accessToken}`},multipart:{file:{name:'test-signature.png',mimeType:'image/png',buffer:png}}});expect(upload.ok()).toBe(true);const signatureUrl=(await upload.json()).data.url;
  await call(request,'put','/super-admin/customer-invoices/settings',admin.accessToken,{enabled:true,legalName:'GST Test Supplier',gstin:'23AAAAA0000A1ZA',address:'10 Supplier Street, Indore',signatoryName:'Test Accounts',signatureUrl,defaultSac:'998719',defaultPartsHsn:'',autoIssue:true,eInvoiceRequired:false});
  const phone=`9${String(Math.floor(Math.random()*1e9)).padStart(9,'0')}`;
- await request.post(`${API}/_dev/test-user`,{data:{role:'customer',phone,name:'GST Test Customer',password:'password123'}});const customer=await login(request,'customer',phone);
+ await request.post(`${API}/_dev/test-user`,{data:{role:'customer',phone,name:'GST Test Customer',password:'password123',walletCoins:0}});const customer=await login(request,'customer',phone);
+ customer.user.walletCoins=999; // A stale cached balance must not expose coins the wallet does not have.
  customer.user.addresses=await call(request,'post','/auth/addresses',customer.accessToken,{type:'Work',house:'15 Service Street',city:'Indore',state:'Madhya Pradesh',pincode:'452001',isDefault:true,latitude:22.7196,longitude:75.8577});
  const partnerPhone=`9${String(Math.floor(Math.random()*1e9)).padStart(9,'0')}`;await request.post(`${API}/_dev/test-serviceProvider`,{data:{phone:partnerPhone,password:'password123',specs:['AC'],serviceCityName:'Indore',serviceStateName:'Madhya Pradesh',availability:'Available'}});const partner=await login(request,'service_provider',partnerPhone);
  await store(page,customer);await page.goto('/book/AC');await page.getByText('Split AC',{exact:true}).click();await page.getByRole('button',{name:/^1\.5 Ton/}).click();await page.getByRole('button',{name:/Continue — Select Service/i}).click();
  await page.getByRole('button',{name:/Installation/i}).first().click();await page.getByRole('button',{name:/Continue — Schedule Visit/i}).click();await page.locator('select').first().selectOption('Voltas');await page.getByText(/Service Needed Now/i).click();await page.getByRole('button',{name:/Continue — Address & Payment/i}).click();
  await page.getByLabel('Wall type *',{exact:true}).selectOption('Brick');
+ await expect(page.getByRole('checkbox',{name:/Use NCC coins/})).toHaveCount(0);
  await page.getByRole('button',{name:/Pay After Service/}).click();await page.getByRole('checkbox',{name:'I need a business GST invoice',exact:true}).check();
  const confirm=page.getByRole('button',{name:'Complete Business GST Details',exact:true});await expect(confirm).toBeDisabled();
+ await page.getByLabel('GSTIN',{exact:true}).fill('27ABCDE1234F2Z5');
+ await page.getByLabel('Registered business name',{exact:true}).focus();
+ await expect(page.getByLabel('GSTIN',{exact:true})).toHaveAttribute('aria-invalid','true');
+ await expect(page.getByRole('alert')).toContainText('fails its check-digit validation');
  for(const [label,value] of [['GSTIN','23AAAAA0000A1ZA'],['Registered business name','Test Business Services'],['Business billing address','12 Business Street'],['Billing city','Indore'],['Billing pincode','452001']])await page.getByLabel(label,{exact:true}).fill(value);
+ await expect(page.getByLabel('GSTIN',{exact:true})).toHaveAttribute('aria-invalid','false');
+ await expect(page.getByText('This GSTIN fails its check-digit validation.',{exact:false})).toHaveCount(0);
  await page.screenshot({path:'/tmp/gst-booking-mobile.png',fullPage:true});
  const booked=page.waitForResponse(r=>r.url()===`${API}/bookings`&&r.request().method()==='POST');await page.getByRole('button',{name:'Confirm Booking (Pay After Service)',exact:true}).click();const response=await booked;expect(response.status()).toBe(201);const {booking,serviceRequest}= (await response.json()).data;
  expect(booking.businessBilling.gstin).toBe('23AAAAA0000A1ZA');expect(booking.commercial.gstAmount).toBeGreaterThan(0);expect(Math.round(booking.commercial.taxableAmount*100)+Math.round(booking.commercial.gstAmount*100)).toBe(Math.round(booking.totalPrice*100));
@@ -31,4 +39,22 @@ test('customer requests a business GST invoice, completes service and saves the 
  await page.goto(`/bookings/${booking.id}`);await expect(page.getByText('Test Business Services',{exact:true})).toBeVisible();
  const popup=page.waitForEvent('popup');await page.getByRole('button',{name:'View / save GST invoice',exact:true}).click();const invoice=await popup;await expect(invoice.getByRole('heading',{name:'Tax Invoice',exact:true})).toBeVisible();await expect(invoice.getByText('Bill to: Test Business Services',{exact:true})).toBeVisible();await expect(invoice.getByRole('columnheader',{name:'CGST',exact:true})).toBeVisible();await expect(invoice.getByRole('button',{name:'Print / Save as PDF',exact:true})).toBeVisible();await expect.poll(()=>invoice.getByAltText('Authorised signature').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);await invoice.screenshot({path:'/tmp/gst-customer-invoice.png',fullPage:true});
  await page.setViewportSize({width:1440,height:1050});await store(page,admin);await page.goto('/super-admin/settings?tab=tax');await expect(page.getByLabel('Supplier legal name',{exact:true})).toHaveValue('GST Test Supplier');await expect(page.getByText(booking.humanId,{exact:false}).first()).toBeVisible();await page.screenshot({path:'/tmp/gst-admin-invoices.png',fullPage:true});
+});
+
+test('booking shows the current available coin count and applies coins only after selection',async({page,request})=>{
+ test.setTimeout(90000);
+ const phone=`9${String(Math.floor(Math.random()*1e9)).padStart(9,'0')}`;
+ await request.post(`${API}/_dev/test-user`,{data:{role:'customer',phone,password:'password123',walletCoins:123}});
+ const customer=await login(request,'customer',phone);
+ customer.user.walletCoins=0; // The current API balance wins over cached profile data.
+ await call(request,'post','/auth/addresses',customer.accessToken,{type:'Home',house:'15 Coin Street',city:'Indore',state:'Madhya Pradesh',pincode:'452001',isDefault:true,latitude:22.7196,longitude:75.8577});
+ await store(page,customer);await page.goto('/book/AC');
+ await page.getByText('Split AC',{exact:true}).click();await page.getByRole('button',{name:/^1\.5 Ton/}).click();await page.getByRole('button',{name:/Continue — Select Service/i}).click();
+ await page.getByRole('button',{name:/Installation/i}).first().click();await page.getByRole('button',{name:/Continue — Schedule Visit/i}).click();await page.locator('select').first().selectOption('Voltas');await page.getByText(/Service Needed Now/i).click();await page.getByRole('button',{name:/Continue — Address & Payment/i}).click();
+ const coins=page.getByRole('checkbox',{name:/Use NCC coins.*123 available/});
+ await expect(coins).toBeVisible();await expect(coins).not.toBeChecked();
+ const repriced=page.waitForResponse(r=>r.url().endsWith('/catalog/quote')&&r.request().method()==='POST'&&r.request().postDataJSON()?.useCoins===true);
+ await coins.check();const response=await repriced;expect(response.status()).toBe(200);expect((await response.json()).data.coinsApplied).toBeGreaterThan(0);
+ await page.screenshot({path:'/tmp/booking-available-coins.png',fullPage:true});
+ await coins.uncheck();await expect(coins).not.toBeChecked();
 });

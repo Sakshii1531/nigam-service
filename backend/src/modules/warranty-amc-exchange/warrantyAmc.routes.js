@@ -7,8 +7,9 @@ import { Category } from '../catalog/category.model.js';
 import { ExtendedWarrantyPlan } from './extendedWarrantyPlan.model.js';
 import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
-import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
+import { createRazorpayOrder, verifyRazorpaySignature, verifyCapturedPayment } from '../payments-wallet/paymentGateway.js';
 import { env } from '../../config/env.js';
+import { confirmCheckout } from './protectionCheckout.service.js';
 
 /**
  * Creates the gateway order + Pending Payment for a warranty/AMC purchase and
@@ -57,6 +58,8 @@ async function confirmPayment({ userId, targetType, targetId, razorpayPaymentId,
     err.statusCode = 400;
     throw err;
   }
+
+  await verifyCapturedPayment({orderId:pendingPayment.gatewayRef,paymentId:razorpayPaymentId,amount:pendingPayment.amount});
 
   if (pendingPayment.status === 'Success') {
     if (pendingPayment.razorpayPaymentId !== razorpayPaymentId) {
@@ -113,7 +116,7 @@ router.get('/amc/appliances', async (req, res) => {
     // not created a separate appliance-specific plan for that category.
     if (generic.length) keys.push(...categories.map(c => c.key).filter(key => !keys.includes(key)));
     const nameOf = new Map(categories.map((c) => [c.key, c]));
-    const data = keys
+    const data = keys.filter(key => categories.some(category => category.key === key))
       .map((key) => {
         const own = plans.filter((p) => p.applianceCategory === key);
         const all = [...own, ...generic];
@@ -162,7 +165,7 @@ router.get('/extended-warranty/appliances', async (req, res) => {
     // not created a separate appliance-specific plan for that category.
     if (generic.length) keys.push(...categories.map(c => c.key).filter(key => !keys.includes(key)));
     const byKey = new Map(categories.map((c) => [c.key, c]));
-    const data = keys
+    const data = keys.filter(key => categories.some(category => category.key === key))
       .map((key) => {
         const all = [...plans.filter((p) => p.applianceCategory === key), ...generic];
         return { appliance: key, name: byKey.get(key)?.name || key, imageUrl: byKey.get(key)?.imageUrl || null, fromPrice: Math.min(...all.map((p) => p.price)), planCount: all.length };
@@ -187,30 +190,15 @@ for (const kind of ['amc','extended-warranty']) {
  * @route   POST /api/v1/warranty-amc/extended-warranty/check-eligibility
  * @desc    Check eligibility for extended warranty based on appliance purchase date
  */
-router.post('/extended-warranty/check-eligibility', (req, res) => {
+router.post('/extended-warranty/check-eligibility', async (req,res,next)=>{
   try {
-    const { purchaseDate } = req.body;
-    if (!purchaseDate) {
-      return res.status(400).json({ error: { message: 'Purchase date is required' } });
-    }
-
-    const pDate = new Date(purchaseDate);
-    const now = new Date();
-    const ageInMonths = (now.getFullYear() - pDate.getFullYear()) * 12 + (now.getMonth() - pDate.getMonth());
-
-    // Product eligible if age <= 36 months (3 years)
-    const eligible = ageInMonths <= 36;
-    return res.json({
-      data: {
-        eligible,
-        ageInMonths,
-        maxEligibleAgeMonths: 36,
-        reason: eligible ? 'Eligible for Extended Warranty' : 'Appliance is older than 3 years limit for extended warranty'
-      }
-    });
-  } catch (err) {
-    return res.status(500).json({ error: { message: err.message } });
-  }
+    const plan=await ExtendedWarrantyPlan.findOne({_id:req.body.plan,isActive:true});
+    if(!plan)return res.status(404).json({error:{message:'Choose an available warranty plan to check eligibility'}});
+    const purchaseDate=new Date(req.body.purchaseDate);
+    if(!req.body.purchaseDate||Number.isNaN(purchaseDate.getTime())||purchaseDate>new Date())return res.status(400).json({error:{message:'Enter a valid purchase date'}});
+    const end=new Date(purchaseDate);if(plan.maxApplianceAgeMonths!=null)end.setMonth(end.getMonth()+plan.maxApplianceAgeMonths);
+    return res.json({data:{eligible:plan.maxApplianceAgeMonths==null||end>=new Date(),maxEligibleAgeMonths:plan.maxApplianceAgeMonths}});
+  }catch(e){next(e);}
 });
 
 /**
@@ -283,7 +271,7 @@ router.post('/extended-warranty/orders', async (req, res) => {
       data: {
         order,
         razorpay,
-        certificateUrl: `/api/v1/warranty-amc/extended-warranty/orders/${order.id}/certificate.pdf`
+        certificateUrl: null
       }
     });
   } catch (err) {
@@ -381,7 +369,7 @@ router.get('/extended-warranty/orders', async (req, res) => {
 router.get('/amc/subscriptions', async (req, res) => {
   try {
     const subscriptions = await AMCSubscription.find({ user: req.user.id }).populate('plan').sort({ createdAt: -1 });
-    return res.json({ data: subscriptions });
+    return res.json({ data:subscriptions.map(s=>{const json=s.toJSON();return s.planSnapshot?{...json,plan:{...json.plan,...json.planSnapshot}}:json;}) });
   } catch (err) {
     return res.status(500).json({ error: { message: err.message } });
   }
@@ -398,6 +386,7 @@ router.post('/extended-warranty/orders/:id/verify-payment', async (req, res) => 
     const order = await ExtendedWarrantyOrder.findById(req.params.id);
     if (!order) return res.status(404).json({ error: { message: 'Extended warranty order not found' } });
 
+    if(order.checkoutKey){const result=await confirmCheckout(req.user.id,order.checkoutKey,req.body);return res.json({data:result.purchase});}
     await confirmPayment({
       userId: req.user.id,
       targetType: 'extended_warranty',
@@ -423,6 +412,7 @@ router.post('/amc/subscriptions/:id/verify-payment', async (req, res) => {
     const subscription = await AMCSubscription.findById(req.params.id);
     if (!subscription) return res.status(404).json({ error: { message: 'AMC subscription not found' } });
 
+    if(subscription.checkoutKey){const result=await confirmCheckout(req.user.id,subscription.checkoutKey,req.body);return res.json({data:result.purchase});}
     await confirmPayment({
       userId: req.user.id,
       targetType: 'amc',

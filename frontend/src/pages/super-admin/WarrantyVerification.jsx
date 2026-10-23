@@ -3,6 +3,7 @@ import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { Search, FileText, Calendar, User } from 'lucide-react';
 import { apiRequest } from '../../lib/apiClient';
+import ProtectionInvoice from '../../components/appliances/ProtectionInvoice';
 
 const dateFormatter = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -16,6 +17,7 @@ function shape(order) {
     brand: order.brand || '—',
     date: order.createdAt ? dateFormatter.format(new Date(order.createdAt)) : '—',
     invoiceUrl: order.invoiceFileUrl || '',
+    checkoutKey:order.checkoutKey,
     // The uploaded dealer invoice is a file, not a number — link to it when present.
     invoice: order.invoiceFileUrl ? 'View invoice' : 'Not uploaded',
     status: order.verificationStatus || 'Pending',
@@ -116,7 +118,7 @@ const WarrantyVerification = () => {
                       <p className="text-[10px] text-[#0D47A1] font-bold uppercase">{c.brand}</p>
                     </td>
                     <td className="p-4 font-mono text-xs font-bold text-slate-600">
-                      {c.invoiceUrl ? (
+                      {c.checkoutKey ? <ProtectionInvoice checkoutKey={c.checkoutKey}/> : c.invoiceUrl ? (
                         <a href={c.invoiceUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[#0D47A1] hover:underline">
                           <FileText size={12} /> {c.invoice}
                         </a>

@@ -249,6 +249,13 @@ describe('customer purchase to covered service regression', () => {
 
 
 describe('any-appliance plans remain discoverable', () => {
+  it.each(['amc', 'extended-warranty'])('%s omits inactive categories even if they retain active plans', async kind => {
+    await Category.updateOne({key:'AC'}, {$set:{isActive:false}});
+    if (kind === 'amc') await AMCPlan.create({name:'Retired category plan', applianceCategory:'AC', price:499, visitsTotal:2});
+    else await ExtendedWarrantyPlan.create({name:'Retired category plan', applianceCategory:'AC', price:499, durationYears:1, claimsTotal:2});
+    const response = await request(app).get(`/api/v1/warranty-amc/${kind}/appliances`).expect(200);
+    expect(response.body.data).toEqual([]);
+  });
   it.each(['amc', 'extended-warranty'])('%s includes active catalogue appliances when only a generic plan exists', async kind => {
     const categories = await Category.find({ key: { $in: ['AC', 'Refrigerator'] } });
     await ProductType.create(categories.map(category => ({ category: category._id, slug: 'appliance', name: category.name })));
