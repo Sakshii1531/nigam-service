@@ -1,3 +1,4 @@
+import { renderInvoiceDocument, invoiceText } from '../../../../backend/src/modules/shared/invoiceTemplate.js';
 import WarrantyParts from './job-flows/WarrantyParts';
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import JobSummaryCard from "../../components/service-provider/JobSummaryCard";
@@ -6101,30 +6102,15 @@ const ActiveJob = () => {
                           const totalAmount = billPreview.total;
 
                           const printWindow = window.open("", "_blank");
-                          printWindow.document.write(`
-                        <html>
-                          <head>
-                            <title>Invoice - #${activeJob.id}</title>
-                            <style>
-                              body { font-family: sans-serif; padding: 40px; color: #333; }
-                              .header { border-bottom: 2px solid #052355; padding-bottom: 20px; margin-bottom: 20px; }
-                              .title { font-size: 24px; color: #052355; font-weight: bold; }
-                              .details { margin-bottom: 30px; font-size: 14px; line-height: 1.6; }
-                              .items { width: 100%; border-collapse: collapse; }
-                              .items th { border-bottom: 2px solid #eee; padding: 10px; text-align: left; }
-                              .items td { border-bottom: 1px solid #eee; padding: 10px; }
-                              .total { font-size: 18px; font-weight: bold; margin-top: 20px; text-align: right; color: #00C853; }
-                            </style>
-                          </head>
-                          <body>
-                            <div class="header">
-                              <div class="title">NCC Partner Service Invoice</div>
-                              <div>Invoice: #INV-${activeJob.id}</div>
-                            </div>
+                          if (!printWindow) return;
+                          printWindow.document.write(renderInvoiceDocument({
+                            title: 'Service Invoice',
+                            reference: `INV-${activeJob.id}`,
+                            content: `
                             <div class="details">
-                              <strong>Customer:</strong> ${activeJob.customerName}<br>
-                              <strong>Phone:</strong> ${activeJob.phone || "Not recorded"}<br>
-                              <strong>Product:</strong> ${activeJob.brand} ${activeJob.product}<br>
+                              <strong>Customer:</strong> ${invoiceText(activeJob.customerName)}<br>
+                              <strong>Phone:</strong> ${invoiceText(activeJob.phone || "Not recorded")}<br>
+                              <strong>Product:</strong> ${invoiceText(activeJob.brand)} ${invoiceText(activeJob.product)}<br>
                               <strong>Status:</strong> Paid / Closed
                             </div>
                             <table class="items">
@@ -6144,7 +6130,7 @@ const ActiveJob = () => {
                                   .map(
                                     (service) =>
                                       "<tr><td>" +
-                                      service.name +
+                                      invoiceText(service.name) +
                                       "</td><td>₹" +
                                       service.price +
                                       "</td></tr>",
@@ -6155,7 +6141,7 @@ const ActiveJob = () => {
                                   .map(
                                     (part) =>
                                       "<tr><td>" +
-                                      part.name +
+                                      invoiceText(part.name) +
                                       "</td><td>₹" +
                                       part.price +
                                       "</td></tr>",
@@ -6164,12 +6150,8 @@ const ActiveJob = () => {
                               </tbody>
                             </table>
                             <div class="total">Grand Total: ₹${totalAmount.toLocaleString("en-IN")}</div>
-                            <script>
-                              window.onload = function() { window.print(); }
-                            </script>
-                          </body>
-                        </html>
-                      `);
+                            `,
+                          }));
                           printWindow.document.close();
                         }}
                         className="bg-slate-50 hover:bg-slate-100 text-[#052355] font-normal py-3 rounded-2xl text-xs transition-all border border-slate-200 flex items-center justify-center gap-1.5 shadow-sm">

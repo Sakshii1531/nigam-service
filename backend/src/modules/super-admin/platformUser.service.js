@@ -1,3 +1,4 @@
+import { renderInvoiceDocument, invoiceText as h } from '../shared/invoiceTemplate.js';
 import { User } from '../auth/user.model.js';
 import { RefreshToken } from '../auth/refreshToken.model.js';
 import { OwnedAppliance } from '../service-requests/ownedAppliance.model.js';
@@ -144,64 +145,28 @@ export async function getServiceReceipt(userId, requestId) {
     ? Math.round(job.billingEstimate.total)
     : baseAmount + taxAmount;
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Service Receipt - ${request.humanId || request._id}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-      <style>
-        body { font-family: 'Inter', sans-serif; color: #0F172A; margin: 0; padding: 40px; background-color: #F8FAFC; }
-        .receipt-card { max-width: 700px; margin: 0 auto; bg-color: #ffffff; padding: 40px; border-radius: 24px; border: 1px solid #E2E8F0; background: #FFF; box-shadow: 0 10px 30px rgba(13, 71, 161, 0.04); }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #E2E8F0; padding-bottom: 24px; margin-bottom: 24px; }
-        .logo-text { font-size: 24px; font-weight: 900; color: #0D47A1; text-transform: uppercase; letter-spacing: 1px; }
-        .receipt-title { font-size: 14px; font-weight: 700; color: #64748B; uppercase tracking-widest; text-align: right; }
-        .grid-details { display: grid; grid-template-cols: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
-        .section-title { font-size: 11px; font-weight: 800; color: #0D47A1; text-transform: uppercase; tracking-wider; margin-bottom: 8px; }
-        .details-box { background-color: #F8FAFC; border: 1px solid #F1F5F9; padding: 16px; border-radius: 16px; font-size: 13px; line-height: 1.6; }
-        .table { w-full; width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table th { border-bottom: 2px solid #E2E8F0; padding: 12px; font-size: 12px; font-weight: 700; color: #64748B; text-align: left; text-transform: uppercase; }
-        .table td { padding: 16px 12px; border-bottom: 1px solid #F1F5F9; font-size: 13px; color: #334155; }
-        .summary-box { float: right; width: 280px; margin-top: 24px; font-size: 13px; }
-        .summary-row { display: flex; justify-content: space-between; padding: 6px 0; }
-        .summary-row.total { border-top: 2px solid #E2E8F0; font-weight: 800; color: #0D47A1; font-size: 16px; padding-top: 12px; }
-        .actions { margin-top: 40px; clear: both; text-align: center; }
-        .btn-print { background-color: #0D47A1; color: #FFF; border: none; padding: 12px 24px; font-weight: 700; font-size: 13px; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(13, 71, 161, 0.15); }
-        .btn-print:hover { background-color: #0A3A85; transform: translateY(-1px); }
-        @media print { .actions { display: none; } body { padding: 0; background-color: #FFF; } .receipt-card { border: none; box-shadow: none; padding: 0; } }
-      </style>
-    </head>
-    <body>
-      <div class="receipt-card">
-        <div class="header">
-          <div>
-            <div class="logo-text">Nigam Care</div>
-            <div style="font-size: 11px; color: #64748B; margin-top: 4px; font-weight: 500;">Trusted Home Appliance Services</div>
-          </div>
-          <div>
-            <div class="receipt-title">SERVICE RECEIPT</div>
-            <div style="font-size: 13px; font-weight: 700; color: #0F172A; margin-top: 4px;">#${request.humanId || request._id}</div>
-            <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Date: ${new Date(request.createdAt).toLocaleDateString()}</div>
-          </div>
-        </div>
-
-        <div class="grid-details">
+  return renderInvoiceDocument({
+    title: 'Service Receipt',
+    reference: request.humanId || String(request._id),
+    date: new Date(request.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    content: `
+<div class="grid-details">
           <div>
             <div class="section-title">Customer Details</div>
             <div class="details-box">
-              <strong>Name:</strong> ${user.name}<br/>
-              <strong>Phone:</strong> ${user.phone}<br/>
-              <strong>Email:</strong> ${user.email}<br/>
-              <strong>Address:</strong> ${request.address || user.addresses?.[0]?.house || 'Indore, MP'}
+              <strong>Name:</strong> ${h(user.name)}<br/>
+              <strong>Phone:</strong> ${h(user.phone)}<br/>
+              <strong>Email:</strong> ${h(user.email)}<br/>
+              <strong>Address:</strong> ${h(request.address || user.addresses?.[0]?.house || 'Indore, MP')}
             </div>
           </div>
           <div>
             <div class="section-title">Service Details</div>
             <div class="details-box">
-              <strong>Appliance:</strong> ${request.appliance?.brand || request.brand || 'Appliance'} ${request.appliance?.type || request.category || ''}<br/>
-              <strong>Model:</strong> ${request.appliance?.model || request.model || '—'}<br/>
-              <strong>Status:</strong> <span style="color:#22C55E; font-weight: 700;">${request.status}</span><br/>
-              <strong>ServiceProvider:</strong> ${request.serviceProvider?.name || 'Assigned Agent'}
+              <strong>Appliance:</strong> ${h(request.appliance?.brand || request.brand || 'Appliance')} ${h(request.appliance?.type || request.category || '')}<br/>
+              <strong>Model:</strong> ${h(request.appliance?.model || request.model || '—')}<br/>
+              <strong>Status:</strong> <span style="color:#22C55E; font-weight: 700;">${h(request.status)}</span><br/>
+              <strong>ServiceProvider:</strong> ${h(request.serviceProvider?.name || 'Assigned Agent')}
             </div>
           </div>
         </div>
@@ -218,9 +183,9 @@ export async function getServiceReceipt(userId, requestId) {
             <tr>
               <td>
                 <strong>Appliance Maintenance / Repair Service</strong><br/>
-                <span style="font-size: 11px; color: #64748B;">Diagnosis, inspection, and component servicing for ${request.category || 'Appliance'}</span>
+                <span style="font-size: 11px; color: #64748B;">Diagnosis, inspection, and component servicing for ${h(request.category || 'Appliance')}</span>
               </td>
-              <td>${request.complaintType || 'Breakdown'}</td>
+              <td>${h(request.complaintType || 'Breakdown')}</td>
               <td style="text-align: right; font-weight: 600;">₹${baseAmount.toFixed(2)}</td>
             </tr>
           </tbody>
@@ -240,14 +205,8 @@ export async function getServiceReceipt(userId, requestId) {
             <span>₹${totalAmount.toFixed(2)}</span>
           </div>
         </div>
-
-        <div class="actions">
-          <button class="btn-print" onclick="window.print()">Print / Download PDF</button>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+    `,
+  });
 }
 
 export async function getProductReceipt(userId, orderId) {
@@ -258,62 +217,26 @@ export async function getProductReceipt(userId, orderId) {
     throw new ApiError(404, 'Product order not found for this customer');
   }
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Product Invoice - ${order.humanId || order._id}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-      <style>
-        body { font-family: 'Inter', sans-serif; color: #0F172A; margin: 0; padding: 40px; background-color: #F8FAFC; }
-        .receipt-card { max-width: 700px; margin: 0 auto; bg-color: #ffffff; padding: 40px; border-radius: 24px; border: 1px solid #E2E8F0; background: #FFF; box-shadow: 0 10px 30px rgba(13, 71, 161, 0.04); }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #E2E8F0; padding-bottom: 24px; margin-bottom: 24px; }
-        .logo-text { font-size: 24px; font-weight: 900; color: #0D47A1; text-transform: uppercase; letter-spacing: 1px; }
-        .receipt-title { font-size: 14px; font-weight: 700; color: #64748B; uppercase tracking-widest; text-align: right; }
-        .grid-details { display: grid; grid-template-cols: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
-        .section-title { font-size: 11px; font-weight: 800; color: #0D47A1; text-transform: uppercase; tracking-wider; margin-bottom: 8px; }
-        .details-box { background-color: #F8FAFC; border: 1px solid #F1F5F9; padding: 16px; border-radius: 16px; font-size: 13px; line-height: 1.6; }
-        .table { w-full; width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table th { border-bottom: 2px solid #E2E8F0; padding: 12px; font-size: 12px; font-weight: 700; color: #64748B; text-align: left; text-transform: uppercase; }
-        .table td { padding: 16px 12px; border-bottom: 1px solid #F1F5F9; font-size: 13px; color: #334155; }
-        .summary-box { float: right; width: 280px; margin-top: 24px; font-size: 13px; }
-        .summary-row { display: flex; justify-content: space-between; padding: 6px 0; }
-        .summary-row.total { border-top: 2px solid #E2E8F0; font-weight: 800; color: #0D47A1; font-size: 16px; padding-top: 12px; }
-        .actions { margin-top: 40px; clear: both; text-align: center; }
-        .btn-print { background-color: #0D47A1; color: #FFF; border: none; padding: 12px 24px; font-weight: 700; font-size: 13px; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(13, 71, 161, 0.15); }
-        .btn-print:hover { background-color: #0A3A85; transform: translateY(-1px); }
-        @media print { .actions { display: none; } body { padding: 0; background-color: #FFF; } .receipt-card { border: none; box-shadow: none; padding: 0; } }
-      </style>
-    </head>
-    <body>
-      <div class="receipt-card">
-        <div class="header">
-          <div>
-            <div class="logo-text">Nigam Care</div>
-            <div style="font-size: 11px; color: #64748B; margin-top: 4px; font-weight: 500;">Premium Appliances & Spares</div>
-          </div>
-          <div>
-            <div class="receipt-title">TAX INVOICE</div>
-            <div style="font-size: 13px; font-weight: 700; color: #0F172A; margin-top: 4px;">#${order.humanId || order._id}</div>
-            <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Date: ${new Date(order.createdAt).toLocaleDateString()}</div>
-          </div>
-        </div>
-
-        <div class="grid-details">
+  return renderInvoiceDocument({
+    title: 'Product Invoice',
+    reference: order.humanId || String(order._id),
+    date: new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    content: `
+<div class="grid-details">
           <div>
             <div class="section-title">Billing Details</div>
             <div class="details-box">
-              <strong>Name:</strong> ${user.name}<br/>
-              <strong>Phone:</strong> ${user.phone}<br/>
-              <strong>Email:</strong> ${user.email}<br/>
-              <strong>Address:</strong> ${order.address?.house || 'Indore, MP'}
+              <strong>Name:</strong> ${h(user.name)}<br/>
+              <strong>Phone:</strong> ${h(user.phone)}<br/>
+              <strong>Email:</strong> ${h(user.email)}<br/>
+              <strong>Address:</strong> ${h(order.address?.house || 'Indore, MP')}
             </div>
           </div>
           <div>
             <div class="section-title">Order Status</div>
             <div class="details-box">
               <strong>Payment Mode:</strong> Razorpay Gateway<br/>
-              <strong>Delivery Status:</strong> <span style="color:#0D47A1; font-weight: 700;">${order.status}</span><br/>
+              <strong>Delivery Status:</strong> <span style="color:#0D47A1; font-weight: 700;">${h(order.status)}</span><br/>
               <strong>Coins Redeemed:</strong> ${order.coinsRedeemed || 0} Coins
             </div>
           </div>
@@ -331,7 +254,7 @@ export async function getProductReceipt(userId, orderId) {
           <tbody>
             ${order.items.map(item => `
               <tr>
-                <td><strong>${item.name || item.product?.name || 'Product Item'}</strong></td>
+                <td><strong>${h(item.name || item.product?.name || 'Product Item')}</strong></td>
                 <td style="text-align: center;">₹${item.price.toFixed(2)}</td>
                 <td style="text-align: center;">${item.quantity}</td>
                 <td style="text-align: right; font-weight: 600;">₹${(item.price * item.quantity).toFixed(2)}</td>
@@ -347,7 +270,7 @@ export async function getProductReceipt(userId, orderId) {
           </div>
           ${order.couponDiscount ? `
             <div class="summary-row" style="color: #22C55E;">
-              <span>Coupon Discount (${order.couponCode || 'PROMO'}):</span>
+              <span>Coupon Discount (${h(order.couponCode || 'PROMO')}):</span>
               <strong>-₹${order.couponDiscount.toFixed(2)}</strong>
             </div>
           ` : ''}
@@ -368,14 +291,8 @@ export async function getProductReceipt(userId, orderId) {
             <span>₹${order.total.toFixed(2)}</span>
           </div>
         </div>
-
-        <div class="actions">
-          <button class="btn-print" onclick="window.print()">Print / Download PDF</button>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+    `,
+  });
 }
 
 export async function getExchangeReceipt(userId, exchangeId) {
@@ -386,62 +303,26 @@ export async function getExchangeReceipt(userId, exchangeId) {
     throw new ApiError(404, 'Exchange Request not found for this customer');
   }
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Exchange Valuation - ${exchange.humanId || exchange._id}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
-      <style>
-        body { font-family: 'Inter', sans-serif; color: #0F172A; margin: 0; padding: 40px; background-color: #F8FAFC; }
-        .receipt-card { max-width: 700px; margin: 0 auto; bg-color: #ffffff; padding: 40px; border-radius: 24px; border: 1px solid #E2E8F0; background: #FFF; box-shadow: 0 10px 30px rgba(13, 71, 161, 0.04); }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #E2E8F0; padding-bottom: 24px; margin-bottom: 24px; }
-        .logo-text { font-size: 24px; font-weight: 900; color: #0D47A1; text-transform: uppercase; letter-spacing: 1px; }
-        .receipt-title { font-size: 14px; font-weight: 700; color: #64748B; uppercase tracking-widest; text-align: right; }
-        .grid-details { display: grid; grid-template-cols: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
-        .section-title { font-size: 11px; font-weight: 800; color: #0D47A1; text-transform: uppercase; tracking-wider; margin-bottom: 8px; }
-        .details-box { background-color: #F8FAFC; border: 1px solid #F1F5F9; padding: 16px; border-radius: 16px; font-size: 13px; line-height: 1.6; }
-        .table { w-full; width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .table th { border-bottom: 2px solid #E2E8F0; padding: 12px; font-size: 12px; font-weight: 700; color: #64748B; text-align: left; text-transform: uppercase; }
-        .table td { padding: 16px 12px; border-bottom: 1px solid #F1F5F9; font-size: 13px; color: #334155; }
-        .summary-box { float: right; width: 280px; margin-top: 24px; font-size: 13px; }
-        .summary-row { display: flex; justify-content: justify; justify-content: space-between; padding: 6px 0; }
-        .summary-row.total { border-top: 2px solid #E2E8F0; font-weight: 800; color: #22C55E; font-size: 16px; padding-top: 12px; }
-        .actions { margin-top: 40px; clear: both; text-align: center; }
-        .btn-print { background-color: #0D47A1; color: #FFF; border: none; padding: 12px 24px; font-weight: 700; font-size: 13px; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(13, 71, 161, 0.15); }
-        .btn-print:hover { background-color: #0A3A85; transform: translateY(-1px); }
-        @media print { .actions { display: none; } body { padding: 0; background-color: #FFF; } .receipt-card { border: none; box-shadow: none; padding: 0; } }
-      </style>
-    </head>
-    <body>
-      <div class="receipt-card">
-        <div class="header">
-          <div>
-            <div class="logo-text">Nigam Care</div>
-            <div style="font-size: 11px; color: #64748B; margin-top: 4px; font-weight: 500;">Eco-friendly appliance upgrades</div>
-          </div>
-          <div>
-            <div class="receipt-title">EXCHANGE VALUATION</div>
-            <div style="font-size: 13px; font-weight: 700; color: #0F172A; margin-top: 4px;">#${exchange.humanId || exchange._id}</div>
-            <div style="font-size: 11px; color: #64748B; margin-top: 2px;">Date: ${new Date(exchange.createdAt).toLocaleDateString()}</div>
-          </div>
-        </div>
-
-        <div class="grid-details">
+  return renderInvoiceDocument({
+    title: 'Exchange Valuation',
+    reference: exchange.humanId || String(exchange._id),
+    date: new Date(exchange.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    content: `
+<div class="grid-details">
           <div>
             <div class="section-title">Customer Details</div>
             <div class="details-box">
-              <strong>Name:</strong> ${user.name}<br/>
-              <strong>Phone:</strong> ${user.phone}<br/>
-              <strong>Email:</strong> ${user.email}
+              <strong>Name:</strong> ${h(user.name)}<br/>
+              <strong>Phone:</strong> ${h(user.phone)}<br/>
+              <strong>Email:</strong> ${h(user.email)}
             </div>
           </div>
           <div>
             <div class="section-title">Valuation Status</div>
             <div class="details-box">
-              <strong>Exchange Category:</strong> ${exchange.category || 'Appliance'}<br/>
-              <strong>Brand/Model:</strong> ${exchange.brand || 'Generic'} ${exchange.model || ''}<br/>
-              <strong>Status:</strong> <span style="color:#FFCA00; font-weight: 700;">${exchange.status}</span>
+              <strong>Exchange Category:</strong> ${h(exchange.category || 'Appliance')}<br/>
+              <strong>Brand/Model:</strong> ${h(exchange.brand || 'Generic')} ${h(exchange.model || '')}<br/>
+              <strong>Status:</strong> <span style="color:#FFCA00; font-weight: 700;">${h(exchange.status)}</span>
             </div>
           </div>
         </div>
@@ -460,7 +341,7 @@ export async function getExchangeReceipt(userId, exchangeId) {
                 <strong>Device Exchange Appraisal</strong><br/>
                 <span style="font-size: 11px; color: #64748B;">Valuation estimation for trade-in product exchange program.</span>
               </td>
-              <td style="text-align: center; font-weight: 700;">${exchange.condition || 'Good'}</td>
+              <td style="text-align: center; font-weight: 700;">${h(exchange.condition || 'Good')}</td>
               <td style="text-align: right; font-weight: 600;">₹${exchange.baseValue.toFixed(2)}</td>
             </tr>
           </tbody>
@@ -484,12 +365,6 @@ export async function getExchangeReceipt(userId, exchangeId) {
             <span>₹${exchange.estimatedValue.toFixed(2)}</span>
           </div>
         </div>
-
-        <div class="actions">
-          <button class="btn-print" onclick="window.print()">Print / Download PDF</button>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+    `,
+  });
 }

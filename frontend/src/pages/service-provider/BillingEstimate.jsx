@@ -1,3 +1,4 @@
+import { renderInvoiceDocument, invoiceText } from '../../../../backend/src/modules/shared/invoiceTemplate.js';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Shield, ShieldCheck } from 'lucide-react';
 import { useTech } from '../../context/ServiceProviderContext';
@@ -116,48 +117,27 @@ const BillingEstimate = () => {
   // ── Warranty (Brand / EW): Split Invoice PDF ──────────────────────────────
   const generateWarrantyInvoice = () => {
     const isEW = isExtendedWarranty;
-    openPDF(`
-      <html>
-        <head>
-          <title>${isEW ? 'NCC Extended Warranty' : 'Brand Warranty'} Invoice</title>
-          <style>
-            body { font-family: sans-serif; padding: 40px; color: #333; max-width: 600px; margin: auto; }
-            .header { border-bottom: 2px solid ${isEW ? '#7C4DFF' : '#1E6BDB'}; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-            .brand { font-size: 20px; color: #052355; font-weight: bold; }
-            .badge { font-size: 10px; background: ${isEW ? '#EDE7F6' : '#E3F2FD'}; color: ${isEW ? '#7C4DFF' : '#1E6BDB'}; padding: 4px 10px; border-radius: 4px; font-weight: bold; letter-spacing: 1px; }
-            .section-title { font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; letter-spacing: 1px; margin: 18px 0 8px 0; }
-            .line-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #eee; }
-            .covered { font-size: 11px; background: #E8F5E9; color: #2E7D32; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
-            .grand-total { font-size: 16px; font-weight: bold; color: #052355; border-top: 2px solid ${isEW ? '#7C4DFF' : '#1E6BDB'}; padding-top: 12px; margin-top: 8px; display: flex; justify-content: space-between; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <div class="brand">NCC Partner Service Invoice</div>
-              <div style="font-size: 11px; color: #666; margin-top: 3px;">Invoice: #INV-${activeJob?.id}</div>
-            </div>
-            <div class="badge">${isEW ? 'EW CLAIM' : 'BRAND WARRANTY'}</div>
-          </div>
+    openPDF(renderInvoiceDocument({
+      title: isEW ? 'Extended Warranty Invoice' : 'Brand Warranty Invoice',
+      reference: `INV-${activeJob?.id || ''}`,
+      content: `
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px; margin-bottom: 20px;">
-            <div><span style="color:#888; text-transform:uppercase; font-size:10px; font-weight:bold;">Customer</span><br/><strong>${activeJob?.customerName}</strong></div>
+            <div><span style="color:#888; text-transform:uppercase; font-size:10px; font-weight:bold;">Customer</span><br/><strong>${invoiceText(activeJob?.customerName)}</strong></div>
             <div><span style="color:#888; text-transform:uppercase; font-size:10px; font-weight:bold;">Date</span><br/><strong>${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></div>
-            <div><span style="color:#888; text-transform:uppercase; font-size:10px; font-weight:bold;">Product</span><br/><strong>${activeJob?.brand} ${activeJob?.product}</strong></div>
-            <div><span style="color:#888; text-transform:uppercase; font-size:10px; font-weight:bold;">Coverage</span><br/><strong>${isEW ? activeJob?.ewPlanName || 'NCC Protect Plus' : 'Brand Warranty'}</strong></div>
+            <div><span style="color:#888; text-transform:uppercase; font-size:10px; font-weight:bold;">Product</span><br/><strong>${invoiceText(activeJob?.brand)} ${invoiceText(activeJob?.product)}</strong></div>
+            <div><span style="color:#888; text-transform:uppercase; font-size:10px; font-weight:bold;">Coverage</span><br/><strong>${invoiceText(isEW ? activeJob?.ewPlanName || 'NCC Protect Plus' : 'Brand Warranty')}</strong></div>
           </div>
           <div class="section-title">Warranty Coverage (Covered at ₹0)</div>
           <div class="line-row">
-            <span>${activeJob?.complaint || 'Primary Repair'}</span>
+            <span>${invoiceText(activeJob?.complaint || 'Primary Repair')}</span>
             <span class="covered">₹0 — COVERED</span>
           </div>
           <div class="section-title">Additional Chargeable Services</div>
-          ${[...billedServices, ...billedParts].map((i) => `<div class="line-row"><span>${i.name}</span><span>₹${i.price}</span></div>`).join('')}
+          ${[...billedServices, ...billedParts].map((i) => `<div class="line-row"><span>${invoiceText(i.name)}</span><span>₹${i.price}</span></div>`).join('')}
           <div class="line-row"><span>GST on parts (${gstPercent}%)</span><span>₹${gst}</span></div>
           <div class="grand-total"><span>Customer Payable</span><span>₹${extrasGrandTotal}</span></div>
-          <script>window.onload = function() { window.print(); }</script>
-        </body>
-      </html>
-    `);
+      `,
+    }));
   };
 
   return (
