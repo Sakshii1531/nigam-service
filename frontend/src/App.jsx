@@ -341,7 +341,10 @@ const ScrollToTop = () => {
       "/forgot-password",
       "/reset-password",
     ];
-    const publicInfoPages = ["/about-ncc", "/area-not-serviceable"];
+    // Legal pages must be readable by anyone (store listings, payment gateway
+    // reviewers, guests before signup) — never gated by login or city.
+    const legalPages = ["/privacy-policy", "/terms-and-conditions"];
+    const publicInfoPages = ["/about-ncc", "/area-not-serviceable", ...legalPages];
 
     // 1. SUPER ADMIN PANEL — shared by super_admin (full access) and asm
     // (role-scoped to their own zone's service providers).
@@ -430,7 +433,7 @@ const ScrollToTop = () => {
           defaultAddress?.city ||
           "";
         // Existing brand tickets remain readable/respondable even where new NCC bookings are unavailable.
-        if (customerCity && !pathname.startsWith("/partner-warranty/claims") && pathname !== "/profile" && pathname !== "/exchange-details" && !pathname.startsWith("/my-appliances")) {
+        if (customerCity && !legalPages.includes(pathname) && !pathname.startsWith("/partner-warranty/claims") && pathname !== "/profile" && pathname !== "/exchange-details" && !pathname.startsWith("/my-appliances")) {
           getActiveCities()
             .then((cities) => {
               const serviceable = isCityServiceable(customerCity, cities);
@@ -457,7 +460,7 @@ const ScrollToTop = () => {
         }
       } else {
         const guestCity = localStorage.getItem("ncc_customer_city");
-        if (guestCity) {
+        if (guestCity && !legalPages.includes(pathname)) {
           getActiveCities()
             .then((cities) => {
               const serviceable = isCityServiceable(guestCity, cities);
