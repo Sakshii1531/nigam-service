@@ -145,9 +145,12 @@ const StoryPanel = ({ story, isActive, onFinished, onClose }) => {
           </div>
         </div>
         <button
+          type="button"
+          aria-label="Close stories"
           className="w-8 h-8 flex items-center justify-center rounded-full bg-black/30 text-white"
           onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => { e.stopPropagation(); onClose(); }}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
         >
           <X className="w-4 h-4" />
         </button>
@@ -247,7 +250,7 @@ const StoryViewer = ({ stories, startIndex = 0, onClose }) => {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black">
+    <div role="dialog" aria-modal="true" aria-label="Stories viewer" className="fixed inset-0 z-[100] bg-black">
       {/* Vertically scrollable snap container */}
       <div
         ref={scrollRef}

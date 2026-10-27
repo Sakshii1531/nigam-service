@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import StoryViewer from './StoryViewer';
+import { DEFAULT_STORIES } from './defaultStories';
 
 import { apiRequest, resolveMediaUrl } from '../../lib/apiClient';
 import { LoadingSection, Skeleton, SkeletonHeading } from '../common/Skeleton';
@@ -9,9 +10,8 @@ const Stories = () => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [startStoryIndex, setStartStoryIndex] = useState(0);
 
-  // Published (Active) stories from Super Admin → Stories. Nothing published
-  // means no Stories row — the app used to show a bundled set instead
-  // (docs/master-catalogue Phase 22).
+  // Prefer published CMS stories; keep the bundled rail available when the
+  // CMS is empty or temporarily unavailable.
   const [stories, setStories] = useState(null);
 
   useEffect(() => {
@@ -19,9 +19,9 @@ const Stories = () => {
     const fetchStories = async () => {
       try {
         const data = await apiRequest('/cms/stories');
-        if (!cancelled) setStories(data || []);
+        if (!cancelled) setStories(Array.isArray(data) ? data : []);
       } catch {
-        if (!cancelled) setStories([]);
+        if (!cancelled) setStories((previous) => previous ?? []);
       }
     };
     fetchStories();
@@ -34,9 +34,9 @@ const Stories = () => {
     };
   }, []);
 
-  const storiesList = (stories || [])
+  const publishedStories = (stories || [])
     .map((story) => ({
-        id: story.id,
+        id: story.id || story._id,
         title: story.title,
         image: resolveMediaUrl(story.mediaUrl || story.slides?.[0]?.image),
         bookLink: story.bookLink || null,
@@ -49,6 +49,8 @@ const Stories = () => {
           .map((slide) => ({ ...slide, image: resolveMediaUrl(slide.image) })),
       }))
     .filter((story) => story.image);
+
+  const storiesList = publishedStories.length ? publishedStories : DEFAULT_STORIES;
 
   const openStory = (index) => {
     setStartStoryIndex(index);
@@ -74,7 +76,6 @@ const Stories = () => {
       />
     );
   }
-  if (!storiesList.length) return null;
 
   return (
     <>
@@ -87,12 +88,14 @@ const Stories = () => {
           {/* Horizontally scrollable on mobile, 4-column grid on desktop */}
           <div className="flex overflow-x-auto gap-2.5 sm:gap-4 pb-3 sm:pb-4 snap-x snap-mandatory no-scrollbar -mx-1 px-1 sm:-mx-2 sm:px-2 md:grid md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 md:gap-6 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
             {storiesList.map((story, index) => (
-              <motion.div
+              <motion.button
+                type="button"
+                aria-label={`Open story: ${story.title}`}
                 key={story.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 h-56 sm:h-64 md:w-auto md:h-112.5 lg:h-125 md:flex-shrink rounded-2xl overflow-hidden relative shadow-sm border border-border-color cursor-pointer snap-start hover:shadow-md transition-all"
+                className="shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 h-56 sm:h-64 md:w-auto md:h-112.5 lg:h-125 md:flex-shrink rounded-2xl overflow-hidden relative shadow-sm border border-border-color cursor-pointer snap-start text-left hover:shadow-md transition-all"
                 onClick={() => openStory(index)}
               >
                 {/* Story Image */}
@@ -111,7 +114,7 @@ const Stories = () => {
                     {story.title}
                   </p>
                 </div>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </div>
