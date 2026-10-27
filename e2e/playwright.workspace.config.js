@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 // UI regressions use mocked API responses: no database, gateway or real uploads.
 export default defineConfig({
   testDir: './ui',
-  testMatch: ['ticketWorkspace.spec.js', 'documentPreview.spec.js', 'partnerWarrantyBrands.spec.js', 'notificationNavigation.spec.js'],
+  testMatch: ['ticketWorkspace.spec.js', 'documentPreview.spec.js', 'partnerWarrantyBrands.spec.js', 'notificationNavigation.spec.js', 'stories.spec.js'],
   reporter: 'list',
   timeout: 30000,
   use: { baseURL: 'http://localhost:5299', trace: 'retain-on-failure' },
