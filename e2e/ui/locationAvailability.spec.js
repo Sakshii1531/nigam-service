@@ -9,7 +9,8 @@ async function call(request, method, path, token, data) {
   return body.data;
 }
 async function session(request, role, identifier) {
-  await call(request, 'post', '/auth/login', null, { role, identifier, password: 'password123' });
+  const loginSession = await call(request, 'post', '/auth/login', null, { role, identifier, password: 'password123' });
+  if (role === 'customer' || role === 'service_provider') return loginSession;
   const otp = await call(request, 'get', `/_dev/last-otp/${encodeURIComponent(identifier)}`);
   return call(request, 'post', '/auth/otp/verify', null, { role, identifier, code: otp.code });
 }

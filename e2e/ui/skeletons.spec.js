@@ -10,9 +10,9 @@ const uniquePhone = () => `9${String(Math.floor(Math.random() * 1_000_000_000)).
 async function customer(page, request) {
   const phone = uniquePhone();
   await request.post(`${API}/_dev/test-user`, { data: { role: 'customer', phone, password: 'password123' } });
-  await request.post(`${API}/auth/login`, { data: { role: 'customer', identifier: phone, password: 'password123' } });
-  const code = (await (await request.get(`${API}/_dev/last-otp/${phone}`)).json()).data.code;
-  const session = (await (await request.post(`${API}/auth/otp/verify`, { data: { role: 'customer', identifier: phone, code } })).json()).data;
+  const loginRes = await request.post(`${API}/auth/login`, { data: { role: 'customer', identifier: phone, password: 'password123' } });
+  expect(loginRes.status()).toBe(200);
+  const session = (await loginRes.json()).data;
   await page.addInitScript(([a, r, u]) => {
     localStorage.setItem('ncc_access_token', a);
     localStorage.setItem('ncc_refresh_token', r);

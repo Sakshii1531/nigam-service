@@ -12,7 +12,9 @@ async function otpFor(request, identifier) {
 }
 
 async function verifyOtp(request, role, identifier) {
-  await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  const loginRes = await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  expect(loginRes.status()).toBe(200);
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data;
   const code = await otpFor(request, identifier);
   const res = await request.post(`${API}/auth/otp/verify`, { data: { role, identifier, code } });
   return (await res.json()).data;

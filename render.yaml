@@ -14,7 +14,8 @@ services:
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/v1/health
-    autoDeploy: true
+    # Release only after the commit passes the GitHub CI checks.
+    autoDeployTrigger: checksPass
     envVars:
       - key: NODE_ENV
         value: production

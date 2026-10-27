@@ -6,7 +6,8 @@ async function call(request, method, path, token, data) {
   const result = await response.json(); expect(response.ok(), JSON.stringify(result.error)).toBe(true); return result.data;
 }
 async function session(request, role, identifier) {
-  await call(request, 'post', '/auth/login', '', { role, identifier, password: 'password123' });
+  const loginSession = await call(request, 'post', '/auth/login', '', { role, identifier, password: 'password123' });
+  if (role === 'customer' || role === 'service_provider') return loginSession;
   const code = (await request.get(`${API}/_dev/last-otp/${identifier}`).then(r => r.json())).data.code;
   return call(request, 'post', '/auth/otp/verify', '', { role, identifier, code });
 }

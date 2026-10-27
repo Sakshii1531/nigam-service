@@ -8,7 +8,9 @@ function uniquePhone() {
 }
 
 async function verifyOtp(request, role, identifier) {
-  await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  const loginRes = await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  expect(loginRes.status()).toBe(200);
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data;
   const otpRes = await request.get(`${API}/_dev/last-otp/${encodeURIComponent(identifier)}`);
   const code = (await otpRes.json()).data.code;
   const res = await request.post(`${API}/auth/otp/verify`, { data: { role, identifier, code } });

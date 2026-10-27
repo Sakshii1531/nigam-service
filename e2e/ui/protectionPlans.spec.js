@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 const API='http://localhost:4111/api/v1';
 async function call(request,method,path,token,data){const res=await request[method](`${API}${path}`,{headers:{Authorization:`Bearer ${token}`},...(data?{data}:{})});const body=await res.json();if(!res.ok())throw new Error(`${path}: ${JSON.stringify(body.error)}`);return body.data;}
-async function login(request,role,identifier){await request.post(`${API}/auth/otp/send`,{data:{role,identifier}});const code=(await(await request.get(`${API}/_dev/last-otp/${encodeURIComponent(identifier)}`)).json()).data.code;return call(request,'post','/auth/otp/verify','',{role,identifier,code});}
+async function login(request,role,identifier){if(role==='customer'||role==='service_provider')return call(request,'post','/auth/login','',{role,identifier,password:'password123'});await request.post(`${API}/auth/otp/send`,{data:{role,identifier}});const code=(await(await request.get(`${API}/_dev/last-otp/${encodeURIComponent(identifier)}`)).json()).data.code;return call(request,'post','/auth/otp/verify','',{role,identifier,code});}
 test('real AMC details, protection cards and named coverage lead to a saved, trackable service request',async({page,request})=>{
  test.setTimeout(150000);await page.setViewportSize({width:390,height:844});const tag=randomUUID().slice(0,8),planName=`AC Silver Care ${tag}`;
  const email=`protection-admin-${tag}@e2e.test`;await request.post(`${API}/_dev/test-user`,{data:{role:'super_admin',email,password:'password123'}});const admin=await login(request,'super_admin',email);

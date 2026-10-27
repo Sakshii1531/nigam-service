@@ -26,7 +26,8 @@ function nextPhone() {
 }
 
 async function loginAndVerify({ role, identifier, password }) {
-  await request(app).post('/api/v1/auth/login').send({ role, identifier, password }).expect(200);
+  const loginRes = await request(app).post('/api/v1/auth/login').send({ role, identifier, password }).expect(200);
+  if (role === ROLES.CUSTOMER || role === ROLES.SERVICE_PROVIDER) return loginRes.body.data.accessToken;
   const code = readOtpCode(identifier);
   const res = await request(app).post('/api/v1/auth/otp/verify').send({ role, identifier, code }).expect(200);
   return res.body.data.accessToken;

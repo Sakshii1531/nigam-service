@@ -7,12 +7,16 @@ on:
       - 'frontend/**'
       - 'backend/**'
       - 'e2e/**'
+      - 'scripts/**'
+      - 'render.yaml'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
     paths:
       - 'frontend/**'
       - 'backend/**'
       - 'e2e/**'
+      - 'scripts/**'
+      - 'render.yaml'
       - '.github/workflows/frontend-ci.yml'
 
 jobs:
@@ -75,6 +79,7 @@ jobs:
       - name: Start MongoDB replica set
         run: |
           docker run --detach --name mongodb --publish 27017:27017 \
+            --ulimit nofile=131072:131072 \
             mongo:7.0 --replSet rs0 --bind_ip_all
           for attempt in {1..30}; do
             if docker exec mongodb mongosh --quiet --eval \
@@ -111,14 +116,14 @@ jobs:
         working-directory: e2e
       - run: npx playwright install --with-deps chromium
         working-directory: e2e
-      - name: Appliances, protection requests and GST invoice
+      - name: Customer and provider login, appliances, protection and GST invoice
         working-directory: e2e
         env:
           CI: true
           NODE_ENV: test
           OTP_PROVIDER: test
           E2E_MONGODB_URI: mongodb://127.0.0.1:27017/nigam_gst_invoice_e2e?replicaSet=rs0
-        run: npx playwright test --config=playwright.ui.config.js customerGstInvoice.spec.js myAppliances.spec.js protectionPlans.spec.js protectionPurchase.spec.js --workers=1
+        run: npx playwright test --config=playwright.ui.config.js brandCrmFoundationFixes.spec.js serviceProviderLogin.spec.js customerGstInvoice.spec.js myAppliances.spec.js protectionPlans.spec.js protectionPurchase.spec.js --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

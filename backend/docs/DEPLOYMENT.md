@@ -9,12 +9,12 @@ done (CI) or a ready-to-run set of steps once the account exists.
 ## What's already built
 
 - **`.github/workflows/backend-ci.yml`** — runs on every PR and push to `main`
-  touching `backend/`, `e2e/`, or the workflow file itself. It runs lint, four
-  Jest shards on isolated `mongo:7.0` replica sets, then Playwright E2E
+  touching `backend/`, `e2e/`, shared `scripts/`, `render.yaml`, or the workflow
+  file itself. It runs lint, four Jest shards on isolated `mongo:7.0` replica sets, then Playwright E2E
   (API-only — no browser binaries installed, since every spec uses Playwright's
   `request` fixture, not a real browser). This is CI's job — it does **not**
-  deploy anything; deployment is Render's job below, triggered separately by
-  Render watching the same GitHub repo.
+  deploy anything; deployment is Render's job below, triggered by
+  Render watching the same GitHub repo after the commit passes CI.
 - **`render.yaml`** — a Render Blueprint at the repo root. Defines one web
   service (`nigam-care-backend`), rooted at `backend/`, `npm ci` build, `npm
   start` run, health check wired to the existing `GET /api/v1/health` route
@@ -23,6 +23,20 @@ done (CI) or a ready-to-run set of steps once the account exists.
   (`MONGODB_URI`, JWT secrets, S3, Razorpay) is marked `sync: false` — the
   blueprint deliberately does not and cannot supply real values; Render will
   prompt for them once when the blueprint is applied.
+
+## CI and login checks
+
+Frontend CI runs the customer credential-login and service-provider phone/email
+login browser regressions alongside the customer service flows. Backend Jest
+and API E2E helpers use the sessions returned directly by customer/provider
+credential login; admin helpers still verify OTP. Signup and password recovery
+retain their OTP checks.
+
+The Render Blueprint uses `autoDeployTrigger: checksPass`, as documented in
+[Render’s Blueprint reference](https://render.com/docs/blueprint-spec#autodeploytrigger).
+Sync the Blueprint (or select **After CI Checks Pass** in the existing service’s
+Auto-Deploy settings) to apply this policy to a live Render service. Committing
+the file alone does not verify the live service configuration.
 
 ## What the user needs to do (cannot be done from this session)
 
@@ -63,8 +77,8 @@ done (CI) or a ready-to-run set of steps once the account exists.
    in this checklist substitutes for actually seeing it return 200 from the
    public internet.
 6. **Confirm auto-deploy**: merge any small PR to `main` and watch Render pick
-   it up automatically (`autoDeploy: true` in `render.yaml`) — this is the
-   second half of the exit criterion ("a PR merge to main auto-deploys").
+   it up automatically after its CI checks pass (`autoDeployTrigger: checksPass`
+   in `render.yaml`) — this is the second half of the exit criterion ("a PR merge to main auto-deploys").
 
 ## Not needed right now
 

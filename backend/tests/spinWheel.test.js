@@ -49,16 +49,11 @@ beforeEach(async () => {
   });
 
   // Login to acquire token
-  const _loginRes = await request(app)
+  const loginRes = await request(app)
     .post('/api/v1/auth/login')
     .send({ role: 'customer', identifier: '9876543210', password: 'password123' }).expect(200);
   
-  // Obtain OTP stub log code
-  const verifyRes = await request(app)
-    .post('/api/v1/auth/otp/verify')
-    .send({ role: 'customer', identifier: '9876543210', code: '123456' }).expect(200);
-  
-  token = verifyRes.body?.data?.accessToken;
+  token = loginRes.body.data.accessToken;
 
   // Seed Spin Wheel Config with 2 segments
   await SpinWheelConfig.create({

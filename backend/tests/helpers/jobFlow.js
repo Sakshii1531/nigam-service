@@ -23,7 +23,8 @@ export function jobFlow(getApp, { phoneStart = 9300100000 } = {}) {
   }
 
   async function loginAndVerify({ role, identifier }) {
-    await expectOk(await api().post('/api/v1/auth/login').send({ role, identifier, password: 'password123' }), `login ${identifier}`);
+    const loginRes = await expectOk(await api().post('/api/v1/auth/login').send({ role, identifier, password: 'password123' }), `login ${identifier}`);
+    if (role === ROLES.CUSTOMER || role === ROLES.SERVICE_PROVIDER) return loginRes.body.data.accessToken;
     const res = await expectOk(
       await api().post('/api/v1/auth/otp/verify').send({ role, identifier, code: readOtpCode(identifier) }),
       `otp/verify ${identifier}`,

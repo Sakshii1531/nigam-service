@@ -13,6 +13,7 @@ async function getOtpCode(request, identifier) {
 async function loginAndVerify(request, { role, identifier, password }) {
   const loginRes = await request.post('/api/v1/auth/login', { data: { role, identifier, password } });
   expect(loginRes.status()).toBe(200);
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data.accessToken;
   const code = await getOtpCode(request, identifier);
   const res = await request.post('/api/v1/auth/otp/verify', { data: { role, identifier, code } });
   return (await res.json()).data.accessToken;

@@ -19,7 +19,9 @@ const PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1440, height: 900 };
 
 async function session(request, role, identifier) {
-  await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  const loginRes = await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  expect(loginRes.status()).toBe(200);
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data;
   const code = (await (await request.get(`${API}/_dev/last-otp/${encodeURIComponent(identifier)}`)).json()).data.code;
   return (await (await request.post(`${API}/auth/otp/verify`, { data: { role, identifier, code } })).json()).data;
 }

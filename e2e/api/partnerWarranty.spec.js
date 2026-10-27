@@ -16,7 +16,9 @@ const PDF = Buffer.from('%PDF-1.4\n%e2e warranty\n');
 const uniquePhone = () => `9${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;
 
 async function session(request, role, identifier) {
-  await request.post('/api/v1/auth/login', { data: { role, identifier, password: 'password123' } });
+  const loginRes = await request.post('/api/v1/auth/login', { data: { role, identifier, password: 'password123' } });
+  expect(loginRes.status()).toBe(200);
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data.accessToken;
   const code = (await (await request.get(`/api/v1/_dev/last-otp/${encodeURIComponent(identifier)}`)).json()).data.code;
   return (await (await request.post('/api/v1/auth/otp/verify', { data: { role, identifier, code } })).json()).data.accessToken;
 }

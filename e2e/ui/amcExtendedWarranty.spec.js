@@ -13,7 +13,8 @@ async function call(request, method, path, token, data) {
 async function session(request, role) {
   const identifier = role === 'customer' ? phone() : `warranty-${randomUUID()}@e2e.test`;
   await call(request, 'post', '/_dev/test-user', null, { role, ...(role === 'customer' ? { phone: identifier } : { email: identifier }), password: 'password123' });
-  await call(request, 'post', '/auth/login', null, { role, identifier, password: 'password123' });
+  const loginSession = await call(request, 'post', '/auth/login', null, { role, identifier, password: 'password123' });
+  if (role === 'customer' || role === 'service_provider') return loginSession;
   const { code } = await call(request, 'get', `/_dev/last-otp/${encodeURIComponent(identifier)}`);
   return call(request, 'post', '/auth/otp/verify', null, { role, identifier, code });
 }

@@ -29,7 +29,9 @@ async function otpFor(request, identifier) {
 }
 
 async function verifyOtp(request, role, identifier) {
-  await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  const loginRes = await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  expect(loginRes.status()).toBe(200);
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data;
   const code = await otpFor(request, identifier);
   const res = await request.post(`${API}/auth/otp/verify`, { data: { role, identifier, code } });
   return (await res.json()).data;
@@ -173,15 +175,12 @@ test('signing in merges the browser cart with the account cart already on the se
   ]);
 
   // Driven through the real form rather than an injected session: the merge
-  // hangs off AuthContext.verifyOtp, which only runs on an actual sign-in.
+  // runs when AuthContext activates the credential login session.
   await page.goto('/login');
   await page.locator('input[name="identifier"]').fill(phone);
   await page.locator('input[name="password"]').fill('password123');
   await page.getByRole('button', { name: /^login$/i }).click();
 
-  await page.waitForURL('**/verify-otp', { timeout: 15_000 });
-  await page.locator('input[inputmode="numeric"]').first().fill(await otpFor(request, phone));
-  await page.getByRole('button', { name: /verify/i }).click();
   await page.waitForURL('**/dashboard', { timeout: 15_000 });
 
   const token = await page.evaluate(() => localStorage.getItem('ncc_access_token'));

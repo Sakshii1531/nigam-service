@@ -32,7 +32,8 @@ async function login(role, identifier) {
     name: role === ROLES.SUPER_ADMIN ? 'Admin Rahul' : 'Customer',
     passwordHash: await hashPassword('password123'),
   });
-  await request(app).post('/api/v1/auth/login').send({ role, identifier, password: 'password123' }).expect(200);
+  const loginRes = await request(app).post('/api/v1/auth/login').send({ role, identifier, password: 'password123' }).expect(200);
+  if (role === ROLES.CUSTOMER || role === ROLES.SERVICE_PROVIDER) return loginRes.body.data.accessToken;
   const res = await request(app)
     .post('/api/v1/auth/otp/verify')
     .send({ role, identifier, code: readOtpCode(identifier) })

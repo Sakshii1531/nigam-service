@@ -9,7 +9,9 @@ const API = `${process.env.UI_API_ORIGIN || 'http://localhost:4111'}/api/v1`;
 const uniquePhone = () => `9${String(Math.floor(Math.random() * 1_000_000_000)).padStart(9, '0')}`;
 
 async function verifyOtp(request, role, identifier) {
-  await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  const loginRes = await request.post(`${API}/auth/login`, { data: { role, identifier, password: 'password123' } });
+  expect(loginRes.status()).toBe(200);
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data;
   const code = (await (await request.get(`${API}/_dev/last-otp/${encodeURIComponent(identifier)}`)).json()).data.code;
   return (await (await request.post(`${API}/auth/otp/verify`, { data: { role, identifier, code } })).json()).data;
 }

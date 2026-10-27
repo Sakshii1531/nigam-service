@@ -9,6 +9,7 @@ async function call(request, method, path, token, data) {
   return body.data;
 }
 async function login(request, role, identifier) {
+  if (role === 'customer' || role === 'service_provider') return call(request, 'post', '/auth/login', '', { role, identifier, password: 'password123' });
   await request.post(`${API}/auth/otp/send`, { data: { role, identifier } });
   const code = (await (await request.get(`${API}/_dev/last-otp/${encodeURIComponent(identifier)}`)).json()).data.code;
   return call(request, 'post', '/auth/otp/verify', '', { role, identifier, code });
@@ -39,10 +40,6 @@ for (const kind of ['amc', 'extended-warranty']) {
       await page.getByPlaceholder('Enter Phone Number', {exact:true}).fill(phone);
       await page.getByPlaceholder('Enter Password', {exact:true}).fill('password123');
       await page.getByRole('button', {name:'Login',exact:true}).click();
-      await expect(page).toHaveURL(/\/verify-otp$/);
-      const code = (await (await request.get(`${API}/_dev/last-otp/${phone}`)).json()).data.code;
-      await page.locator('input[inputmode="numeric"]').first().fill(code);
-      await page.getByRole('button', {name:/Verify/}).click();
       await expect(page).toHaveURL(new RegExp(`${base}\\?category=AC&plan=${plan.id}&view=details$`));
       await expect(page.getByLabel('Protection appliance', {exact:true})).toBeVisible();
     }

@@ -35,9 +35,7 @@ async function loginAsCustomer(phone, walletCoins = 0) {
     passwordHash: await hashPassword('password123'),
     walletCoins,
   });
-  await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' });
-  const code = readOtpCode(phone);
-  const res = await request(app).post('/api/v1/auth/otp/verify').send({ role: ROLES.CUSTOMER, identifier: phone, code });
+  const res = await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' }).expect(200);
   return res.body.data.accessToken;
 }
 

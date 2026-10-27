@@ -27,7 +27,8 @@ import { listenOnLoopback, closeServer } from './helpers/loopbackServer.js';
 let server, seq = 9392000000;
 const api = (method, path, token, body) => request(server)[method](`/api/v1${path}`).set('Authorization', `Bearer ${token || ''}`).send(body);
 async function login(role, identifier) {
-  await api('post', '/auth/login', null, { role, identifier, password: 'password123' }).expect(200);
+  const loginRes = await api('post', '/auth/login', null, { role, identifier, password: 'password123' }).expect(200);
+  if (role === 'customer' || role === 'service_provider') return loginRes.body.data;
   return (await api('post', '/auth/otp/verify', null, { role, identifier, code: readOtpCode(identifier) }).expect(200)).body.data;
 }
 async function clearDocs() { for (const p of await ServiceProvider.find()) for (const ref of [p.verification?.aadharFrontUrl, p.verification?.aadharBackUrl]) if (ref?.startsWith('kyc-')) await removePrivateKyc(ref); }

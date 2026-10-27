@@ -12,11 +12,15 @@ on:
     paths:
       - 'backend/**'
       - 'e2e/**'
+      - 'scripts/**'
+      - 'render.yaml'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     paths:
       - 'backend/**'
       - 'e2e/**'
+      - 'scripts/**'
+      - 'render.yaml'
       - '.github/workflows/backend-ci.yml'
 
 jobs:
@@ -52,6 +56,7 @@ jobs:
       - name: Start MongoDB replica set
         run: |
           docker run --detach --name mongodb --publish 27017:27017 \
+            --ulimit nofile=131072:131072 \
             mongo:7.0 --replSet rs0 --bind_ip_all
           for attempt in {1..30}; do
             if docker exec mongodb mongosh --quiet --eval \
@@ -103,6 +108,7 @@ jobs:
       - name: Start MongoDB replica set
         run: |
           docker run --detach --name mongodb --publish 27017:27017 \
+            --ulimit nofile=131072:131072 \
             mongo:7.0 --replSet rs0 --bind_ip_all
           for attempt in {1..30}; do
             if docker exec mongodb mongosh --quiet --eval \

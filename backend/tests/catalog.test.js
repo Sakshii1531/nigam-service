@@ -110,11 +110,7 @@ describe('admin-editable category writes', () => {
       name: 'Customer',
       passwordHash: await hashPassword('password123'),
     });
-    await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: '9111111111', password: 'password123' });
-    const code = readOtpCode('9111111111');
-    const verify = await request(app)
-      .post('/api/v1/auth/otp/verify')
-      .send({ role: ROLES.CUSTOMER, identifier: '9111111111', code });
+    const verify = await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: '9111111111', password: 'password123' }).expect(200);
 
     await request(app)
       .post('/api/v1/catalog/categories')

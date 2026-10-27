@@ -19,7 +19,6 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { seedTestCatalogue } from './helpers/catalogue.js';
 import { testDbUri } from './helpers/testDb.js';
-import { readOtpCode } from './helpers/otp.js';
 
 const TEST_DB_URI = testDbUri('catalog_quote');
 
@@ -74,11 +73,7 @@ const INTERNAL = /payout|margin|incentive|internalNotes|needsRateReview|reason|c
 async function customerToken(walletCoins = 0) {
   const phone = '9200000077';
   await User.create({ role: ROLES.CUSTOMER, phone, name: 'Quote Customer', walletCoins, passwordHash: await hashPassword('password123') });
-  await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' }).expect(200);
-  const res = await request(app)
-    .post('/api/v1/auth/otp/verify')
-    .send({ role: ROLES.CUSTOMER, identifier: phone, code: readOtpCode(phone) })
-    .expect(200);
+  const res = await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: phone, password: 'password123' }).expect(200);
   return res.body.data.accessToken;
 }
 

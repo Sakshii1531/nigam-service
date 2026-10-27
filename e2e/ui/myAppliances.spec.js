@@ -8,9 +8,7 @@ async function call(request,method,path,token,data) {
 }
 async function session(request,phone) {
   await request.post(`${API}/_dev/test-user`,{data:{role:'customer',phone,name:'Appliance Test Customer',password:'password123'}});
-  await request.post(`${API}/auth/otp/send`,{data:{role:'customer',identifier:phone}});
-  const code=(await(await request.get(`${API}/_dev/last-otp/${phone}`)).json()).data.code;
-  return call(request,'post','/auth/otp/verify','',{role:'customer',identifier:phone,code});
+  return call(request,'post','/auth/login','',{role:'customer',identifier:phone,password:'password123'});
 }
 function pdf() {
   const objects=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
