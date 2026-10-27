@@ -59,10 +59,9 @@ for (const kind of ['phone', 'email']) {
     if (kind === 'email') {
       identifier = `partner-${randomUUID().slice(0, 8)}@e2e.test`;
       // The dev fixture has no email field; set it through the provider's own profile.
-      const otpLogin = await request.post(`${API}/auth/login`, { data: { role: 'service_provider', identifier: phone, password: 'password123' } });
-      expect(otpLogin.status()).toBe(200);
-      const code = (await (await request.get(`${API}/_dev/last-otp/${phone}`)).json()).data.code;
-      const session = (await (await request.post(`${API}/auth/otp/verify`, { data: { role: 'service_provider', identifier: phone, code } })).json()).data;
+      const loginRes = await request.post(`${API}/auth/login`, { data: { role: 'service_provider', identifier: phone, password: 'password123' } });
+      expect(loginRes.status()).toBe(200);
+      const session = (await loginRes.json()).data;
       await request.patch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${session.accessToken}` }, data: { email: identifier } });
     }
 
@@ -70,6 +69,6 @@ for (const kind of ['phone', 'email']) {
     await page.getByLabel('Email or Phone Number').fill(identifier);
     await page.getByPlaceholder('Enter Password').fill('password123');
     await page.getByRole('button', { name: 'Login to Dashboard' }).click();
-    await expect(page).toHaveURL(/\/service-provider\/verify-otp/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/service-provider\/dashboard/, { timeout: 15_000 });
   });
 }

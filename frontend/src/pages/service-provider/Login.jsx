@@ -58,8 +58,9 @@ const ServiceProviderLogin = () => {
     setError('');
     setSubmitting(true);
     try {
-      const { destination } = await login({ role: 'service_provider', identifier: identifier.trim(), password });
-      navigate('/service-provider/verify-otp', { state: { destination, role: 'service_provider', identifier } });
+      await login({ role: 'service_provider', identifier: identifier.trim(), password });
+      sessionStorage.removeItem('ncc_sp_duty_prompted');
+      navigate('/service-provider/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
     } finally {

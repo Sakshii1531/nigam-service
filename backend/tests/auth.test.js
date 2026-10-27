@@ -27,7 +27,8 @@ async function createUser({ role, phone, email, password, extra = {} }) {
 }
 
 async function loginAndVerify(app_, { role, identifier, password }) {
-  await request(app_).post('/api/v1/auth/login').send({ role, identifier, password }).expect(200);
+  const loginRes = await request(app_).post('/api/v1/auth/login').send({ role, identifier, password }).expect(200);
+  if (role === ROLES.CUSTOMER || role === ROLES.SERVICE_PROVIDER) return loginRes.body.data;
   const code = readOtpCode(identifier);
   const res = await request(app_).post('/api/v1/auth/otp/verify').send({ role, identifier, code }).expect(200);
   return res.body.data;
@@ -56,7 +57,7 @@ beforeEach(async () => {
   ]);
 });
 
-describe('login -> OTP verify -> protected route', () => {
+describe('credential login -> protected route', () => {
   it('preserves saved address GPS including zero coordinates on edit, and clears a removed pin', async () => {
     const user = await createUser({ role: ROLES.CUSTOMER, phone: '9000000099', password: 'password123' });
     const session = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: user.phone, password: 'password123' });
@@ -69,12 +70,13 @@ describe('login -> OTP verify -> protected route', () => {
     expect(cleared.body.data[0].latitude).toBeUndefined();
     expect(cleared.body.data[0].longitude).toBeUndefined();
   });
-  it('issues a working access token after the full flow', async () => {
+  it('issues a working access token directly after customer credential login', async () => {
     await createUser({ role: ROLES.CUSTOMER, phone: '9000000010', password: 'password123' });
 
     const session = await loginAndVerify(app, { role: ROLES.CUSTOMER, identifier: '9000000010', password: 'password123' });
     expect(session.accessToken).toBeTruthy();
     expect(session.refreshToken).toBeTruthy();
+    expect(await Otp.countDocuments({})).toBe(0);
     expect(session.user.passwordHash).toBeUndefined();
 
     const whoami = await request(app)
@@ -106,10 +108,29 @@ describe('login -> OTP verify -> protected route', () => {
   });
 });
 
+describe('direct service provider login', () => {
+  it.each(['phone', 'email'])('issues a working session for a provider using %s without sending OTP', async (field) => {
+    const user = await createUser({ role: ROLES.SERVICE_PROVIDER, phone: '9876501234', email: 'partner@test.dev', password: 'password123' });
+    const res = await request(app).post('/api/v1/auth/login').send({ role: ROLES.SERVICE_PROVIDER, identifier: user[field], password: 'password123' }).expect(200);
+    expect(res.body.data.accessToken).toBeTruthy();
+    expect(res.body.data.refreshToken).toBeTruthy();
+    expect(res.body.data.user.passwordHash).toBeUndefined();
+    expect(await Otp.countDocuments({})).toBe(0);
+    const whoami = await request(app).get('/api/v1/_dev/whoami').set('Authorization', `Bearer ${res.body.data.accessToken}`).expect(200);
+    expect(whoami.body.data.role).toBe(ROLES.SERVICE_PROVIDER);
+  });
+
+  it.each([ROLES.CUSTOMER, ROLES.SERVICE_PROVIDER])('rejects inactive %s accounts before creating a session', async (role) => {
+    await createUser({ role, phone: '9876501234', password: 'password123', extra: { status: 'Suspended' } });
+    await request(app).post('/api/v1/auth/login').send({ role, identifier: '9876501234', password: 'password123' }).expect(403);
+    expect(await RefreshToken.countDocuments({})).toBe(0);
+  });
+});
+
 describe('OTP verification', () => {
   it('rejects an incorrect code without consuming the real one', async () => {
     await createUser({ role: ROLES.CUSTOMER, phone: '9000000012', password: 'password123' });
-    await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: '9000000012', password: 'password123' });
+    await request(app).post('/api/v1/auth/otp/send').send({ role: ROLES.CUSTOMER, identifier: '9000000012' }).expect(200);
 
     await request(app)
       .post('/api/v1/auth/otp/verify')
@@ -123,7 +144,7 @@ describe('OTP verification', () => {
 
   it('locks out after too many incorrect attempts', async () => {
     await createUser({ role: ROLES.CUSTOMER, phone: '9000000013', password: 'password123' });
-    await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: '9000000013', password: 'password123' });
+    await request(app).post('/api/v1/auth/otp/send').send({ role: ROLES.CUSTOMER, identifier: '9000000013' }).expect(200);
 
     for (let i = 0; i < 5; i += 1) {
       await request(app)
@@ -256,7 +277,7 @@ describe('forgot / reset password', () => {
 describe('resend OTP', () => {
   it('supersedes the previous pending OTP for the same identifier+purpose', async () => {
     await createUser({ role: ROLES.CUSTOMER, phone: '9000000018', password: 'password123' });
-    await request(app).post('/api/v1/auth/login').send({ role: ROLES.CUSTOMER, identifier: '9000000018', password: 'password123' });
+    await request(app).post('/api/v1/auth/otp/send').send({ role: ROLES.CUSTOMER, identifier: '9000000018' }).expect(200);
 
     await request(app).post('/api/v1/auth/otp/send').send({ role: ROLES.CUSTOMER, identifier: '9000000018' }).expect(200);
     const freshCode = readOtpCode('9000000018');

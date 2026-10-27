@@ -29,13 +29,14 @@ async function loginAndVerify(request, { role, identifier, password }) {
   const loginRes = await request.post('/api/v1/auth/login', { data: { role, identifier, password } });
   expect(loginRes.status()).toBe(200);
 
+  if (role === 'customer' || role === 'service_provider') return (await loginRes.json()).data;
   const code = await getOtpCode(request, identifier);
   const verifyRes = await request.post('/api/v1/auth/otp/verify', { data: { role, identifier, code } });
   expect(verifyRes.status()).toBe(200);
   return (await verifyRes.json()).data;
 }
 
-test.describe('login -> OTP verify -> protected route', () => {
+test.describe('login -> protected route', () => {
   test('issues a working access token after the full flow', async ({ request }) => {
     const phone = uniquePhone();
     await createTestUser(request, { role: 'customer', phone, password: 'password123' });

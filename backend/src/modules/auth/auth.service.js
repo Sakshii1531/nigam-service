@@ -136,8 +136,7 @@ function sanitizeUser(user) {
   return obj;
 }
 
-/** Step 1 of login: verify the password, then send an OTP — the frontend always
- * routes password-verified logins through an OTP screen before granting a session. */
+/** Customers and service providers sign in with credentials; admin portals also require OTP. */
 // Service providers sign in with their 10-digit phone number or their email —
 // not their provider ID. Mirrors the partner login form's validation.
 const PROVIDER_PHONE = /^\d{10}$/;
@@ -160,6 +159,12 @@ export async function login({ role, identifier, password }) {
   if (user.status !== 'Active') {
     await securityAudit(user, 'auth.login_failed', { stage: 'account_status' });
     throw new ApiError(403, `Account is ${user.status.toLowerCase()}`);
+  }
+
+  if (role === ROLES.CUSTOMER || role === ROLES.SERVICE_PROVIDER) {
+    const session = await issueSession(user);
+    await securityAudit(user, 'auth.login_succeeded');
+    return session;
   }
 
   return initiateOtp({ role, identifier, purpose: 'login', deliveryIdentifier: user.phone || identifier });

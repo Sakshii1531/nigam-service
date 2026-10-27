@@ -100,7 +100,39 @@ export const AuthProvider = ({ children }) => {
    * would file an ASM's session under a 'asm' bucket nothing on
    * /super-admin/* ever reads, leaving them looking logged-out.
    */
-  /** Step 1: password check -> server sends an OTP. Returns the masked destination to display. */
+  // Shared session setup for credential login and OTP verification.
+  const activateSession = useCallback((data, portal) => {
+    storeTokens(data, portal);
+    localStorage.setItem(`ncc_user_${portal}`, JSON.stringify(data.user));
+    if (portal === "customer") {
+      localStorage.setItem("ncc_user", JSON.stringify(data.user));
+    }
+
+    setUsersByPortal((prev) => ({
+      ...prev,
+      [portal]: data.user,
+    }));
+
+    if (portal === "customer") {
+      syncCartOnLogin();
+    }
+
+    // Trigger push token registration
+    try {
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "default"
+      ) {
+        enablePush().catch(() => {});
+      } else {
+        syncPushToken();
+      }
+    } catch {
+      syncPushToken();
+    }
+  }, []);
+
+  /** Credential login activates customer/provider sessions; admins continue to OTP. */
   const login = useCallback(
     async ({ role, identifier, password }) => {
       const portal = getCurrentPortal(location.pathname);
@@ -109,12 +141,12 @@ export const AuthProvider = ({ children }) => {
         body: { role, identifier, password },
         portal,
       });
+      if (data.accessToken && data.user) activateSession(data, portal);
       return data;
     },
-    [location.pathname],
+    [location.pathname, activateSession],
   );
 
-  /** Step 2: OTP verify -> real tokens + user, session now active for this role. */
   const verifyOtp = useCallback(
     async ({ role, identifier, code }) => {
       const portal = getCurrentPortal(location.pathname);
@@ -123,38 +155,10 @@ export const AuthProvider = ({ children }) => {
         body: { role, identifier, code },
         portal,
       });
-
-      storeTokens(data, portal);
-      localStorage.setItem(`ncc_user_${portal}`, JSON.stringify(data.user));
-      if (portal === "customer") {
-        localStorage.setItem("ncc_user", JSON.stringify(data.user));
-      }
-
-      setUsersByPortal((prev) => ({
-        ...prev,
-        [portal]: data.user,
-      }));
-
-      if (portal === "customer") {
-        syncCartOnLogin();
-      }
-
-      // Trigger push token registration
-      try {
-        if (
-          typeof Notification !== "undefined" &&
-          Notification.permission === "default"
-        ) {
-          enablePush().catch(() => {});
-        } else {
-          syncPushToken();
-        }
-      } catch {
-        syncPushToken();
-      }
+      activateSession(data, portal);
       return data.user;
     },
-    [location.pathname],
+    [location.pathname, activateSession],
   );
 
   const resendOtp = useCallback(

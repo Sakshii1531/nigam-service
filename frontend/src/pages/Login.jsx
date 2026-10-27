@@ -6,17 +6,18 @@ import { useAppLogo } from '../context/LogoContext';
 import { apiRequest } from '../lib/apiClient';
 import SearchableSelect from '../components/common/SearchableSelect';
 import { STATE_CITIES } from '../utils/indiaGeoData';
+import { authReturnPath } from '../utils/authReturnPath';
+import { getActiveCities, isCityServiceable } from '../utils/serviceableCities';
 
 const Login = ({ initialSignup = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { login, signupCheck, resendOtp } = useAuth();
+  const { login, signupCheck } = useAuth();
   const { logoUrl } = useAppLogo();
 
   const isSignupRoute = location.pathname === '/signup' || initialSignup;
   const [isSignup, setIsSignup] = useState(location.state?.isSignup || isSignupRoute || false);
   const [usePhone, setUsePhone] = useState(true);
-  const [useOtp, setUseOtp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -318,10 +319,16 @@ const Login = ({ initialSignup = false }) => {
     setError('');
     setSubmitting(true);
     try {
-      const { destination } = useOtp
-        ? await resendOtp({ role: 'customer', identifier, purpose: 'login' })
-        : await login({ role: 'customer', identifier, password });
-      navigate('/verify-otp', { state: { destination, role: 'customer', identifier, from:location.state?.from } });
+      const { user } = await login({ role: 'customer', identifier, password });
+      const city = user?.addresses?.[0]?.city || '';
+      if (city) {
+        const activeCities = await getActiveCities();
+        if (!isCityServiceable(city, activeCities)) {
+          navigate('/area-not-serviceable', { replace: true });
+          return;
+        }
+      }
+      navigate(authReturnPath(location.state?.from), { replace: true });
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -499,7 +506,7 @@ const Login = ({ initialSignup = false }) => {
               </div>
             )}
 
-            {!useOtp && <div className="relative">
+            <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <input
                 type={showPassword ? "text" : "password"}
@@ -515,15 +522,7 @@ const Login = ({ initialSignup = false }) => {
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
-            </div>}
-
-            <button
-              type="button"
-              onClick={() => { setUseOtp(!useOtp); setError(''); }}
-              className="text-xs font-semibold text-brand-blue self-end hover:text-blue-800"
-            >
-              {useOtp ? 'Use password instead' : 'Sign in with OTP'}
-            </button>
+            </div>
 
             <button
               type="button"
@@ -538,7 +537,7 @@ const Login = ({ initialSignup = false }) => {
               disabled={submitting}
               className="w-full bg-linear-to-r from-brand-yellow to-[#FFCA00] text-brand-blue font-bold py-3 rounded-2xl hover:shadow-lg hover:shadow-yellow-400/20 transition-all transform hover:-translate-y-0.5 mt-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {submitting ? (useOtp ? 'Sending OTP…' : 'Logging in…') : (useOtp ? 'Send OTP' : 'Login')}
+              {submitting ? 'Logging in…' : 'Login'}
             </button>
           </form>
         ) : (
