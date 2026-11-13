@@ -49,7 +49,7 @@ test('completion monitor updates live, exports files, submits Re-QC and renders 
   await page.goto('/brand-admin/service-completion');
   await expect(page.getByTestId('completion-total')).toHaveText('0');
   for (const step of ['start-travel', 'arrive']) await call(r, 'post', `/service-provider/jobs/${job.id}/${step}`, partner.accessToken, {});
-  await call(r, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partner.accessToken, { notes: 'Fault diagnosed' });
+  await call(r, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partner.accessToken, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Fault diagnosed' });
   await call(r, 'post', `/service-provider/jobs/${job.id}/spare-parts`, partner.accessToken, { parts: [] });
   await call(r, 'post', `/service-provider/jobs/${job.id}/repair-complete`, partner.accessToken, {});
   // No reload: verifies the completion monitor's socket subscription.

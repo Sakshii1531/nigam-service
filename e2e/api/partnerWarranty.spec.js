@@ -184,7 +184,7 @@ test.describe('Partner Warranty — the testing guide, over the API', () => {
     await expectStatus(request, w, claim.id, 'Technician On Way');
     await call(request, 'post', `/service-provider/jobs/${job.id}/arrive`, w.partner);
     await expectStatus(request, w, claim.id, 'Service In Progress');
-    await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, w.partner, { notes: 'Low gas' });
+    await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, w.partner, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Low gas' });
     await call(request, 'post', `/service-provider/jobs/${job.id}/spare-parts`, w.partner, { parts: [] });
     await call(request, 'post', `/service-provider/jobs/${job.id}/repair-complete`, w.partner);
     const billing = (await call(request, 'post', `/service-provider/jobs/${job.id}/billing`, w.partner)).billingEstimate;

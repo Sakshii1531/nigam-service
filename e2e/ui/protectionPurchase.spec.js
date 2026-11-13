@@ -28,11 +28,11 @@ for (const kind of ['amc', 'extended-warranty']) {
     await request.post(`${API}/_dev/test-user`, { data: { role: 'customer', phone, name: 'Protection Buyer', password: 'password123' } });
     const customer = await login(request, 'customer', phone);
     await call(request, 'post', '/auth/addresses', customer.accessToken, {type:'Home',house:'15 Protection Street',city:'Indore',state:'Madhya Pradesh',pincode:'452001',isDefault:true,latitude:22.7196,longitude:75.8577});
-    const appliance = await call(request, 'post', '/appliances', customer.accessToken, { nickname: `Bedroom AC ${tag}`, category: 'AC', brand: brandName, modelNumber: 'MODEL-42', serialNumber: tag, purchaseDate: new Date(Date.now() - 86400000 * 20).toISOString().slice(0, 10), createSeparateUnit: true });
+    const appliance = await call(request, 'post', '/appliances', customer.accessToken, { nickname: `Bedroom AC ${tag}`, category: 'AC', brand: brandName, modelNumber: 'MODEL-42', serialNumber: tag, purchaseDate: new Date(Date.now() - 86400000 * 400).toISOString().slice(0, 10), createSeparateUnit: true });
     const uploaded = await request.post(`${API}/appliances/${appliance.id}/documents`, { headers: { Authorization: `Bearer ${customer.accessToken}` }, multipart: { kind: 'invoice', file: { name: 'purchase.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') } } });
     expect(uploaded.status()).toBe(201);
     const amc = kind === 'amc';
-    const plan = await call(request, 'post', `/super-admin/plans/${amc ? 'amc' : 'extended-warranty'}`, admin.accessToken, { name: planName, applianceCategory: 'AC', price: 699, requiresInvoice: true, maxApplianceAgeMonths: 12, ...(amc ? { tier: 'Silver', visitsTotal: 3, durationMonths: 18, benefits: ['Configured service benefit'] } : { durationYears: 2, claimsTotal: 3, features: ['Configured service benefit'] }) });
+    const plan = await call(request, 'post', `/super-admin/plans/${amc ? 'amc' : 'extended-warranty'}`, admin.accessToken, { name: planName, applianceCategory: 'AC', price: 699, requiresInvoice: true, maxApplianceAgeMonths: 24, ...(amc ? { tier: 'Silver', visitsTotal: 3, durationMonths: 18, benefits: ['Configured service benefit'] } : { durationYears: 2, claimsTotal: 3, features: ['Configured service benefit'] }) });
     const base = amc ? '/buy/amc' : '/buy/select-appliance';
     if (amc) {
       await page.goto(`${base}?category=AC&plan=${plan.id}&view=details`);

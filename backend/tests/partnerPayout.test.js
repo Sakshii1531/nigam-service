@@ -16,6 +16,7 @@ import { ServiceOffering } from '../src/modules/catalog/serviceOffering.model.js
 import { createRateVersion } from '../src/modules/catalog/rateWriter.js';
 import { seedTestCatalogue, clearCatalogue, offeringBooking } from './helpers/catalogue.js';
 import { jobFlow } from './helpers/jobFlow.js';
+import { brandWarrantyAppliance } from './helpers/coverage.js';
 import { testDbUri } from './helpers/testDb.js';
 
 // Fixed partner payout end to end on the real seeded catalogue
@@ -77,10 +78,10 @@ describe('fixed partner payout', () => {
   });
 
   it('a warranty-covered booking: customer pays ₹0, partner still earns the offering payout (A5)', async () => {
-    const purchaseDate = new Date(Date.now() - 30 * 86400000).toISOString();
     const flow = await jobToBilling('AC-WINDOW-INSTALL', {
       specs: ['AC'],
-      bookingOptions: { purchaseDate, coverageType: 'Brand Warranty' },
+      bookingOptions: { coverageType: 'Brand Warranty' },
+      prepareBooking: async (cust) => ({ brand: 'LG', applianceId: String((await brandWarrantyAppliance({ user: cust.user._id }))._id) }),
     });
     expect(flow.booking.totalPrice).toBe(0);
     expect(flow.accepted.type).toBe('Brand Warranty');
@@ -173,7 +174,7 @@ describe('what the partner collects', () => {
     const flow = await jobToBilling('TV-LED-55-65-INSTALL', {
       specs: ['TV'],
       bookingOptions: { paymentMode: 'advance', paymentMethod: 'UPI' },
-      beforeWork: async ({ booking, razorpay, custToken }) => {
+      beforeAccept: async ({ booking, razorpay, custToken }) => {
         const signature = signForTesting({ orderId: razorpay.orderId, paymentId: 'pay_adv' });
         await request(app)
           .post(`/api/v1/bookings/${booking.id}/verify-payment`)

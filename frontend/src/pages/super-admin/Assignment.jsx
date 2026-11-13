@@ -206,7 +206,7 @@ const Assignment = () => {
 
   const handleAssign = async () => {
     if (!selectedRequest || !selectedTech) {
-      showToast('Please select a request from the left and a serviceProvider from the right.');
+      showToast('Please select a request from the left and a service partner from the right.');
       return;
     }
     setAssigning(true);
@@ -335,7 +335,7 @@ const Assignment = () => {
                     </div>
 
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Auto-assignment matches each request with the best available serviceProvider based on distance, ratings, and active jobs.
+                      Auto-assignment matches each request with the best available service partner based on distance, ratings, and active jobs.
                     </p>
 
                     <div className="mt-4 p-4 bg-white border border-slate-200 rounded-xl space-y-2">
@@ -370,7 +370,7 @@ const Assignment = () => {
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-slate-600 shrink-0" />
                 <p className="text-xs text-slate-600 font-medium">
-                  <strong>Manual Mode Active:</strong> Select an unassigned request on the left, then pick a serviceProvider on the right to assign directly.
+                  <strong>Manual Mode Active:</strong> Select an unassigned request on the left, then pick a service partner on the right to assign directly.
                 </p>
               </div>
             )}

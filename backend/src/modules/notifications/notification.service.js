@@ -55,6 +55,14 @@ const EVENT_TEMPLATES = {
     priority: 'High',
     cta: { label: 'View jobs', route: '/service-provider/history' },
   }),
+  'booking.payment_expired': (p) => ({
+    recipient: p.user,
+    type: 'service',
+    title: 'Booking cancelled — payment not completed',
+    message: `Your ${p.category || 'service'} booking was cancelled because the advance payment was not completed in time. If any amount was debited it will be refunded automatically.`,
+    cta: { label: 'Book again', route: '/services' },
+    smsBody: 'Your Nigam Care booking was cancelled as the advance payment was not completed. Any debited amount will be refunded.',
+  }),
   'booking.search_expired': (p) => ({
     recipient: p.user,
     type: 'service',

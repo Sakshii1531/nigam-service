@@ -41,7 +41,8 @@ export async function protectionDetails(userId, kind, id, query = {}) {
   const expiry = isAmc ? purchase.expiryDate : purchase.validTill;
   const remaining = isAmc ? purchase.visitsRemaining : purchase.claimsRemaining;
   const state = !purchase.paid ? 'Payment pending' : isAmc && !purchase.plan ? 'Plan unavailable' : !isAmc && purchase.verificationStatus === 'Rejected' ? 'Verification rejected'
-    : !expiry || new Date(expiry) <= new Date() || purchase.status === 'Expired' ? 'Expired' : remaining <= 0 ? 'Allowance used' : 'Active';
+    : !expiry || new Date(expiry) <= new Date() || purchase.status === 'Expired' ? 'Expired' : remaining <= 0 ? 'Allowance used'
+    : !isAmc && purchase.validFrom && new Date(purchase.validFrom) > new Date() ? 'Starts after brand warranty' : 'Active';
   const recordedVisits = isAmc ? await AMCVisit.find({ subscription:id }).sort({ visitNumber:-1 }).select('visitNumber scheduledDate status tasks.label tasks.done notes createdAt').limit(100) : [];
   const json=purchase.toJSON();
   const purchaseView=isAmc&&purchase.planSnapshot?{...json,plan:{...json.plan,...json.planSnapshot}}:json;

@@ -288,7 +288,7 @@ test.describe('spare part request reaches an approver', () => {
     const jobId = (await acceptRes.json()).data.id;
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/arrive`, auth);
-    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { notes: 'needs a part' } });
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'needs a part' } });
     await request.post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`, {
       ...auth,
       data: { parts: [{ name: 'Compressor', price: 3200, checked: true }], additionalServices: [] },

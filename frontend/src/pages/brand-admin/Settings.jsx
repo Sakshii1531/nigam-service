@@ -310,7 +310,7 @@ const Settings = () => {
                   <div className="flex justify-between items-center py-3 border-b border-[#E2E8F0]">
                     <div>
                       <p className="text-sm font-medium text-[#1E293B]">Auto-assign ServiceProviders</p>
-                      <p className="text-xs text-[#64748B]">Automatically assign closest available serviceProvider to new requests.</p>
+                      <p className="text-xs text-[#64748B]">Automatically assign closest available service partner to new requests.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 

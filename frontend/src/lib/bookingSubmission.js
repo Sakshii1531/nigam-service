@@ -1,5 +1,28 @@
 import { apiRequest } from './apiClient';
 
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+/**
+ * The schedule step labels a day as "Wed 4 Nov" (no year). Turn that label
+ * into the real calendar day the customer picked, as an ISO timestamp at
+ * local noon (noon keeps the day stable across timezones). With no year in
+ * the label we take the next occurrence of that day-and-month that is not in
+ * the past. ASAP / unparseable labels fall back to "now".
+ */
+export function scheduledDateFromLabel(label, isInstant = false, now = new Date()) {
+  if (isInstant || !label) return now.toISOString();
+  const m = String(label).trim().match(/^(?:[A-Za-z]+\s+)?(\d{1,2})\s+([A-Za-z]{3,})(?:\s+(\d{4}))?/);
+  const month = m ? MONTHS.indexOf(m[2].slice(0, 3).toLowerCase()) : -1;
+  if (!m || month < 0) return now.toISOString();
+  const day = Number(m[1]);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const year = m[3] ? Number(m[3]) : now.getFullYear();
+  let picked = new Date(year, month, day, 12, 0, 0);
+  if (!m[3] && picked < startOfToday) picked = new Date(year + 1, month, day, 12, 0, 0);
+  if (picked.getMonth() !== month) return now.toISOString(); // e.g. 31 Feb
+  return picked.toISOString();
+}
+
 /**
  * One /bookings POST body for a single quote line of a bookingMeta
  * (BookingFlow's Step 4 handoff). Everything commercial comes from the quote
@@ -25,7 +48,7 @@ function buildBookingBody(meta, line, index, extra) {
     newAppliance: index > 0 || Boolean(meta.newAppliance),
     ...(index === 0 && meta.protection ? { protection:meta.protection } : {}),
     ...(meta.issueDescription ? { issueDescription:meta.issueDescription } : {}),
-    scheduledDate: new Date().toISOString(),
+    scheduledDate: scheduledDateFromLabel(meta.date, meta.isInstant),
     timeSlot: { date: meta.date || '', time: meta.timeGroup || '' },
     address: meta.address,
     ...(meta.businessBilling ? { businessBilling: meta.businessBilling } : {}),

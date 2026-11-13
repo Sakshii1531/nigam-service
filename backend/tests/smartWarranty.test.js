@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import mongoose from 'mongoose';
 import { testDbUri } from './helpers/testDb.js';
+import { brandWarrantyAppliance } from './helpers/coverage.js';
 import { detectWarrantyForAppliance } from '../src/modules/warranty-amc-exchange/warrantyDetector.service.js';
 import { withWarranty } from '../src/modules/service-requests/ownedAppliance.service.js';
 import { createBooking } from '../src/modules/booking/booking.service.js';
@@ -112,9 +113,20 @@ describe('Smart Warranty Detection Pipeline', () => {
         purchaseDate: recentDate,
       });
 
+      // The appliance IS in warranty, but with no purchase invoice on file the
+      // visit is not free — a typed date is not proof.
       expect(res.warrantyStatus).toBe('In Warranty');
-      expect(res.jobType).toBe('Brand Warranty');
+      expect(res.coverageStatus).toBe('Out of Warranty');
+      expect(res.jobType).toBe('NCC Paid Service');
+      expect(res.brandWarrantyNote).toMatch(/purchase invoice/);
       expect(String(res.brandId)).toBe(brand.id);
+    });
+
+    it('covers an in-warranty partner-brand appliance that has its invoice on file', async () => {
+      const appliance = await brandWarrantyAppliance({ user: customer._id, brand: 'LG Electronics', purchaseDate: new Date(Date.now() - 60 * 86400000) });
+      const res = await detectWarrantyForAppliance({ userId: customer.id, category: 'AC', brandName: 'LG Electronics', applianceId: String(appliance._id) });
+      expect(res.coverageStatus).toBe('In Warranty');
+      expect(res.jobType).toBe('Brand Warranty');
     });
 
     it('detects Out of Warranty when purchaseDate is older than 12 months', async () => {
@@ -219,9 +231,10 @@ describe('Smart Warranty Detection Pipeline', () => {
       const recentDate = new Date();
       recentDate.setMonth(recentDate.getMonth() - 1);
 
+      const appliance = await brandWarrantyAppliance({ user: customer._id, brand: 'LG Electronics', purchaseDate: recentDate });
       const { booking, serviceRequest } = await createBooking(
         customer.id,
-        await offeringBooking('AC-SERVICING', { brand: 'LG Electronics', purchaseDate: recentDate, coverageType: 'Brand Warranty' }),
+        await offeringBooking('AC-SERVICING', { brand: 'LG Electronics', applianceId: String(appliance._id), coverageType: 'Brand Warranty' }),
       );
 
       expect(booking.totalPrice).toBe(0); // Covered by Brand Warranty!

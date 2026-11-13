@@ -31,7 +31,7 @@ async function approve(w) { await action(w.owner, w.c.id, 'approve', { coverageD
 async function partner(name, at = 22.73) { const p = await kit.flow.partner(['AC'], name); await ServiceProvider.findByIdAndUpdate(p.serviceProvider._id, { serviceCityName: 'Indore', location: { latitude: at, longitude: 75.87 }, rating: 4.5 }); return p; }
 async function accept(w, p) { w.p = p; w.job = (await kit.api().post(`/api/v1/service-provider/jobs/accept/${w.sr.id}`).set(kit.bearer(p.token)).send({}).expect(200)).body.data; }
 const step = (w, path, data = {}) => kit.api().post(`/api/v1/service-provider/jobs/${w.job.id}/${path}`).set(kit.bearer(w.p.token)).send(data).expect(200);
-async function complete(w) { await step(w, 'start-travel'); await step(w, 'arrive'); await step(w, 'diagnosis', { notes: 'Fault diagnosed' }); await step(w, 'spare-parts', { parts: [] }); const url = await kit.upload(w.customer.token); await step(w, 'repair-complete', { notes: 'Repair completed and tested', workDone: 'Replaced faulty capacitor and tested cooling', photos: [url] }); await step(w, 'billing'); const sr = await ServiceRequest.findById(w.sr.id); await step(w, 'collect-payment', { paymentMethod: 'Cash', otp: sr.completionOtp }); return url; }
+async function complete(w) { await step(w, 'start-travel'); await step(w, 'arrive'); await step(w, 'diagnosis', { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Fault diagnosed' }); await step(w, 'spare-parts', { parts: [] }); const url = await kit.upload(w.customer.token); await step(w, 'repair-complete', { notes: 'Repair completed and tested', workDone: 'Replaced faulty capacitor and tested cooling', photos: [url] }); await step(w, 'billing'); const sr = await ServiceRequest.findById(w.sr.id); await step(w, 'collect-payment', { paymentMethod: 'Cash', otp: sr.completionOtp }); return url; }
 describe('Phase 8 verified mapping', () => {
   it.each([
     ['New', null, false, false, 'PARTNER_FINDING'], ['Assigned', null, false, false, 'JOB_OFFERED'],
@@ -70,7 +70,7 @@ describe('Phase 8 real job lifecycle', () => {
     const checkpoints = [['start-travel', 'EN_ROUTE'], ['arrive', 'REACHED'], ['diagnosis', 'DIAGNOSIS'], ['spare-parts', 'REPAIR']];
     for (const [path, stage] of checkpoints) {
       const before = (await saved(w)).timeline.filter(e => e.action === 'JOB_STAGE_CHANGED').length;
-      const start = pushes.length; await step(w, path, path === 'diagnosis' ? { notes: 'Fault diagnosed' } : path === 'spare-parts' ? { parts: [] } : {});
+      const start = pushes.length; await step(w, path, path === 'diagnosis' ? { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Fault diagnosed' } : path === 'spare-parts' ? { parts: [] } : {});
       let c = await saved(w); expect(c.jobStage).toBe(stage); expect(c.timeline.filter(e => e.action === 'JOB_STAGE_CHANGED')).toHaveLength(before + 1);
       expect(pushes.slice(start).filter(p => p.room === `brand:${w.lg.id}` && p.event === 'claim:updated')).toHaveLength(1);
       await syncJobStage(w.sr.id); c = await saved(w); expect(c.timeline.filter(e => e.action === 'JOB_STAGE_CHANGED')).toHaveLength(before + 1);

@@ -23,6 +23,10 @@ const extendedWarrantyOrderSchema = new mongoose.Schema(
     modelNumber: String,
     purchaseDate: Date,
     invoiceFileUrl: String,
+    // Cover starts when the brand warranty ends (see brandWarranty.js
+    // extendedWarrantyWindow). null on policies sold before this was tracked —
+    // those count as started.
+    validFrom: { type: Date, default: null },
     validTill: Date,
     // Coverage lifecycle — independent of the invoice check below.
     status: { type: String, enum: ['Active', 'Expired'], default: 'Active', index: true },

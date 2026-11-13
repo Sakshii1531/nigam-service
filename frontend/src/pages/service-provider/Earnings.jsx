@@ -308,6 +308,14 @@ const EarningsPage = () => {
               </p>
             </div>
 
+            {earningsTally?.cashInHand > 0 && (
+              <div className="relative z-10 rounded-2xl bg-amber-400/15 border border-amber-300/40 px-3.5 py-2.5">
+                <p className="text-[11px] font-bold text-amber-200">Customer cash you are holding</p>
+                <p className="text-lg font-black text-white leading-tight">₹{Number(earningsTally.cashInHand).toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-amber-100/80 mt-0.5">Hand this to Nigam Care — it is not part of your earnings.</p>
+              </div>
+            )}
+
             <div className="pt-2 flex flex-col gap-2.5 relative z-10">
               <button 
                 onClick={() => {

@@ -206,7 +206,7 @@ describe('Phase 5 — the partner works the warranty job', () => {
 
     await api().post(`/api/v1/service-provider/jobs/${job.id}/start-travel`).set(auth).expect(200);
     await api().post(`/api/v1/service-provider/jobs/${job.id}/arrive`).set(auth).expect(200);
-    await api().post(`/api/v1/service-provider/jobs/${job.id}/diagnosis`).set(auth).send({ notes: 'Gas leak at flare nut' }).expect(200);
+    await api().post(`/api/v1/service-provider/jobs/${job.id}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak at flare nut' }).expect(200);
     await api()
       .post(`/api/v1/service-provider/jobs/${job.id}/spare-parts`)
       .set(auth)

@@ -103,7 +103,7 @@ const ReplacementApprovals = () => {
     <div className="min-h-screen bg-[#F1F5F9] flex relative">
       <Sidebar />
       <div className="flex-1 ml-64 flex flex-col">
-        <Topbar title="Replacement Approvals" subtitle="Review and approve product replacement requests raised by serviceProviders" />
+        <Topbar title="Replacement Approvals" subtitle="Review and approve product replacement requests raised by service partners" />
         <div className="p-5 space-y-5">
 
           <div className="grid grid-cols-4 gap-4">

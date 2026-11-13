@@ -264,24 +264,44 @@ export async function listOrders(userId, { status, page, limit, sort } = {}) {
  */
 export async function verifyOrderPayment(userId, orderId, { razorpayPaymentId, razorpaySignature }) {
   const order = await findOwnedOr404(userId, orderId);
-  if (order.status !== 'Placed') throw new ApiError(400, `Order is not awaiting payment (status: ${order.status})`);
 
-  const payment = await Payment.findOne({ targetType: 'order', targetId: order._id, status: 'Pending' });
-  if (!payment) throw new ApiError(400, 'No pending payment found for this order');
+  const payment = await Payment.findOne({ targetType: 'order', targetId: order._id, status: { $in: ['Pending', 'Success'] } }).sort({ createdAt: -1 });
+  if (!payment) throw new ApiError(400, `Order is not awaiting payment (status: ${order.status})`);
 
   const valid = verifyRazorpaySignature({ orderId: payment.gatewayRef, paymentId: razorpayPaymentId, signature: razorpaySignature });
   if (!valid) throw new ApiError(400, 'Payment signature verification failed');
 
-  payment.status = 'Success';
-  payment.razorpayPaymentId = razorpayPaymentId;
-  await payment.save();
+  if (payment.status === 'Success') {
+    // Already settled (the webhook got there first) — only the same payment may confirm again.
+    if (payment.razorpayPaymentId !== razorpayPaymentId) throw new ApiError(400, 'This order was already paid with a different payment');
+    return findOwnedOr404(userId, orderId);
+  }
+  if (order.status !== 'Placed') throw new ApiError(400, `Order is not awaiting payment (status: ${order.status})`);
 
+  await settleOrderPayment(payment, razorpayPaymentId);
+  return findOwnedOr404(userId, orderId);
+}
+
+/**
+ * The one place a shop order becomes "paid" — the customer's browser
+ * (verifyOrderPayment), Razorpay's webhook, or the reconciliation sweep. The
+ * Pending -> Success flip is atomic so the order is confirmed exactly once.
+ */
+export async function settleOrderPayment(payment, razorpayPaymentId, { method } = {}) {
+  const claimed = await Payment.findOneAndUpdate(
+    { _id: payment._id, status: 'Pending' },
+    { $set: { status: 'Success', razorpayPaymentId, ...(method ? { method } : {}) } },
+    { new: true },
+  );
+  if (!claimed) return { settled: false, payment: await Payment.findById(payment._id) };
+
+  const order = await Order.findById(payment.targetId);
+  if (!order) return { settled: true, payment: claimed };
   order.status = 'Confirmed';
   order.paymentStatus = 'Paid';
   await order.save();
 
   if (order.exchangeRequest) await markApplied(order.exchangeRequest, order._id);
-  if (order.checkedOutFromCart) await Cart.updateOne({ user: userId }, { items: [] });
-
-  return order;
+  if (order.checkedOutFromCart) await Cart.updateOne({ user: order.user }, { items: [] });
+  return { settled: true, payment: claimed, order };
 }

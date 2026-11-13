@@ -30,6 +30,11 @@ export const createServiceProviderSchema = z.object({
   status: z.enum(['Active', 'Pending']).default('Pending'),
 });
 
+export const cashRemittanceSchema = z.object({
+  amount: z.number().positive().max(10000000),
+  note: z.string().trim().max(300).optional(),
+}).strict();
+
 export const idParamSchema = z.object({ id: z.string().min(1) });
 
 export const changeServiceProviderCitySchema = z.object({

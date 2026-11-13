@@ -144,7 +144,7 @@ test('client acceptance walkthrough across every Brand CRM role and application'
   const activeJobs = await call(request, 'get', '/service-provider/jobs/active', partnerAuth.accessToken);
   const job = activeJobs.find(row => row.serviceRequest === detail.job.id || row.warranty?.claimId === ticketNo);
   for (const step of ['start-travel', 'arrive']) await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partnerAuth.accessToken, {});
-  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerAuth.accessToken, { notes: 'Fan motor failed' });
+  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerAuth.accessToken, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Fan motor failed' });
   await call(request, 'post', `/service-provider/jobs/${job.id}/request-part`, partnerAuth.accessToken, {
     partName: `Fan Motor ${tag}`,
     sku: `FM-${tag}`,

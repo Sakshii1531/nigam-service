@@ -273,7 +273,7 @@ describe('Phase 1 — bug fixes', () => {
     expect(accepted.body.data.type).toBe('Brand Warranty');
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'compressor' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'compressor' }).expect(200);
     await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`)
       .set(auth)

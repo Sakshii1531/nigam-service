@@ -330,6 +330,8 @@ const ActiveJob = () => {
   // z.string().optional() — that accepts a missing key but rejects an
   // explicit null, so a not-yet-taken slot must be left out of the payload
   // rather than sent as null (which 400s the whole diagnosis auto-save).
+  // The server refuses to leave the inspection without these two photos.
+  const inspectionPhotosReady = Boolean(productPhoto && serialPhoto);
   const buildPhotosPayload = (overrides = {}) => {
     const merged = {
       product: productPhoto,
@@ -2487,8 +2489,9 @@ const ActiveJob = () => {
                         {/* Section 3: Continue Button */}
                         <button
                           type="button"
+                          disabled={!inspectionPhotosReady}
                           onClick={async () => {
-                            setInspectionDiagnosed(true);
+                            if (!inspectionPhotosReady) return;
                             if (activeJob?.id) {
                               try {
                                 const diagNotes =
@@ -2514,16 +2517,25 @@ const ActiveJob = () => {
                                 );
                                 if (!notesText.trim()) setNotesText(diagNotes);
                               } catch (err) {
-                                console.warn(
-                                  "[ActiveJob] Auto-saving diagnosis failed non-fatally:",
-                                  err.message,
+                                // Not "non-fatal": if the diagnosis and photos were not
+                                // saved, moving on would leave the partner believing they
+                                // were recorded when the server never got them.
+                                setStepError(
+                                  err.message || "Could not save the inspection. Check your connection and try again.",
                                 );
+                                return;
                               }
                             }
+                            setInspectionDiagnosed(true);
                           }}
-                          className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-medium py-3.5 rounded-xl text-xs transition-all shadow-md mt-6">
+                          className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] text-white font-medium py-3.5 rounded-xl text-xs transition-all shadow-md mt-6 disabled:opacity-40 disabled:cursor-not-allowed">
                           Continue
                         </button>
+                        {!inspectionPhotosReady && (
+                          <p className="text-[11px] text-center text-rose-600 font-semibold mt-2">
+                            Add the product photo and the serial-number photo to continue.
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <>

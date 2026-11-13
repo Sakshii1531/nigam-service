@@ -66,13 +66,13 @@ const HelpSupport = () => {
   const faqs = [
     {
       id: 1,
-      question: 'How do I track my assigned serviceProvider?',
+      question: 'How do I track my assigned service partner?',
       answer: 'Go to "Bookings" tab in your account. You can view serviceProvider contact details, live status, and expected arrival time once assigned.',
     },
     {
       id: 2,
       question: 'What is covered under the 30-Day Service Warranty?',
-      answer: 'All repair work done by Nigam Care serviceProviders comes with a free 30-day warranty. If the same issue reoccurs within 30 days, we repair it free of cost.',
+      answer: 'All repair work done by Nigam Care service partners comes with a free 30-day warranty. If the same issue reoccurs within 30 days, we repair it free of cost.',
     },
     {
       id: 3,

@@ -10,6 +10,7 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { seedTestCatalogue, clearCatalogue } from './helpers/catalogue.js';
 import { jobFlow } from './helpers/jobFlow.js';
+import { brandWarrantyAppliance } from './helpers/coverage.js';
 import { testDbUri } from './helpers/testDb.js';
 
 // NCC gross service margin report (docs/master-catalogue Phase 7) on the
@@ -56,7 +57,8 @@ beforeAll(async () => {
 
   const covered = await flow.jobToBilling('AC-WINDOW-INSTALL', {
     sp: partnerA,
-    bookingOptions: { purchaseDate: new Date(Date.now() - 30 * 86400000).toISOString(), coverageType: 'Brand Warranty' },
+    bookingOptions: { coverageType: 'Brand Warranty' },
+    prepareBooking: async (cust) => ({ brand: 'LG', applianceId: String((await brandWarrantyAppliance({ user: cust.user._id }))._id) }),
   });
   await flow.billAndCollect(covered);
 

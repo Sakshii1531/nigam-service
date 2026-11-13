@@ -21,7 +21,7 @@ const slides = [
   {
     id: 3,
     title: "Secure Masked Chat",
-    description: "Chat with your serviceProvider securely — your phone number always stays private and masked.",
+    description: "Chat with your service partner securely — your phone number always stays private and masked.",
     icon: <PhoneOff className="h-16 w-16 text-brand-blue" />,
     bg: "bg-[#FFFBEB]"
   }

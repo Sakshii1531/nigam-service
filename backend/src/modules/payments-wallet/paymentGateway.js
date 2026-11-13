@@ -88,6 +88,22 @@ export async function findCapturedPayment(orderId) {
   return result.items.find(payment => payment.status === 'captured')?.id || null;
 }
 
+/** Razorpay's payment method name -> our Payment.method value (null if unknown). */
+export const paymentMethodFromGateway = (method) => ({ card: 'Card', netbanking: 'NetBanking', wallet: 'Wallet', upi: 'UPI' })[method] || null;
+
+/**
+ * Full refund of a captured payment back to the customer's original method —
+ * used when money arrives for something that no longer exists (a booking that
+ * was cancelled while the customer was still paying).
+ */
+export async function refundPayment({ paymentId, amount, notes = {} }) {
+  if (!isRazorpayConfigured) {
+    if (isProd) throw new ApiError(503, 'Payment gateway is not configured');
+    return { id: `rfnd_stub_${randomUUID()}`, status: 'processed', amount: Math.round(amount * 100), currency: 'INR', payment_id: paymentId };
+  }
+  return getClient().payments.refund(paymentId, { amount: Math.round(amount * 100), notes });
+}
+
 export async function refundKitPayment({ paymentId, amount, orderId }) {
   if (!isRazorpayConfigured) {
     if (isProd) throw new ApiError(503, 'Payment gateway is not configured');

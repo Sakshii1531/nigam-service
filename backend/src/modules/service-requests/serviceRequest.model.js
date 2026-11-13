@@ -69,6 +69,9 @@ const serviceRequestSchema = new mongoose.Schema(
       default: null,
     },
     cancellationReason: { type: String, default: null },
+    // True while a booking's online advance is unpaid: the request is invisible
+    // to partners and to auto-assignment until the payment settles.
+    paymentHold: { type: Boolean, default: false, index: true },
     cancelledAt: { type: Date, default: null },
     searchEndReason: { type: String, default: null },
   },

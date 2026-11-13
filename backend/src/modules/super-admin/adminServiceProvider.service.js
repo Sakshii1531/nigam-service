@@ -239,3 +239,35 @@ export async function deleteServiceProvider(id) {
   }
   return { deleted: true, humanId: serviceProvider.humanId, name: serviceProvider.name };
 }
+
+/**
+ * A partner hands over cash they collected from customers. Refuses more than
+ * they actually hold, so the balance can never go negative.
+ */
+export async function recordCashRemittance(id, { amount, note }, actingUserId) {
+  const rupees = Math.round(amount * 100) / 100;
+  const updated = await ServiceProvider.findOneAndUpdate(
+    { _id: id, $expr: { $gte: [{ $subtract: ['$cashCollected', '$cashRemitted'] }, rupees] } },
+    { $inc: { cashRemitted: rupees } },
+    { new: true },
+  );
+  if (!updated) {
+    const exists = await ServiceProvider.exists({ _id: id });
+    if (!exists) throw new ApiError(404, 'Service provider not found');
+    throw new ApiError(409, 'That is more than the cash this partner is holding');
+  }
+  await logAudit({
+    user: actingUserId,
+    action: `Recorded ₹${rupees} cash handed over by ${updated.name}${note ? ` (${note})` : ''}`,
+    type: 'System',
+    entityType: 'ServiceProvider',
+    entityId: updated._id,
+  });
+  return {
+    id: updated.id,
+    name: updated.name,
+    cashCollected: updated.cashCollected,
+    cashRemitted: updated.cashRemitted,
+    cashInHand: Math.round((updated.cashCollected - updated.cashRemitted) * 100) / 100,
+  };
+}

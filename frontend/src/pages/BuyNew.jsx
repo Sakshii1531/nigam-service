@@ -2712,7 +2712,7 @@ const BuyNew = () => {
                           </span>
                         </div>
                         <span className="text-[10px] text-amber-700 leading-snug">
-                          Credited after our serviceProvider inspects your old
+                          Credited after our service partner inspects your old
                           device at pickup. Today you pay the full price.
                         </span>
                       </div>

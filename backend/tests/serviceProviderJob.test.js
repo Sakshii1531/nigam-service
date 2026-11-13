@@ -296,7 +296,7 @@ describe('D2C job — full lifecycle to payment', () => {
     const diagRes = await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ notes: 'Gas leak found' })
+      .send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak found' })
       .expect(200);
     expect(diagRes.body.data.diagnosis.notes).toBe('Gas leak found');
     sr = await ServiceRequest.findById(srId);
@@ -373,7 +373,7 @@ describe('D2C job — full lifecycle to payment', () => {
 
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({});
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' } });
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ parts: [] });
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${serviceProviderToken}`);
     const billingRes = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`);
@@ -422,7 +422,7 @@ describe('D2C job — full lifecycle to payment', () => {
 
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({});
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' } });
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ parts: [] });
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`);
@@ -451,7 +451,7 @@ describe('D2C job — full lifecycle to payment', () => {
 
   it('rejects diagnosis submission before the serviceProvider has arrived', async () => {
     const { jobId, serviceProviderToken } = await createAcceptedD2CJob();
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ notes: 'x' }).expect(400);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'x' }).expect(400);
   });
 
   it('records the technician\'s own on-site warranty check on the diagnosis, and a later save without it does not clear it', async () => {
@@ -462,7 +462,7 @@ describe('D2C job — full lifecycle to payment', () => {
     const diagRes = await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ notes: 'Checked the warranty card on site', warrantyCheck: 'In Warranty' })
+      .send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Checked the warranty card on site', warrantyCheck: 'In Warranty' })
       .expect(200);
     expect(diagRes.body.data.diagnosis.warrantyCheck).toBe('In Warranty');
 
@@ -471,7 +471,7 @@ describe('D2C job — full lifecycle to payment', () => {
     const secondRes = await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)
-      .send({ notes: 'Updated notes' })
+      .send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Updated notes' })
       .expect(200);
     expect(secondRes.body.data.diagnosis.warrantyCheck).toBe('In Warranty');
   });
@@ -532,7 +532,7 @@ describe('AMC-covered job — FOC claims and subscription decrement', () => {
 
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ notes: 'Compressor issue' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Compressor issue' }).expect(200);
 
     const sparePartsRes = await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`)
@@ -699,7 +699,7 @@ describe('earnings + payouts', () => {
     // Fast-forward the job to completion to have a real earned balance to pay out.
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({});
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' } });
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ parts: [] });
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set('Authorization', `Bearer ${serviceProviderToken}`);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set('Authorization', `Bearer ${serviceProviderToken}`);
@@ -754,7 +754,7 @@ describe('recent earnings + analytics', () => {
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'Gas leak found' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak found' }).expect(200);
     // The step machine routes through the spare pipeline even when nothing is used.
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
@@ -897,7 +897,7 @@ describe('earnings breakdown', () => {
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'x' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'x' }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
@@ -922,7 +922,7 @@ describe('earnings breakdown', () => {
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'x' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'x' }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [], additionalServices: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);
@@ -1008,7 +1008,7 @@ describe('platform settings actually drive the money', () => {
     const auth = { Authorization: `Bearer ${serviceProviderToken}` };
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'x' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'x' }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [] }).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
     const billing = await request(app).post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);

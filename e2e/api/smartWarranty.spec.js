@@ -50,27 +50,45 @@ async function setupIsolatedFixture(request, { price = 299 } = {}) {
   });
   await createTestOffering(request, adminToken, categoryKey, { price });
 
+  // A free brand-warranty visit is billed to the brand, so the brand must be an
+  // onboarded partner brand and the appliance must have its purchase invoice.
+  const brandName = `Warranty Brand ${randomUUID().slice(0, 8)}`;
+  const brandRes = await request.post('/api/v1/super-admin/brands', { headers: { Authorization: `Bearer ${adminToken}` }, data: { name: brandName, status: 'Active' } });
+  expect(brandRes.ok()).toBeTruthy();
+
   const provider = await createServiceProvider(request, { specs: [categoryKey] });
   const customer = await createCustomer(request);
 
-  return { categoryKey, provider, customer };
+  return { categoryKey, provider, customer, brandName };
+}
+
+/** A saved, invoiced appliance bought recently — i.e. genuinely in brand warranty. */
+async function invoicedAppliance(request, customer, { categoryKey, brandName }) {
+  const auth = { Authorization: `Bearer ${customer.token}` };
+  const created = await request.post('/api/v1/appliances', { headers: auth, data: { category: categoryKey, brand: brandName, modelNumber: 'MODEL-1', serialNumber: randomUUID(), purchaseDate: new Date().toISOString() } });
+  expect(created.status()).toBe(201);
+  const appliance = (await created.json()).data;
+  const upload = await request.post(`/api/v1/appliances/${appliance.id}/documents`, { headers: auth, multipart: { kind: 'invoice', file: { name: 'invoice.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%e2e\n') } } });
+  expect(upload.status()).toBe(201);
+  return appliance.id;
 }
 
 test.describe('Smart Warranty Detection E2E', () => {
   test('detects In-Warranty status and applies pricing benefits (price = 0) automatically', async ({ request }) => {
-    const { categoryKey, customer } = await setupIsolatedFixture(request);
-    const recentDate = new Date().toISOString();
+    const fixture = await setupIsolatedFixture(request);
+    const { categoryKey, customer } = fixture;
+    const applianceId = await invoicedAppliance(request, customer, fixture);
 
     const res = await request.post('/api/v1/bookings', {
       headers: { Authorization: `Bearer ${customer.token}` },
       data: await offeringBookingBody(request, {
         categoryKey,
         covered: true, // in brand warranty → the customer pays ₹0
-        brand: 'Demo Brand',
+        brand: fixture.brandName,
+        applianceId,
         scheduledDate: new Date(Date.now() + 86400000).toISOString(),
         timeSlot: { date: '2026-07-21', time: '10:00 AM' },
         address: { type: 'Home', pincode: '226001' },
-        purchaseDate: recentDate,
         fullName: 'E2E Warranty User',
         mobile: customer.phone,
         paymentMode: 'after',
@@ -84,8 +102,9 @@ test.describe('Smart Warranty Detection E2E', () => {
   });
 
   test('auto-infers Job.type as "Brand Warranty" when accepted by serviceProvider without explicit flags', async ({ request }) => {
-    const { categoryKey, provider, customer } = await setupIsolatedFixture(request);
-    const recentDate = new Date().toISOString();
+    const fixture = await setupIsolatedFixture(request);
+    const { categoryKey, provider, customer } = fixture;
+    const applianceId = await invoicedAppliance(request, customer, fixture);
 
     // 1. Customer creates an in-warranty booking
     const res = await request.post('/api/v1/bookings', {
@@ -93,11 +112,11 @@ test.describe('Smart Warranty Detection E2E', () => {
       data: await offeringBookingBody(request, {
         categoryKey,
         covered: true, // in brand warranty → the customer pays ₹0
-        brand: 'Demo Brand',
+        brand: fixture.brandName,
+        applianceId,
         scheduledDate: new Date(Date.now() + 86400000).toISOString(),
         timeSlot: { date: '2026-07-21', time: '10:00 AM' },
         address: { type: 'Home', pincode: '226001' },
-        purchaseDate: recentDate,
         fullName: 'E2E Warranty User 2',
         mobile: customer.phone,
         paymentMode: 'after',

@@ -20,6 +20,7 @@ import { seedSimpleOffering, seedTestCatalogue, offeringBooking, clearCatalogue 
 import { ServiceOffering } from '../src/modules/catalog/serviceOffering.model.js';
 import { createRateVersion } from '../src/modules/catalog/rateWriter.js';
 import { readOtpCode } from './helpers/otp.js';
+import { brandWarrantyAppliance } from './helpers/coverage.js';
 
 const TEST_DB_URI = testDbUri('booking');
 
@@ -306,8 +307,9 @@ describe('POST /bookings — master catalogue booking engine', () => {
   });
 
   it('a warranty-covered booking costs the customer nothing but keeps the partner payout', async () => {
-    const purchaseDate = new Date(Date.now() - 30 * 86400000).toISOString();
-    const res = await book(await offeringBooking('AC-WINDOW-INSTALL', { purchaseDate, coverageType: 'Brand Warranty' }));
+    // A partner-brand appliance with its purchase invoice on file (a typed date alone is not enough).
+    const appliance = await brandWarrantyAppliance({ user: userId });
+    const res = await book(await offeringBooking('AC-WINDOW-INSTALL', { brand: 'LG', applianceId: String(appliance._id), coverageType: 'Brand Warranty' }));
     expect(res.status).toBe(201);
     expect(res.body.data.booking.totalPrice).toBe(0);
     expect(res.body.data.booking.commercial.coverage).toEqual({ type: 'Brand Warranty', amount: 599 });

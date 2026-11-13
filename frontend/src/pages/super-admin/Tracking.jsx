@@ -374,7 +374,7 @@ const Tracking = () => {
                   <div className="text-center pt-8">
                     <MapPin size={32} className="mx-auto text-slate-300 mb-2" />
                     <p className="text-xs text-[#64748B]">No active live jobs</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Waiting for serviceProviders to go online...</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Waiting for service partners to go online...</p>
                   </div>
                 )}
               </div>
@@ -438,7 +438,7 @@ const Tracking = () => {
                           )}
                         </div>
                         <div className="flex gap-2 justify-end pt-2">
-                          {/* Dials the serviceProvider's real number. This used to
+                          {/* Dials the service partner's real number. This used to
                               show "Contacting <name>…" and place no call. */}
                           {serviceProviderPhone ? (
                             <a

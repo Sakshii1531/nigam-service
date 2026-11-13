@@ -424,7 +424,7 @@ const Settings = () => {
                   <div className="flex justify-between items-center p-4 border border-[#E2E8F0] rounded-xl">
                     <div>
                       <p className="font-bold text-[#1E293B] text-sm">SMS Alerts</p>
-                      <p className="text-xs text-[#64748B] mt-0.5">Send SMS to serviceProviders for new jobs.</p>
+                      <p className="text-xs text-[#64748B] mt-0.5">Send SMS to service partners for new jobs.</p>
                     </div>
                     <button 
                       onClick={() => {

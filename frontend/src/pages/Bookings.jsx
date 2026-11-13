@@ -29,6 +29,7 @@ const TABS = ['All', 'Upcoming', 'Completed', 'Cancelled'];
 
 const STATUS_BADGES = {
   Upcoming: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200/80', dot: 'bg-blue-500' },
+  'Payment pending': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200/80', dot: 'bg-amber-500' },
   Ongoing: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200/80', dot: 'bg-indigo-500' },
   'Parts Pending': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200/80', dot: 'bg-amber-500' },
   'Spare Ordered': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200/80', dot: 'bg-amber-500' },
@@ -496,7 +497,10 @@ const Bookings = () => {
               const orderId = b.humanId || b.id;
               const isPartsPending = b.instantStatus === 'PARTS_PENDING' || b.partPending || b.serviceRequest?.status === 'Spare Ordered' || b.serviceRequest?.status === 'Spare Required' || b.status === 'Parts Pending';
               const isRescheduled = b.instantStatus === 'RESCHEDULED' || b.serviceRequest?.status === 'Spare Received' || b.status === 'Rescheduled' || b.status === 'Revisit Scheduled' || (b.rescheduleCount > 0);
-              const status = isPartsPending ? 'Parts Pending' : isRescheduled ? 'Rescheduled' : (b.status || 'Upcoming');
+              // An online advance that has not been paid yet: the booking is held and
+              // no partner has been told, so don't present it as upcoming.
+              const awaitingPayment = Boolean(b.paymentExpiresAt) && !b.advancePaid && b.status !== 'Cancelled';
+              const status = awaitingPayment ? 'Payment pending' : isPartsPending ? 'Parts Pending' : isRescheduled ? 'Rescheduled' : (b.status || 'Upcoming');
               const badge = STATUS_BADGES[status] || STATUS_BADGES.Upcoming;
               const categoryBadge = CATEGORY_COLORS[b.category] || 'bg-slate-100 text-slate-700 border-slate-200';
               

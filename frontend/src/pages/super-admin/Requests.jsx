@@ -1002,7 +1002,7 @@ const Requests = () => {
                               onClick={() => {
                                 setSuccessCardData({
                                   title: "Initiating Assignment",
-                                  message: "Preparing redirection to the serviceProvider assignment console for Ticket ID:",
+                                  message: "Preparing redirection to the service partner assignment console for Ticket ID:",
                                   ticketId: req.ref,
                                   onClose: () => {
                                     navigate(`/super-admin/assignment?req=${req.id}`);

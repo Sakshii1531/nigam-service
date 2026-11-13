@@ -315,6 +315,7 @@ export async function assignServiceProvider(id, serviceProviderId) {
   if (!['New', 'Assigned'].includes(serviceRequest.status)) {
     throw new ApiError(409, `Cannot assign a request in status "${serviceRequest.status}"`);
   }
+  if (serviceRequest.paymentHold) throw new ApiError(409, 'The customer has not paid the advance for this booking yet');
 
   let booking = null;
   if (serviceRequest.booking) {
@@ -615,7 +616,7 @@ export async function declineAssignment(id, serviceProviderId, { reason = 'decli
  */
 export async function autoAssignPendingRequests({ limit = 25 } = {}) {
   await expireStaleServiceRequests();
-  const pending = await ServiceRequest.find({ serviceProvider: null, status: 'New' })
+  const pending = await ServiceRequest.find({ serviceProvider: null, status: 'New', paymentHold: { $ne: true } })
     .sort({ createdAt: 1 })
     .limit(limit)
     .select('_id');

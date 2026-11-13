@@ -18,7 +18,7 @@ const defaultStats = [
 const defaultCoreValues = [
   {
     title: 'Certified & Verified ServiceProviders',
-    desc: 'Every serviceProvider undergoes rigorous background verification, technical testing, and safety protocols before taking any job.',
+    desc: 'Every service partner undergoes rigorous background verification, technical testing, and safety protocols before taking any job.',
     icon: ShieldCheck,
     color: 'bg-blue-600',
   },
@@ -49,7 +49,7 @@ const AboutNCC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [heroTitle, setHeroTitle] = useState('Empowering Smart Home Care & Appliance Solutions');
-  const [heroSubtitle, setHeroSubtitle] = useState("Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified serviceProviders for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.");
+  const [heroSubtitle, setHeroSubtitle] = useState("Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified service partners for AC repair, appliance servicing, electrical work, plumbing, and genuine spare parts delivery.");
   const [appVersion, setAppVersion] = useState('v2.4.0');
   const [stats, setStats] = useState(defaultStats);
   const [coreValues, setCoreValues] = useState(defaultCoreValues);

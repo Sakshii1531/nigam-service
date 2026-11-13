@@ -50,6 +50,7 @@ import {
   formatRupees,
 } from "../lib/catalogueApi";
 import { Skeleton } from '../components/common/Skeleton';
+import { INDIAN_STATES, getCitiesForState } from '../utils/indiaGeoData';
 
 // Every price on this screen comes from the Master Catalogue quote API
 // (docs/master-catalogue Phase 4) — nothing here adds, multiplies or taxes.
@@ -313,6 +314,14 @@ function quoteLoading0(quoteKey, quoteState) {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+/** The state a typed city belongs to, if it belongs to exactly one — else "". */
+function stateForCity(city) {
+  const wanted = String(city || "").trim().toLowerCase();
+  if (wanted.length < 3) return "";
+  const matches = INDIAN_STATES.filter((s) => getCitiesForState(s).some((c) => String(c).toLowerCase() === wanted));
+  return matches.length === 1 ? matches[0] : "";
+}
+
 const BookingFlow = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -455,6 +464,16 @@ const BookingFlow = () => {
       },
   );
   const [selectedAddrId, setSelectedAddrId] = useState(null);
+
+  // A saved address (or a resumed booking) that has a city but no state: fill the
+  // state in when the city belongs to exactly one, so the customer is not asked
+  // for something we can already tell. The State dropdown covers the rest.
+  useEffect(() => {
+    if (!address.state && address.city) {
+      const inferred = stateForCity(address.city);
+      if (inferred) setAddress((p) => (p.state ? p : { ...p, state: inferred }));
+    }
+  }, [address.city, address.state]);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [paymentMode, setPaymentMode] = useState(
     () => resumeBooking?.paymentMode || "advance",
@@ -1167,7 +1186,7 @@ const BookingFlow = () => {
   const isPincodeValid =
     !address.pincode?.trim() || /^\d{6}$/.test(address.pincode.trim());
   const isAddressValid = Boolean(
-    address.house?.trim() && address.city?.trim() && isPincodeValid,
+    address.house?.trim() && address.city?.trim() && address.state?.trim() && isPincodeValid,
   );
   const isContactValid = !!fullName?.trim() && isMobileValid;
   const answersValid = requiredQuestions.every(
@@ -2226,7 +2245,11 @@ const BookingFlow = () => {
                           type="text"
                           value={address.city}
                           onChange={(e) =>
-                            setAddress((p) => ({ ...p, city: e.target.value }))
+                            setAddress((p) => ({
+                              ...p,
+                              city: e.target.value,
+                              state: stateForCity(e.target.value) || p.state,
+                            }))
                           }
                           placeholder="City *"
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
@@ -2260,6 +2283,21 @@ const BookingFlow = () => {
                         Pincode must be exactly 6 digits
                       </p>
                     )}
+                    {/* State — drives GST (CGST/SGST vs IGST) and which partners serve the address */}
+                    <select
+                      aria-label="State"
+                      value={address.state || ""}
+                      onChange={(e) =>
+                        setAddress((p) => ({ ...p, state: e.target.value }))
+                      }
+                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-bold outline-none focus:bg-white focus:border-brand-blue transition-all ${
+                        address.state ? "text-slate-900 border-slate-200" : "text-slate-400 border-slate-200"
+                      }`}>
+                      <option value="">State *</option>
+                      {INDIAN_STATES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -2403,9 +2441,9 @@ const BookingFlow = () => {
                   </div>
                 )}
 
-                {needsGstInvoice && <label className="block rounded-2xl border border-slate-200 bg-white p-4 text-xs font-semibold text-slate-600">Service state / Union Territory<input aria-label="Service state / Union Territory" required value={address.state || ''} onChange={e => setAddress(p => ({ ...p, state: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /><span className="mt-2 block text-[11px] font-normal text-slate-500">State where the technician will perform this service.</span></label>}
                 <BusinessBillingFields enabled={needsGstInvoice} onEnabledChange={setNeedsGstInvoice} value={businessBilling} onChange={setBusinessBilling} />
 
+                {!(shownQuote?.totals.coverage > 0) && shownQuote?.coverageNote && <p role="note" className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-900">{shownQuote.coverageNote}</p>}
                 {shownQuote?.totals.coverage > 0 && <section aria-label="Applied protection" className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" /><div className="min-w-0"><p className="text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">{shownQuote.lines.find(l => l.coverage?.amount > 0)?.coverage?.type === 'AMC Visit' ? 'AMC coverage applied' : shownQuote.lines.find(l => l.coverage?.amount > 0)?.coverage?.type === 'NCC Extended Warranty' ? 'Extended warranty applied' : 'Manufacturer warranty applied'}</p><p className="mt-1 break-words text-sm font-extrabold text-slate-900">{shownQuote.coverageSource?.name || 'Warranty coverage'}</p><p className="mt-1 text-xs text-emerald-800">{formatRupees(shownQuote.totals.coverage)} covered{shownQuote.coverageSource?.number ? ` · ${shownQuote.coverageSource.number}` : ''}</p>{shownQuote.coverageSource?.id && <button type="button" onClick={() => navigate(`/protection-plans/${shownQuote.coverageSource.kind}/${shownQuote.coverageSource.id}`)} className="mt-2 text-xs font-bold text-blue-800 underline">View covering plan</button>}</div></section>}
 
                 {/* Payment Options */}

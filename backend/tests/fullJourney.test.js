@@ -114,7 +114,7 @@ describe('Phase 10 — the real customer journey end to end: browse -> book -> s
     // 5. Full job lifecycle to completion.
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
     await request(app).post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set('Authorization', `Bearer ${serviceProviderToken}`).expect(200);
-    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ notes: 'Gas leak' }).expect(200);
+    await request(app).post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set('Authorization', `Bearer ${serviceProviderToken}`).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak' }).expect(200);
     await request(app)
       .post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`)
       .set('Authorization', `Bearer ${serviceProviderToken}`)

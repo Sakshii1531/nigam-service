@@ -85,7 +85,7 @@ test('WhatsApp → approval → partner completion → invoice and payment over 
   const detail = await call(request, 'get', `/brand/tickets/${row.id}`, owner.accessToken);
   const job = await call(request, 'post', `/service-provider/jobs/accept/${detail.job.id}`, partner.accessToken, {});
   for (const step of ['start-travel', 'arrive']) await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partner.accessToken, {});
-  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partner.accessToken, { notes: 'Loose electrical connection' });
+  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partner.accessToken, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Loose electrical connection' });
   await call(request, 'post', `/service-provider/jobs/${job.id}/spare-parts`, partner.accessToken, { parts: [] });
   await call(request, 'post', `/service-provider/jobs/${job.id}/repair-complete`, partner.accessToken, {});
   await call(request, 'post', `/service-provider/jobs/${job.id}/billing`, partner.accessToken, {});

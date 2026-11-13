@@ -548,7 +548,7 @@ const BookingSuccess = () => {
                     <p className="text-xs md:text-sm font-black leading-tight">
                       {isAccepted && serviceProvider
                         ? `${serviceProvider.name || "Service Provider"} is on the way!`
-                        : "Searching nearest certified serviceProvider in your territory"}
+                        : "Searching nearest certified service partner in your territory"}
                     </p>
                     <p className="text-[11px] text-white/90 font-medium mt-0.5">
                       {isAccepted && serviceProvider

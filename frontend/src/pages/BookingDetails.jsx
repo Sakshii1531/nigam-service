@@ -45,6 +45,7 @@ const SOCKET_URL = (
 ).replace(/\/api\/v1\/?$/, "");
 
 const STATUS_BADGES = {
+  'Payment pending': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200/80', dot: 'bg-amber-500' },
   Upcoming: {
     bg: "bg-blue-50",
     text: "text-blue-700",
@@ -342,7 +343,10 @@ const BookingDetails = () => {
   const orderId = booking.humanId || booking.id;
   const isCancelled = booking.status === "Cancelled";
   const isCompleted = booking.status === "Completed";
-  const badge = STATUS_BADGES[booking.status] || STATUS_BADGES.Upcoming;
+  // Held until the online advance is paid — no partner has been told yet.
+  const awaitingPayment = Boolean(booking.paymentExpiresAt) && !booking.advancePaid && booking.status !== "Cancelled";
+  const displayStatus = awaitingPayment ? "Payment pending" : booking.status || "Upcoming";
+  const badge = STATUS_BADGES[displayStatus] || STATUS_BADGES.Upcoming;
 
   const scheduledDateStr = booking.scheduledDate
     ? new Date(booking.scheduledDate).toLocaleDateString("en-IN", {
@@ -396,7 +400,7 @@ const BookingDetails = () => {
               </h1>
               <span
                 className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badge.bg} ${badge.text} ${badge.border}`}>
-                {booking.status || "Upcoming"}
+                {displayStatus}
               </span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">

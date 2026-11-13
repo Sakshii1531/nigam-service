@@ -60,6 +60,11 @@ const serviceProviderSchema = new mongoose.Schema(
     rating: { type: Number, default: 0 },
     activeJobsCount: { type: Number, default: 0 },
     completedJobsCount: { type: Number, default: 0 },
+    // Cash the customer handed this partner on completed jobs, and how much of it
+    // the partner has since handed over to NCC. The difference is cash the partner
+    // is still holding that belongs to the company.
+    cashCollected: { type: Number, default: 0, min: 0 },
+    cashRemitted: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: ['Active', 'Inactive', 'Pending'], default: 'Pending', index: true },
     availability: { type: String, enum: ['Available', 'Busy', 'Offline'], default: 'Offline', index: true },
     verification: {

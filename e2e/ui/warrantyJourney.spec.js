@@ -193,7 +193,7 @@ test('one warranty claim through the customer, Super Admin, brand and partner ap
   const job = (await call(request, 'get', '/service-provider/jobs/active', partnerSession.accessToken)).find((j) => j.warranty?.claimId === ticket);
   for (const [step, stage] of [['start-travel','En Route'], ['arrive','Reached']]) { await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partnerSession.accessToken); await expect(brandPage.getByTestId('job-stage')).toHaveText(stage); }
   await expect(customer.getByText('The technician is working on your product.')).toBeVisible({ timeout: 15_000 });
-  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerSession.accessToken, { notes: 'Capacitor replaced' });
+  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerSession.accessToken, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Capacitor replaced' });
   await expect(brandPage.getByTestId('job-stage')).toHaveText('Diagnosis');
   await call(request, 'post', `/service-provider/jobs/${job.id}/spare-parts`, partnerSession.accessToken, { parts: [] });
   await expect(brandPage.getByTestId('job-stage')).toHaveText('Repair');

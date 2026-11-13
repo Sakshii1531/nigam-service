@@ -66,7 +66,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
     setErrorMsg('');
 
     if (serviceProviderRating < 1 || serviceProviderRating > 5) {
-      setErrorMsg('Please select a rating for your serviceProvider (1 to 5 stars).');
+      setErrorMsg('Please select a rating for your service partner (1 to 5 stars).');
       return;
     }
 
@@ -255,7 +255,7 @@ const ServiceRatingCard = ({ service, onRatingSubmitted }) => {
                 onMouseLeave={() => setTechHover(0)}
                 onClick={() => setTechRating(star)}
                 className="p-1 cursor-pointer transition-transform hover:scale-110 active:scale-95"
-                aria-label={`Rate serviceProvider ${star} stars`}
+                aria-label={`Rate service partner ${star} stars`}
               >
                 <Star
                   className={`w-6 h-6 transition-colors ${

@@ -46,7 +46,7 @@ export async function detectCoverage({ userId, categoryKey, warranty = {} }) {
     newAppliance: warranty.newAppliance,
     protection:warranty.protection,
   });
-  return { coverageType: COVERAGE_BY_WARRANTY_STATUS[detection.warrantyStatus] || null, detection };
+  return { coverageType: COVERAGE_BY_WARRANTY_STATUS[detection.coverageStatus || detection.warrantyStatus] || null, detection };
 }
 
 const { OFFERING_NOT_BOOKABLE, VARIANT_REQUIRED, VARIANT_MISMATCH, COUPON_INVALID } = CATALOG_ERROR_CODES;
@@ -163,6 +163,8 @@ export async function buildQuote(input, { userId = null, coverageType: knownCove
   return {
     ...priced,
     coverageSource:detected?.detection?.coverageSource || null,
+    // Why a brand warranty did not make this visit free (shown to the customer).
+    coverageNote:detected?.detection?.brandWarrantyNote || null,
     lines: priced.lines.map((line, i) => {
       const { offering, rate, variant } = selections[i];
       return {

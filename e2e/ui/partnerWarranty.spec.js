@@ -147,7 +147,7 @@ test('a customer raises, answers, tracks and closes a Partner Warranty claim', a
 
   for (const step of ['start-travel', 'arrive']) await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partnerToken);
   await expect(page.getByText('The technician is working on your product.')).toBeVisible({ timeout: 10_000 });
-  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerToken, { notes: 'Gas leak fixed' });
+  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerToken, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak fixed' });
   await call(request, 'post', `/service-provider/jobs/${job.id}/spare-parts`, partnerToken, { parts: [] });
   await call(request, 'post', `/service-provider/jobs/${job.id}/repair-complete`, partnerToken);
   await call(request, 'post', `/service-provider/jobs/${job.id}/billing`, partnerToken);

@@ -455,6 +455,7 @@ export const ServiceProviderProvider = ({ children }) => {
             available: d.available || 0,
             paidOut: d.paidOut || 0,
             lifetimeEarned: d.lifetimeEarned || 0,
+            cashInHand: d.cashInHand || 0,
             split: d.split || {
               quick: { amount: 0, jobs: 0 },
               invoice: { amount: 0, jobs: 0 },
@@ -474,7 +475,7 @@ export const ServiceProviderProvider = ({ children }) => {
       await Promise.allSettled([loadInventory(), loadClaims(), loadEarnings()]);
     } catch (err) {
       console.error(
-        "Failed to fetch real jobs for serviceProvider:",
+        "Failed to fetch real jobs for service partner:",
         err.message,
       );
       // The other sections never started — stop their skeletons.
@@ -1337,6 +1338,7 @@ export const ServiceProviderProvider = ({ children }) => {
         available: d.available || 0,
         paidOut: d.paidOut || 0,
         lifetimeEarned: d.lifetimeEarned || 0,
+        cashInHand: d.cashInHand || 0,
         split: d.split || {
           quick: { amount: 0, jobs: 0 },
           invoice: { amount: 0, jobs: 0 },

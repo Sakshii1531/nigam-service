@@ -86,7 +86,7 @@ describe('paid AMC and extended-warranty lifecycle', () => {
       expect(job.type).toBe(kind === 'amc' ? 'AMC Visit' : 'NCC Extended Warranty');
       expect(kind === 'amc' ? job.amc.planName : job.ew.planName).toBe(plan.name);
       for (const action of ['start-travel', 'arrive']) await call('post', `/service-provider/jobs/${job.id}/${action}`, partner.token, {}).expect(200);
-      await call('post', `/service-provider/jobs/${job.id}/diagnosis`, partner.token, { notes: 'Scheduled covered repair' }).expect(200);
+      await call('post', `/service-provider/jobs/${job.id}/diagnosis`, partner.token, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Scheduled covered repair' }).expect(200);
       await call('post', `/service-provider/jobs/${job.id}/spare-parts`, partner.token, { parts: [{ name: 'Covered capacitor', price: 500, checked: true }] }).expect(200);
       await call('post', `/service-provider/jobs/${job.id}/repair-complete`, partner.token, {}).expect(200);
       const billing = (await call('post', `/service-provider/jobs/${job.id}/billing`, partner.token, {}).expect(200)).body.data.billingEstimate;

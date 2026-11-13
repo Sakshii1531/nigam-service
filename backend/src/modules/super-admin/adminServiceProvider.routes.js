@@ -12,6 +12,7 @@ import {
   listServiceProvidersQuerySchema,
   updateServiceProviderStatusSchema,
   idParamSchema,
+  cashRemittanceSchema,
 } from './adminServiceProvider.validation.js';
 
 export const adminServiceProviderRouter = Router();
@@ -96,6 +97,24 @@ adminServiceProviderRouter.patch(
   async (req, res, next) => {
     try {
       ok(res, await cityChangeService.changeCityDirectly(req.params.id, { ...req.body, adminId: req.user.id }));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * Records that a partner handed over cash they collected from customers.
+ * Super-admin only — it adjusts how much company money the partner holds.
+ */
+adminServiceProviderRouter.post(
+  '/:id/cash-remittance',
+  requireRole(ROLES.SUPER_ADMIN),
+  validate(idParamSchema, 'params'),
+  validate(cashRemittanceSchema),
+  async (req, res, next) => {
+    try {
+      ok(res, await adminServiceProviderService.recordCashRemittance(req.params.id, req.body, req.user?.id || req.user?._id));
     } catch (err) {
       next(err);
     }

@@ -151,6 +151,7 @@ test('report expands Maharashtra → Pune, filters, switches all reports and dow
     const job = await call(r, 'post', `/service-provider/jobs/accept/${detail.job.id}`, tech.accessToken, {});
     for (const step of ['start-travel', 'arrive']) await call(r, 'post', `/service-provider/jobs/${job.id}/${step}`, tech.accessToken, {});
     await call(r, 'post', `/service-provider/jobs/${job.id}/diagnosis`, tech.accessToken, {
+      photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' },
       notes: 'Cooling problem'
     });
     await call(r, 'post', `/service-provider/jobs/${job.id}/spare-parts`, tech.accessToken, {

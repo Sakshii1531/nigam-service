@@ -146,7 +146,7 @@ test('a service partner takes a warranty job from offer to NCC settlement', asyn
   // The partner finishes the job (API), the customer hands over the OTP.
   const job = (await call(request, 'get', '/service-provider/jobs/active', partner.accessToken)).find((j) => j.warranty?.claimId === claim.humanId);
   for (const step of ['start-travel', 'arrive']) await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partner.accessToken);
-  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partner.accessToken, { notes: 'Low gas' });
+  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partner.accessToken, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Low gas' });
   await call(request, 'post', `/service-provider/jobs/${job.id}/spare-parts`, partner.accessToken, { parts: [] });
   await call(request, 'post', `/service-provider/jobs/${job.id}/repair-complete`, partner.accessToken);
   await call(request, 'post', `/service-provider/jobs/${job.id}/billing`, partner.accessToken);

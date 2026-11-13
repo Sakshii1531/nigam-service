@@ -88,7 +88,7 @@ async function fullJourney(s) {
   const jobId = (await api().post(`/api/v1/service-provider/jobs/accept/${srId}`).set(auth).send({}).expect(200)).body.data.id;
   await api().post(`/api/v1/service-provider/warranty-jobs/${jobId}/schedule-visit`).set(auth).send({ date: tomorrow(), slot: 'Morning' }).expect(200);
   for (const step of ['start-travel', 'arrive']) await api().post(`/api/v1/service-provider/jobs/${jobId}/${step}`).set(auth).expect(200);
-  await api().post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'ok' }).expect(200);
+  await api().post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'ok' }).expect(200);
   await api().post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(auth).send({ parts: [] }).expect(200);
   await api().post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(auth).expect(200);
   await api().post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(auth).expect(200);

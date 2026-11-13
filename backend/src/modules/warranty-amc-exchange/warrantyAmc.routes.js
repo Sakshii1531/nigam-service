@@ -10,6 +10,7 @@ import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature, verifyCapturedPayment } from '../payments-wallet/paymentGateway.js';
 import { env } from '../../config/env.js';
 import { confirmCheckout } from './protectionCheckout.service.js';
+import { extendedWarrantyWindow } from '../shared/brandWarranty.js';
 
 /**
  * Creates the gateway order + Pending Payment for a warranty/AMC purchase and
@@ -223,8 +224,7 @@ router.post('/extended-warranty/orders', async (req, res) => {
       return res.status(400).json({ error: { message: 'Plan does not cover this appliance category' } });
     }
 
-    const validTill = new Date();
-    validTill.setFullYear(validTill.getFullYear() + ewPlan.durationYears);
+    const { validFrom, validTill } = await extendedWarrantyWindow({ brand, purchaseDate, months: ewPlan.durationYears * 12 });
 
     // An appliance reference is only accepted if it really belongs to this
     // customer — otherwise a policy could be attached to someone else's unit.
@@ -248,6 +248,7 @@ router.post('/extended-warranty/orders', async (req, res) => {
       modelNumber: modelName,
       purchaseDate,
       invoiceFileUrl,
+      validFrom,
       validTill,
       tierId: ewPlan.id,
       planName: ewPlan.name,

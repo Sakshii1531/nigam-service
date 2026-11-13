@@ -19,6 +19,7 @@ import { hashPassword } from '../src/modules/auth/password.js';
 import { ROLES } from '../src/config/constants.js';
 import { seedTestCatalogue } from './helpers/catalogue.js';
 import { testDbUri } from './helpers/testDb.js';
+import { brandWarrantyAppliance } from './helpers/coverage.js';
 
 const TEST_DB_URI = testDbUri('catalog_quote');
 
@@ -242,11 +243,19 @@ describe('express, coupon, coins, advance', () => {
 describe('warranty coverage is detected server-side, never declared', () => {
   const recent = () => new Date(Date.now() - 30 * 86400000).toISOString();
 
+  const qualifyingAppliance = async () => String((await brandWarrantyAppliance({ user: (await User.findOne({ phone: '9200000077' }))._id }))._id);
+
   it('a signed-in customer with an in-warranty appliance is quoted ₹0', async () => {
     const token = await customerToken();
-    const res = await quote([{ offeringId: await idOf('AC-WINDOW-INSTALL'), quantity: 1 }], { warranty: { brand: 'LG', purchaseDate: recent() } }, token);
+    const res = await quote([{ offeringId: await idOf('AC-WINDOW-INSTALL'), quantity: 1 }], { warranty: { brand: 'LG', applianceId: await qualifyingAppliance() } }, token);
     expect(res.body.data.lines[0].coverage).toEqual({ type: 'Brand Warranty', amount: 599 });
     expect(res.body.data.totals.final).toBe(0);
+  });
+
+  it('a typed-in purchase date alone does not make the visit free', async () => {
+    const token = await customerToken();
+    const res = await quote([{ offeringId: await idOf('AC-WINDOW-INSTALL'), quantity: 1 }], { warranty: { brand: 'LG', purchaseDate: recent() } }, token);
+    expect(res.body.data.totals.final).toBe(706.82);
   });
 
   it('a guest sending the same appliance details pays the normal price', async () => {
@@ -269,12 +278,13 @@ describe('warranty coverage is detected server-side, never declared', () => {
   it('the covered quote and the booking agree (no PRICE_CHANGED)', async () => {
     const token = await customerToken();
     const offeringId = await idOf('AC-WINDOW-INSTALL');
-    const purchaseDate = recent();
-    const q = await quote([{ offeringId, quantity: 1 }], { warranty: { brand: 'LG', purchaseDate } }, token);
+    const applianceId = await qualifyingAppliance();
+    const q = await quote([{ offeringId, quantity: 1 }], { warranty: { brand: 'LG', applianceId } }, token);
+    expect(q.body.data.totals.final).toBe(0);
     const res = await request(app)
       .post('/api/v1/bookings')
       .set('Authorization', `Bearer ${token}`)
-      .send({ offeringId, quantity: 1, brand: 'LG', purchaseDate, expectedFinalAmount: q.body.data.totals.final });
+      .send({ offeringId, quantity: 1, brand: 'LG', applianceId, expectedFinalAmount: q.body.data.totals.final });
     expect(res.status).toBe(201);
     expect(res.body.data.booking.totalPrice).toBe(0);
   });

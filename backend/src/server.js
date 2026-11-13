@@ -9,7 +9,8 @@ import { registerAllModels } from './config/registerModels.js';
 import { env } from './config/env.js';
 import { initSockets } from './sockets/index.js';
 import { expireStaleServiceRequests, sweepExpiredAssignments } from './modules/service-requests/serviceRequest.service.js';
-import { expireStaleSearches, reconcileCancelledBookings } from './modules/booking/booking.service.js';
+import { expireStaleSearches, expireUnpaidBookings, reconcileCancelledBookings } from './modules/booking/booking.service.js';
+import { reconcilePendingPayments } from './modules/payments-wallet/paymentSettlement.service.js';
 import { autoCloseCompletedClaims } from './modules/partner-warranty/partnerWarrantyJob.service.js';
 import { runSlaSweep } from './modules/partner-warranty/claimSla.service.js';
 import { runWebhookSweep } from './modules/partner-warranty/claimWebhooks.service.js';
@@ -54,6 +55,11 @@ async function main() {
       // Give up on searches past their window first, so the assignment sweep
       // doesn't pass those bookings on to yet another provider.
       await expireKitCheckouts();
+      // Money first: settle anything Razorpay captured that the customer's browser
+      // never reported, then cancel advances that were never paid.
+      await reconcilePendingPayments();
+      const unpaid = await expireUnpaidBookings();
+      if (unpaid.expired) console.log(`[payment-expiry] cancelled ${unpaid.expired} booking(s) whose advance was never paid`);
       await expireStaleServiceRequests();
       const { expired } = await expireStaleSearches();
       if (expired) console.log(`[search-expiry] stopped searching for ${expired} booking(s) after 30 minutes`);

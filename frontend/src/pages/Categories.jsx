@@ -218,7 +218,7 @@ const Categories = () => {
             <p className="text-[10px] min-[380px]:text-[11px] sm:text-xs text-blue-100 lg:text-slate-500 leading-tight">
               {searchQuery
                 ? `Showing results matching "${searchQuery}"`
-                : 'Browse verified serviceProviders and instant home services'}
+                : 'Browse verified service partners and instant home services'}
             </p>
 
             {/* Instant Search Bar */}

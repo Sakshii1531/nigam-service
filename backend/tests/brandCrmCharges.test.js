@@ -314,6 +314,7 @@ describe('Phase 12 frozen billing lines', () => {
       serviceProvider: sp.serviceProvider._id,
       warrantyClaim: c._id,
       activeStep: 'inspection',
+      diagnosis: { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' } },
       type: 'Brand Warranty'
     });
     const spy = jest.spyOn(BillingLine, 'create').mockRejectedValueOnce(new Error('Capture unavailable'));

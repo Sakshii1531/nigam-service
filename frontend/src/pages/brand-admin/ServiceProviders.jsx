@@ -299,7 +299,7 @@ const ServiceProviders = () => {
                         <td
                           colSpan={9}
                           className="px-6 py-10 text-center text-[#64748B] font-semibold">
-                          No serviceProviders have worked this brand's requests
+                          No service partners have worked this brand's requests
                           yet.
                         </td>
                       </tr>

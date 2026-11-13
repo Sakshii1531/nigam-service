@@ -10,11 +10,11 @@ import { LoadingSection, Skeleton, SkeletonText } from '../components/common/Ske
 const defaultTerms = [
   {
     heading: '1. Service Booking & Service Provider Dispatch',
-    text: 'Nigam Care Center (NCC) acts as a verified home service platform connecting clients with certified serviceProviders for AC repair, appliance servicing, electrical, plumbing, and cleaning tasks. By placing a booking, you agree to provide accurate location details and ensure adult supervision during doorstep appointments.',
+    text: 'Nigam Care Center (NCC) acts as a verified home service platform connecting clients with certified service partners for AC repair, appliance servicing, electrical, plumbing, and cleaning tasks. By placing a booking, you agree to provide accurate location details and ensure adult supervision during doorstep appointments.',
   },
   {
     heading: '2. Upfront Pricing & Payment Terms',
-    text: 'All visiting charges, diagnostic costs, and spare part prices are displayed upfront prior to job confirmation. Payments can be processed securely online via UPI, Credit/Debit Cards, NetBanking, or directly in cash to the serviceProvider upon satisfactory job completion.',
+    text: 'All visiting charges, diagnostic costs, and spare part prices are displayed upfront prior to job confirmation. Payments can be processed securely online via UPI, Credit/Debit Cards, NetBanking, or directly in cash to the service partner upon satisfactory job completion.',
   },
   {
     heading: '3. 30-Day Service Warranty Policy',
@@ -30,7 +30,7 @@ const defaultTerms = [
   },
   {
     heading: '6. Limitation of Liability',
-    text: 'NCC carries comprehensive liability coverage for serviceProvider property damage during active job execution. For support or dispute resolution, contact support@nccservice.in or call 1800-123-6222.',
+    text: 'NCC carries comprehensive liability coverage for service partner property damage during active job execution. For support or dispute resolution, contact support@nccservice.in or call 1800-123-6222.',
   },
 ];
 
@@ -49,7 +49,7 @@ const defaultPrivacy = [
   },
   {
     heading: '4. Sharing Information with Service Providers',
-    text: 'Your contact name and service address are shared exclusively with the assigned background-verified serviceProvider solely for the duration of the scheduled job slot.',
+    text: 'Your contact name and service address are shared exclusively with the assigned background-verified service partner solely for the duration of the scheduled job slot.',
   },
   {
     heading: '5. Cookies & Analytics',

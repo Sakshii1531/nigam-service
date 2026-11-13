@@ -91,7 +91,7 @@ describe('Phase 7 — the claim follows the Service Job', () => {
     expect(await statusOf(s.claim.id)).toBe('Technician On Way');
     await step(s, jobId, 'arrive');
     expect(await statusOf(s.claim.id)).toBe('Service In Progress');
-    await step(s, jobId, 'diagnosis', { notes: 'Gas leak' });
+    await step(s, jobId, 'diagnosis', { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak' });
     await step(s, jobId, 'spare-parts', { parts: [] });
     expect(await statusOf(s.claim.id)).toBe('Service In Progress');
     await step(s, jobId, 'repair-complete');
@@ -220,7 +220,7 @@ describe('Phase 7 — confirming and closing', () => {
     const jobId = await accept(s);
     await step(s, jobId, 'start-travel');
     await step(s, jobId, 'arrive');
-    await step(s, jobId, 'diagnosis', { notes: 'ok' });
+    await step(s, jobId, 'diagnosis', { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'ok' });
     await step(s, jobId, 'spare-parts', { parts: [] });
     await step(s, jobId, 'repair-complete');
     return { ...s, jobId };
@@ -281,7 +281,7 @@ describe('Phase 12 fix — a job change that leaves the claim status alone still
     const s = await approvedClaim();
     const jobId = await accept(s);
     for (const path of ['start-travel', 'arrive']) await step(s, jobId, path);
-    await step(s, jobId, 'diagnosis', { notes: 'ok' });
+    await step(s, jobId, 'diagnosis', { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'ok' });
     await step(s, jobId, 'spare-parts', { parts: [] });
     await step(s, jobId, 'repair-complete');
     await step(s, jobId, 'billing');

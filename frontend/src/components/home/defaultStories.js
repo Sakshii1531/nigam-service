@@ -33,7 +33,7 @@ export const DEFAULT_STORIES = [
       {
         image: geyserImg3,
         caption: 'Back to warm showers in no time',
-        subCaption: 'Our certified serviceProviders get your geyser fixed fast.',
+        subCaption: 'Our certified service partners get your geyser fixed fast.',
       },
     ],
   },

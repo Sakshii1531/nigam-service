@@ -46,12 +46,16 @@ export function jobFlow(getApp, { phoneStart = 9300100000 } = {}) {
   }
 
   /** Books `code`, has the partner accept it, and walks it to diagnosis. */
-  async function jobToBilling(code, { specs, sp: givenPartner, bookingOptions = {}, beforeWork } = {}) {
+  async function jobToBilling(code, { specs, sp: givenPartner, bookingOptions = {}, prepareBooking, beforeAccept, beforeWork } = {}) {
     const sp = givenPartner || (await partner(specs));
     const cust = await customer();
-    const body = await offeringBooking(code, { userId: String(cust.user._id), ...bookingOptions });
+    const extra = prepareBooking ? await prepareBooking(cust) : {};
+    const body = await offeringBooking(code, { userId: String(cust.user._id), ...bookingOptions, ...extra });
     const booked = await api().post('/api/v1/bookings').set('Authorization', `Bearer ${cust.token}`).send(body).expect(201);
     const { booking, serviceRequest, razorpay } = booked.body.data;
+
+    // An online advance has to be paid before any partner can see or accept the job.
+    if (beforeAccept) await beforeAccept({ booking, razorpay, custToken: cust.token });
 
     const auth = { Authorization: `Bearer ${sp.token}` };
     const accepted = await api().post(`/api/v1/service-provider/jobs/accept/${serviceRequest.id}`).set(auth).send({}).expect(200);
@@ -60,7 +64,7 @@ export function jobFlow(getApp, { phoneStart = 9300100000 } = {}) {
     if (beforeWork) await beforeWork({ jobId, auth, booking, razorpay, custToken: cust.token });
     await api().post(`/api/v1/service-provider/jobs/${jobId}/start-travel`).set(auth).expect(200);
     await api().post(`/api/v1/service-provider/jobs/${jobId}/arrive`).set(auth).expect(200);
-    await api().post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ notes: 'ok' }).expect(200);
+    await api().post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'ok' }).expect(200);
     return { jobId, auth, sp, cust, booking, serviceRequest, accepted: accepted.body.data };
   }
 

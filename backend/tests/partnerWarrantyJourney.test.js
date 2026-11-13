@@ -202,7 +202,7 @@ describe('Phase 16 — the client\'s Partner Warranty flow, end to end', () => {
     await expectInSync(claim.id, 'Technician On Way');
     await api().post(`/api/v1/service-provider/jobs/${job.id}/arrive`).set(auth).expect(200);
     await expectInSync(claim.id, 'Service In Progress');
-    await api().post(`/api/v1/service-provider/jobs/${job.id}/diagnosis`).set(auth).send({ notes: 'Gas leak at flare nut' }).expect(200);
+    await api().post(`/api/v1/service-provider/jobs/${job.id}/diagnosis`).set(auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak at flare nut' }).expect(200);
     await api().post(`/api/v1/service-provider/jobs/${job.id}/spare-parts`).set(auth).send({ parts: [{ name: 'Flare Nut', price: 120, checked: true }] }).expect((res) => { if (res.status !== 200) throw new Error(JSON.stringify(res.body)); }).expect(200);
     await fulfillWarrantyParts(kit,{jobId:job.id,claimId:claim.id,partner:partners.Chetan,brand:lg,admin,customer:cust});
     await api().post(`/api/v1/service-provider/jobs/${job.id}/repair-complete`).set(auth).expect(200);

@@ -164,6 +164,8 @@ const ServiceProviders = ({ pendingOnly = false }) => {
           trustScore: item.trustScore || 0,
           activeJobs: item.activeJobsCount || 0,
           completedJobs: item.completedJobsCount || 0,
+          // Customer cash this partner took and has not yet handed to NCC.
+          cashInHand: Math.max(0, Math.round(((item.cashCollected || 0) - (item.cashRemitted || 0)) * 100) / 100),
           status: item.status || "Pending",
           availability: item.availability || "Offline",
           // Derived from city, not stored — see adminServiceProvider.service.js's
@@ -259,6 +261,32 @@ const ServiceProviders = ({ pendingOnly = false }) => {
     setTimeout(() => {
       setSuccessMessage("");
     }, 3000);
+  };
+
+  // Super-admin records that a partner handed over cash collected from customers.
+  const recordCashHandOver = async (provider) => {
+    const answer = window.prompt(
+      `${provider.name} is holding ₹${provider.cashInHand.toLocaleString("en-IN")} of customer cash.\nHow much did they just hand over (₹)?`,
+      String(provider.cashInHand),
+    );
+    if (answer === null) return;
+    const amount = Number(answer);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast("Enter an amount greater than zero");
+      return;
+    }
+    try {
+      const saved = await apiRequest(`/super-admin/service-providers/${provider.id}/cash-remittance`, {
+        method: "POST",
+        auth: true,
+        body: { amount },
+      });
+      setServiceProviders((current) => current.map((t) => (t.id === provider.id ? { ...t, cashInHand: saved.cashInHand } : t)));
+      setSelectedTechProfile((current) => (current?.id === provider.id ? { ...current, cashInHand: saved.cashInHand } : current));
+      showToast(`Recorded ₹${amount.toLocaleString("en-IN")} handed over. ₹${saved.cashInHand.toLocaleString("en-IN")} still with the partner.`);
+    } catch (err) {
+      showToast(err.message || "Could not record the hand-over");
+    }
   };
 
   const handleStatusChange = async (id, newStatus) => {
@@ -756,6 +784,25 @@ const ServiceProviders = ({ pendingOnly = false }) => {
 
           {/* Right Column - Stats & History */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Cash the partner is holding for NCC */}
+            {user?.role === "super_admin" && (
+              <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 shadow-sm ${provider.cashInHand > 0 ? "border-amber-200 bg-amber-50" : "border-[#E2E8F0] bg-white"}`}>
+                <div>
+                  <p className="text-xs text-[#64748B] font-medium">Customer cash held by this partner</p>
+                  <p className="text-2xl font-bold text-[#1E293B] mt-1">₹{(provider.cashInHand || 0).toLocaleString("en-IN")}</p>
+                  <p className="text-[11px] text-[#64748B] mt-0.5">Cash taken from customers that still has to be handed to NCC.</p>
+                </div>
+                {provider.cashInHand > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => recordCashHandOver(provider)}
+                    className="px-4 py-2 rounded-lg bg-[#0D47A1] text-white text-xs font-bold hover:bg-[#0A3F91] cursor-pointer">
+                    Record hand-over
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm text-center">

@@ -75,7 +75,7 @@ async function completedWarrantyJob(s, { brandAdmin = s.lg, overrides = {} } = {
   const srId = String((await WarrantyClaim.findById(claim.id)).serviceRequest);
   const jobId = (await api().post(`/api/v1/service-provider/jobs/accept/${srId}`).set(s.auth).send({}).expect(200)).body.data.id;
   for (const step of ['start-travel', 'arrive']) await api().post(`/api/v1/service-provider/jobs/${jobId}/${step}`).set(s.auth).expect(200);
-  await api().post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(s.auth).send({ notes: 'ok' }).expect(200);
+  await api().post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`).set(s.auth).send({ photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'ok' }).expect(200);
   await api().post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`).set(s.auth).send({ parts: [] }).expect(200);
   await api().post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`).set(s.auth).expect(200);
   await api().post(`/api/v1/service-provider/jobs/${jobId}/billing`).set(s.auth).expect(200);

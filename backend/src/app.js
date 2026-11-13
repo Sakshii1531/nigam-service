@@ -141,7 +141,7 @@ export function createApp() {
     }),
   );
   app.use(express.json({ limit: '50mb', verify: (req, _res, buffer) => {
-    if (req.originalUrl.startsWith('/api/v1/provider-kit-payment-webhook')) req.rawBody = buffer;
+    if (req.originalUrl.startsWith('/api/v1/provider-kit-payment-webhook') || req.originalUrl.startsWith('/api/v1/razorpay-webhook')) req.rawBody = buffer;
   } }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.use(requestLogger);
@@ -211,6 +211,9 @@ export function createApp() {
   app.use('/api/v1/super-admin/provider-kits', adminKitRouter);
   app.use('/api/v1/super-admin/provider-kit-orders', adminKitOrderRouter);
   app.use('/api/v1/provider-kit-payment-webhook', providerPaymentWebhookRouter);
+  // The same handler under a name that says what it is: point Razorpay's
+  // webhook (payment.captured, refund.processed) here.
+  app.use('/api/v1/razorpay-webhook', providerPaymentWebhookRouter);
   app.use('/api/v1/service-provider/profile', serviceProviderRouter);
   app.use('/api/v1/service-provider/assistant', assistantRouter);
   app.use('/api/v1/service-provider/jobs', jobRouter);

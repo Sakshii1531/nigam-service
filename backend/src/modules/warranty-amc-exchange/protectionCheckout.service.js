@@ -13,6 +13,7 @@ import { Payment } from '../payments-wallet/payment.model.js';
 import { createRazorpayOrder, verifyRazorpaySignature, verifyCapturedPayment, findCapturedPayment } from '../payments-wallet/paymentGateway.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { env } from '../../config/env.js';
+import { extendedWarrantyWindow } from '../shared/brandWarranty.js';
 
 const purchaseModel=kind=>kind==='amc'?AMCSubscription:ExtendedWarrantyOrder;
 const targetType=kind=>kind==='amc'?'amc':'extended_warranty';
@@ -70,11 +71,12 @@ export async function prepareCheckout(userId,data){
   const months=data.kind==='amc'?plan.durationMonths:plan.durationYears*12;
   const snapshot=data.kind==='amc'?{name:plan.name,tier:plan.tier,description:plan.description,benefits:plan.benefits,price:plan.price,durationMonths:months,visitsTotal:plan.visitsTotal,requiresInvoice:plan.requiresInvoice,maxApplianceAgeMonths:plan.maxApplianceAgeMonths}
     :{name:plan.name,description:plan.description,features:plan.features,price:plan.price,durationYears:plan.durationYears,claimsTotal:plan.claimsTotal,requiresInvoice:plan.requiresInvoice,maxApplianceAgeMonths:plan.maxApplianceAgeMonths};
+  const ewWindow=data.kind==='amc'?null:await extendedWarrantyWindow({brand:brand.name,purchaseDate:appliance.purchaseDate,months});
   const session=await mongoose.startSession();
   try{await session.withTransaction(async()=>{
     const common={user:userId,appliance:appliance._id,applianceCategory:appliance.category,brand:brand.name,pincode:data.pincode,paid:plan.price===0,paidAt:plan.price===0?new Date():undefined,checkoutKey:data.key,planSnapshot:snapshot};
     const payload=data.kind==='amc'?{...common,plan:plan._id,model:appliance.modelNumber||appliance.model,installationDate:appliance.purchaseDate,expiryDate:endDate(months),visitsTotal:plan.visitsTotal,visitsRemaining:plan.visitsTotal}
-      :{...common,tierId:plan.id,planName:plan.name,price:plan.price,fullName:user.name,mobile:user.phone,email:user.email,modelNumber:appliance.modelNumber||appliance.model,purchaseDate:appliance.purchaseDate,validTill:endDate(months),coverage:plan.features,terms:plan.description,claimsTotal:plan.claimsTotal,claimsRemaining:plan.claimsTotal};
+      :{...common,tierId:plan.id,planName:plan.name,price:plan.price,fullName:user.name,mobile:user.phone,email:user.email,modelNumber:appliance.modelNumber||appliance.model,purchaseDate:appliance.purchaseDate,validFrom:ewWindow.validFrom,validTill:ewWindow.validTill,coverage:plan.features,terms:plan.description,claimsTotal:plan.claimsTotal,claimsRemaining:plan.claimsTotal};
     const [purchase]=await purchaseModel(data.kind).create([payload],{session});
     [checkout]=await ProtectionCheckout.create([{user:userId,key:data.key,kind:data.kind,fingerprint,purchase:purchase._id,amount:plan.price,durationMonths:months,invoiceName:invoice?.name,invoiceMimeType:invoice?.mimeType,invoiceData}],{session});
   });}catch(error){
@@ -102,6 +104,12 @@ export async function initiatePayment(userId,key){
     return {...await view(checkout),razorpay:gateway(payment)};
   }finally{await ProtectionCheckout.updateOne({_id:checkout._id},{$set:{paymentPreparingAt:null}});}
 }
+/** Settles an AMC / extended-warranty payment from Razorpay's own record (webhook or sweep). */
+export async function reconcileProtectionPayment(payment){
+  const checkout=await ProtectionCheckout.findOne({purchase:payment.targetId});
+  if(!checkout)return null;
+  return confirmCheckout(checkout.user,checkout.key,{},{reconcile:true});
+}
 export async function confirmCheckout(userId,key,data,{reconcile=false}={}){
   const checkout=await owned(userId,key),model=purchaseModel(checkout.kind);
   const purchase=await model.findById(checkout.purchase);
@@ -115,13 +123,14 @@ export async function confirmCheckout(userId,key,data,{reconcile=false}={}){
   if(reconcile){paymentId=await findCapturedPayment(payment.gatewayRef);if(!paymentId)throw new ApiError(409,'No captured payment was found yet. Wait briefly and check again.');}
   else if(!verifyRazorpaySignature({orderId:payment.gatewayRef,paymentId,signature:data.razorpaySignature}))throw new ApiError(400,'Payment signature verification failed');
   const capture=await verifyCapturedPayment({orderId:payment.gatewayRef,paymentId,amount:checkout.amount});
+  const paidAt=new Date();
+  const coverage=checkout.kind==='amc'?{expiryDate:endDate(checkout.durationMonths,paidAt)}:await extendedWarrantyWindow({brand:purchase.brand,purchaseDate:purchase.purchaseDate,months:checkout.durationMonths,from:paidAt});
   const session=await mongoose.startSession();
   try{await session.withTransaction(async()=>{
     const other=await Payment.exists({razorpayPaymentId:paymentId,status:'Success',_id:{$ne:payment._id}}).session(session);
     if(other)throw new ApiError(409,'This payment was already used');
-    const paidAt=new Date();
     await Payment.updateOne({_id:payment._id},{$set:{status:'Success',razorpayPaymentId:paymentId,method:({card:'Card',netbanking:'NetBanking',wallet:'Wallet'})[capture.method]||'UPI'}},{session});
-    await model.updateOne({_id:purchase._id,paid:false},{$set:{paid:true,paidAt,[checkout.kind==='amc'?'expiryDate':'validTill']:endDate(checkout.durationMonths,paidAt)}},{session});
+    await model.updateOne({_id:purchase._id,paid:false},{$set:{paid:true,paidAt,...coverage}},{session});
   });}finally{await session.endSession();}
   return view(checkout);
 }

@@ -17,6 +17,11 @@ const paymentSchema = new mongoose.Schema(
     gatewayRef: String,
     razorpayPaymentId: { type: String, default: null },
     coinsRedeemed: { type: Number, default: 0 },
+    // Set when money had to be returned automatically (e.g. a payment that landed
+    // after its booking was cancelled). refundError means the automatic refund
+    // failed and someone must return the money by hand.
+    refundReason: { type: String, default: null },
+    refundError: { type: String, default: null },
   },
   { timestamps: true },
 );

@@ -131,6 +131,10 @@ const bookingSchema = new mongoose.Schema(
       enum: ['NO_PROVIDERS_NEARBY', 'PROVIDERS_NOT_ACCEPTING', null],
       default: null,
     },
+    // Online advance not yet paid: the booking exists but is NOT offered to any
+    // partner until the advance is settled, and is auto-cancelled at this time
+    // if it never is (booking.service.js expireUnpaidBookings).
+    paymentExpiresAt: { type: Date, default: null, index: true },
     cancelledAt: { type: Date, default: null },
     rescheduledAt: { type: Date, default: null },
     rescheduleReason: { type: String, default: null },

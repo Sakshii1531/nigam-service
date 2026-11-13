@@ -86,11 +86,11 @@ const PartRequests = () => {
         status === 'Approved'
           ? 'Approved — request approved.'
           : status === 'Ready to Hand Over'
-          ? 'Marked ready — part is ready to hand over to the serviceProvider.'
+          ? 'Marked ready — part is ready to hand over to the service partner.'
           : status === 'Handed Over'
-          ? 'Handed over — parts given to serviceProvider & revisit has been rescheduled!'
+          ? 'Handed over — parts given to service partner & revisit has been rescheduled!'
           : status === 'Dispatched'
-          ? 'Dispatched — spare parts are on the way to serviceProvider.'
+          ? 'Dispatched — spare parts are on the way to service partner.'
           : status === 'Delivered'
           ? 'Delivered — parts delivered & serviceProvider revisit has been rescheduled!'
           : `Request marked ${status}.`,
@@ -156,7 +156,7 @@ const PartRequests = () => {
                 <Package size={32} className="text-slate-300" />
                 <p className="text-sm font-bold text-[#1E293B]">No part requests{filter === 'All' ? '' : ` marked ${filter}`}</p>
                 <p className="text-xs text-slate-500 max-w-sm">
-                  When a serviceProvider needs a spare part to finish a job, the request lands here for approval.
+                  When a service partner needs a spare part to finish a job, the request lands here for approval.
                 </p>
               </div>
             ) : (

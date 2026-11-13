@@ -374,7 +374,7 @@ async function upsertTechFixtures(customer) {
       durationYears: 2,
       price: 1399,
       description: 'Extends coverage by 2 full years from your current expiry date.',
-      features: ['2 years peace of mind', 'Priority serviceProvider booking', 'Comprehensive repair cover', 'Gas charging included'],
+      features: ['2 years peace of mind', 'Priority technician booking', 'Comprehensive repair cover', 'Gas charging included'],
       claimsTotal: 3,
       isActive: true,
     },

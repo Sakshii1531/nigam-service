@@ -21,6 +21,31 @@ export async function brandWarrantyMonths(brandName) {
   return partner?.warrantyMonths || catalogue?.warrantyMonths || DEFAULT_BRAND_WARRANTY_MONTHS;
 }
 
+/** `months` after `date`, keeping the day of month (31 Jan + 1 month = 28/29 Feb). */
+function addMonthsClamped(date, months) {
+  const end = new Date(date); const day = end.getDate();
+  end.setDate(1); end.setMonth(end.getMonth() + months);
+  const last = new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+  end.setDate(Math.min(day, last));
+  return end;
+}
+
+/**
+ * The period an extended warranty covers. It *extends* the manufacturer's
+ * warranty ("1 year from its current expiry"), so it starts when the brand
+ * warranty ends — or on the day it is bought if that has already passed (or
+ * the purchase date is unknown). It used to start on the payment date, so the
+ * customer lost the overlap and spent paid claims on repairs the brand owed.
+ */
+export async function extendedWarrantyWindow({ brand, purchaseDate, months, from = new Date() }) {
+  let validFrom = new Date(from);
+  if (purchaseDate) {
+    const brandEnds = addMonthsClamped(purchaseDate, await brandWarrantyMonths(brand));
+    if (brandEnds > validFrom) validFrom = brandEnds;
+  }
+  return { validFrom, validTill: addMonthsClamped(validFrom, months) };
+}
+
 // General text-search helper retained for ticket/customer filters. Tenant joins
 // use ObjectIds and do not use this helper.
 export { escapeRegex };

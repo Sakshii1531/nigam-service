@@ -81,7 +81,7 @@ const Verification = () => {
       {/* Main Content */}
       <div className="flex-1 p-4 lg:px-6 xl:px-8 flex flex-col gap-4 max-w-screen-xl mx-auto w-full">
 
-        {/* Status Header — reflects the serviceProvider's real verification record,
+        {/* Status Header — reflects the service partner's real verification record,
             which used to read "Verified Partner" for everyone. */}
         {documents === null && !error && (
           <LoadingSection

@@ -229,6 +229,9 @@ export async function getEarningsBreakdown(serviceProviderId) {
     bucket.jobs += 1;
   }
 
+  const holder = await ServiceProvider.findById(serviceProviderId).select('cashCollected cashRemitted').lean();
+  const cashInHand = Math.max(0, Math.round(((holder?.cashCollected || 0) - (holder?.cashRemitted || 0)) * 100) / 100);
+
   const withdrawn = paidOutRows[0]?.base || 0;
   const paidOut = paidOutRows[0]?.net || 0;
   return {
@@ -241,6 +244,8 @@ export async function getEarningsBreakdown(serviceProviderId) {
     lifetimeEarned: tally.total + withdrawn + b2b2c.pending.amount,
     split,
     b2b2c,
+    // Customer cash the partner is holding that still has to be handed to NCC.
+    cashInHand,
   };
 }
 

@@ -13,6 +13,7 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { ProviderKitOrder } from './kitOrder.model.js';
 import * as onboarding from './onboarding.service.js';
 import * as kits from './kit.service.js';
+import { settleCapturedEntity } from '../payments-wallet/paymentSettlement.service.js';
 const oid = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID');
 const reason = z.string().trim().min(3).max(2000);
 const wrap = fn => async (req, res, next) => { try { await fn(req, res); } catch (e) { next(e); } };
@@ -95,8 +96,8 @@ adminKitOrderRouter.post('/:id/receipt-exception', validate(z.object({ exception
 
 export const providerPaymentWebhookRouter = Router();
 providerPaymentWebhookRouter.post('/', wrap(async (req, res) => {
-  const secret = process.env.PROVIDER_KIT_WEBHOOK_SECRET;
-  if (!secret) throw new ApiError(503, 'Kit payment webhook is not configured');
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.PROVIDER_KIT_WEBHOOK_SECRET;
+  if (!secret) throw new ApiError(503, 'Payment webhook is not configured');
   const signature = req.get('x-razorpay-signature') || '';
   const expected = createHmac('sha256', secret).update(req.rawBody || '').digest('hex');
   if (!/^[a-f\d]{64}$/i.test(signature) || !timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'))) throw new ApiError(400, 'Invalid webhook signature');
@@ -106,6 +107,10 @@ providerPaymentWebhookRouter.post('/', wrap(async (req, res) => {
     if (order) {
       if (payment.amount !== Math.round(order.total * 100) || payment.currency !== 'INR' || payment.status !== 'captured') throw new ApiError(400, 'Webhook payment does not match order');
       await kits.settleKitPayment(order.id, payment.id);
+    } else {
+      // Not a partner kit: a booking advance, shop order, job payment or AMC /
+      // extended-warranty purchase whose customer never reported back.
+      await settleCapturedEntity(payment);
     }
   }
   const refund = req.body?.payload?.refund?.entity;

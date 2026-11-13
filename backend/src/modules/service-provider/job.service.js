@@ -78,6 +78,21 @@ async function syncJobTracking(job, stepOverride) {
   }
 }
 
+const IST_DAY = (date) => new Date(date).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+/**
+ * A visit booked for a future day cannot be started today: before this, a
+ * partner could tap "Start Trip" on a Friday booking on Monday, putting the
+ * customer's job in progress days early.
+ */
+export function assertNotBeforeScheduledDay(booking, now = new Date()) {
+  if (!booking || booking.isInstant || !booking.scheduledDate) return;
+  if (IST_DAY(booking.scheduledDate) > IST_DAY(now)) {
+    const when = new Date(booking.scheduledDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+    throw new ApiError(409, `This visit is booked for ${when}. You can start the trip on that day.`);
+  }
+}
+
 function ensureTransition(job, toStep) {
   if (job.activeStep === toStep) return;
   const allowed = JOB_STEP_TRANSITIONS[job.activeStep] || [];
@@ -86,6 +101,15 @@ function ensureTransition(job, toStep) {
       400,
       `Cannot move from "${job.activeStep}" to "${toStep}" (allowed: ${allowed.join(', ') || 'none — terminal state'})`,
     );
+  }
+  // The inspection photos ("Required for verification" in the partner app) are
+  // the only on-site proof of what was found. They used to be optional on the
+  // server, so a partner could skip straight through the inspection.
+  if (job.activeStep === 'inspection') {
+    const photos = job.diagnosis?.photos || {};
+    if (!photos.product || !photos.serial) {
+      throw new ApiError(400, 'Upload the product photo and the serial-number photo before leaving the inspection step');
+    }
   }
 }
 
@@ -133,6 +157,7 @@ async function simpleTransition(serviceProviderId, jobId, toStep, srStatus) {
   if ((job.activeStep === 'revisit_arrived' || job.activeStep === 'revisit_complete') && toStep === 'repaircomplete') targetStep = 'revisit_complete';
 
   ensureTransition(job, targetStep);
+  if (targetStep === 'ontheway') assertNotBeforeScheduledDay(job.serviceRequest?.booking);
   job.activeStep = targetStep;
   let updatedSr = null;
   if (job.warrantyClaim && ['repaircomplete', 'revisit_complete'].includes(targetStep)) {
@@ -242,6 +267,7 @@ export async function listAvailableJobs(serviceProviderId) {
       { serviceProvider: null, status: { $in: ['New', 'Assigned', 'Pending'] }, declinedBy: { $ne: serviceProviderId }, warrantyClaim: null },
     ],
     _id: { $nin: acceptedServiceRequestIds },
+    paymentHold: { $ne: true },
   })
     .populate('user').populate({path:'booking',select:'-businessBilling'})
     .populate(AMC_POPULATE)
@@ -672,6 +698,7 @@ export async function acceptJob(serviceProviderId, serviceRequestId, { type, amc
   if (['Cancelled', 'Closed', 'Completed', 'Customer Confirmation'].includes(serviceRequest.status)) {
     throw new ApiError(409, 'This service request is no longer available');
   }
+  if (serviceRequest.paymentHold) throw new ApiError(409, 'This booking is waiting for the customer to pay the advance');
 
   await assertJobEligible(serviceProviderId, { category: serviceRequest.category });
   const acceptingProvider = await ServiceProvider.findById(serviceProviderId).populate('city');
@@ -1383,7 +1410,14 @@ async function finalizeJobCompletion(job, payment) {
   job.activeStep = 'completed';
   await job.save();
 
-  await ServiceProvider.findByIdAndUpdate(serviceProviderId, { $inc: { activeJobsCount: -1, completedJobsCount: 1 } });
+  await ServiceProvider.findByIdAndUpdate(serviceProviderId, {
+    $inc: {
+      activeJobsCount: -1,
+      completedJobsCount: 1,
+      // Cash the partner took from the customer is the company's money in their hand.
+      ...(payment?.method === 'Cash' && payment.amount > 0 ? { cashCollected: payment.amount } : {}),
+    },
+  });
 
   // confirmRepairComplete() already drove the SR to 'Repair Completed'; collecting
   // payment is what hands it off to the customer for final sign-off. 'Closed' itself
@@ -1576,12 +1610,25 @@ export async function verifyJobPayment(serviceProviderId, jobId, { razorpayPayme
   const valid = verifyRazorpaySignature({ orderId: pendingPayment.gatewayRef, paymentId: razorpayPaymentId, signature: razorpaySignature });
   if (!valid) throw new ApiError(400, 'Payment signature verification failed');
 
-  pendingPayment.status = 'Success';
-  pendingPayment.razorpayPaymentId = razorpayPaymentId;
-  await pendingPayment.save();
-
-  const result = await finalizeJobCompletion(job, pendingPayment);
+  const result = await settleJobPayment(pendingPayment, razorpayPaymentId);
   return { ...result, razorpay: null };
+}
+
+/**
+ * The one place a job's online payment becomes "paid" — the partner's app
+ * (verifyJobPayment), Razorpay's webhook, or the reconciliation sweep. The
+ * Pending -> Success flip is atomic so the job is completed exactly once.
+ */
+export async function settleJobPayment(payment, razorpayPaymentId, { method } = {}) {
+  const claimed = await Payment.findOneAndUpdate(
+    { _id: payment._id, status: 'Pending' },
+    { $set: { status: 'Success', razorpayPaymentId, ...(method ? { method } : {}) } },
+    { new: true },
+  );
+  if (!claimed) return { settled: false, payment: await Payment.findById(payment._id) };
+  const job = await Job.findById(payment.targetId);
+  if (!job) return { settled: true, payment: claimed };
+  return finalizeJobCompletion(job, claimed);
 }
 
 /**

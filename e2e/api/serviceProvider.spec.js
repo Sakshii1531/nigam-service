@@ -91,7 +91,7 @@ test.describe('serviceProvider job lifecycle — D2C', () => {
 
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/arrive`, auth);
-    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { notes: 'Gas leak found' } });
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Gas leak found' } });
     const sparePartsRes = await request.post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`, {
       ...auth,
       data: { parts: [{ name: 'Gas Refill Kit', price: 500, checked: true }] },
@@ -131,7 +131,7 @@ test.describe('serviceProvider job lifecycle — D2C', () => {
 
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/arrive`, auth);
-    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: {} });
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' } } });
     await request.post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`, { ...auth, data: { parts: [] } });
     await request.post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/billing`, auth);
@@ -211,7 +211,7 @@ test.describe('serviceProvider job lifecycle — AMC-covered', () => {
 
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/arrive`, auth);
-    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { notes: 'Compressor issue' } });
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Compressor issue' } });
     await request.post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`, {
       ...auth,
       data: { parts: [{ name: 'Compressor Unit', price: 1500, checked: true }] },
@@ -236,7 +236,7 @@ test.describe('serviceProvider job lifecycle — AMC-covered', () => {
 
     await request.post(`/api/v1/service-provider/jobs/${jobId}/start-travel`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/arrive`, auth);
-    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: {} });
+    await request.post(`/api/v1/service-provider/jobs/${jobId}/diagnosis`, { ...auth, data: { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' } } });
     await request.post(`/api/v1/service-provider/jobs/${jobId}/spare-parts`, { ...auth, data: { parts: [] } });
     await request.post(`/api/v1/service-provider/jobs/${jobId}/repair-complete`, auth);
     await request.post(`/api/v1/service-provider/jobs/${jobId}/billing`, auth);

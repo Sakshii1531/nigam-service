@@ -15,7 +15,7 @@ import { PartOrder } from '../service-provider/partOrder.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 
 // How long a booking keeps looking for a service provider before giving up.
-import { SEARCH_WINDOW_MS } from '../shared/dispatchPolicy.js';
+import { SEARCH_WINDOW_MS, PAYMENT_WINDOW_MS } from '../shared/dispatchPolicy.js';
 export { SEARCH_WINDOW_MS };
 
 export const SEARCH_END_MESSAGES = Object.freeze({
@@ -29,7 +29,7 @@ import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 import { runInTransaction } from '../../utils/transaction.js';
 import { LiveTracking } from '../super-admin/liveTracking.model.js';
 import { Payment } from '../payments-wallet/payment.model.js';
-import { createRazorpayOrder, verifyRazorpaySignature } from '../payments-wallet/paymentGateway.js';
+import { createRazorpayOrder, verifyRazorpaySignature, refundPayment, findCapturedPayment, verifyCapturedPayment, paymentMethodFromGateway } from '../payments-wallet/paymentGateway.js';
 import { env } from '../../config/env.js';
 
 /**
@@ -130,7 +130,9 @@ export async function createBooking(userId, data) {
     categoryKey,
     warranty: { brand: data.brand, serialNo: data.serialNo, purchaseDate: data.purchaseDate, applianceId: data.applianceId, newAppliance: data.newAppliance, protection:data.protection },
   });
-  const { warrantyStatus, brandId, applianceId, amcSubscriptionId, extendedWarrantyOrderId } = detection;
+  const { brandId, applianceId, amcSubscriptionId, extendedWarrantyOrderId } = detection;
+  // The request is a brand-warranty claim only when the brand warranty actually covers this visit.
+  const warrantyStatus = detection.coverageStatus || detection.warrantyStatus;
 
   const quote = await buildQuote(
     {
@@ -163,15 +165,16 @@ export async function createBooking(userId, data) {
   const customerLat = data.address?.latitude != null ? Number(data.address.latitude) : null;
   const customerLng = data.address?.longitude != null ? Number(data.address.longitude) : null;
 
+  // An online advance has to be paid BEFORE any partner hears about the job.
+  // Previously the booking was assigned and broadcast first and the payment
+  // was collected afterwards, so an abandoned checkout left a live, unpaid job
+  // in the partner's feed. A held booking is created (the customer needs its
+  // id to pay) but stays invisible until the advance settles, and is
+  // auto-cancelled if it never does.
+  const holdForPayment = toRupees(quote.advanceAmount) > 0 && Boolean(data.paymentMethod) && data.paymentMethod !== 'Cash';
+
   // Nearest-to-farthest 1-by-1 service provider selection in the territory
-  const serviceProvider = await findAvailableServiceProvider({
-    category: categoryKey,
-    city: customerCity,
-    state: customerState,
-    pincode: data.address?.pincode,
-    latitude: customerLat,
-    longitude: customerLng,
-  });
+  const serviceProvider = holdForPayment ? null : await findAvailableServiceProvider(addressSearch(categoryKey, data.address));
 
   const initialInstantStatus = isInstant ? (serviceProvider ? 'ASSIGNED' : 'SEARCHING') : null;
 
@@ -217,6 +220,7 @@ export async function createBooking(userId, data) {
         instantStatus: initialInstantStatus,
         instantRequestedAt: isInstant ? new Date() : null,
         searchExpiresAt: new Date(Date.now() + SEARCH_WINDOW_MS),
+        paymentExpiresAt: holdForPayment ? new Date(Date.now() + PAYMENT_WINDOW_MS) : null,
       }], session ? { session } : {});
 
       const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(categoryKey)}\\s*[-—:]*\\s*`, 'i'), '');
@@ -243,6 +247,7 @@ export async function createBooking(userId, data) {
         extendedWarrantyOrder: extendedWarrantyOrderId,
         isInstant,
         instantStatus: initialInstantStatus,
+        paymentHold: holdForPayment,
       }, { session });
 
       if (serviceProvider) {
@@ -268,7 +273,7 @@ export async function createBooking(userId, data) {
   // handed a session so a rolled-back claim never notifies the brand.
   await emitWarrantyClaimNotification(serviceRequest);
 
-  await emitNotification('booking.created', { user: userId, category: categoryKey, bookingId: booking.id });
+  if (!holdForPayment) await emitNotification('booking.created', { user: userId, category: categoryKey, bookingId: booking.id });
   if (serviceProvider) {
     await emitNotification('serviceProvider.assigned', {
       user: userId,
@@ -277,110 +282,266 @@ export async function createBooking(userId, data) {
     });
   }
 
-  // Broadcast real-time dispatch event via Socket.IO for instant pop-up on service provider apps
-  const io = getIO();
-  if (io) {
-    const estEarnings = await estimateServiceProviderEarnings(serviceRequest, booking).catch(() => 0);
-    const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(categoryKey)}\\s*[-—:]*\\s*`, 'i'), '');
-    const displayServiceTitle = serviceName.toLowerCase().startsWith(categoryKey.toLowerCase())
-      ? serviceName
-      : `${categoryKey} — ${cleanServiceName || serviceName}`;
+  // Held bookings are offered to nobody until the advance is paid
+  // (releaseBookingToDispatch, called by the payment settlement).
+  if (!holdForPayment) await broadcastDispatch(booking, serviceRequest, serviceProvider);
 
-    const jobPayload = {
-      bookingId: booking.id,
-      serviceRequestId: serviceRequest.id,
-      category: categoryKey,
-      serviceName,
-      product: displayServiceTitle,
-      address: data.address ? `${data.address.house || ''}, ${data.address.landmark || ''}, ${data.address.city || ''}`.trim().replace(/^,\s*/, '') : 'Customer Address',
-      city: customerCity,
-      state: customerState,
-      fullName: data.fullName,
-      customerName: data.fullName,
-      mobile: data.mobile,
-      totalPrice: booking.totalPrice,
-      estEarnings,
-      isInstant,
-      scheduledTime: booking.timeSlot?.time || (isInstant ? 'ASAP' : 'Scheduled'),
-      scheduledDateLabel: booking.timeSlot?.date || 'Today',
-      assignedServiceProviderId: serviceProvider ? String(serviceProvider._id) : null,
-      assignedServiceProviderUserId: serviceProvider ? String(serviceProvider.user) : null,
-      instantStatus: initialInstantStatus,
-      isAvailableRequest: !serviceProvider,
-    };
-
-    if (serviceProvider) {
-      io.to(`service-provider:${serviceProvider._id}`).emit('job:assigned', jobPayload);
-      io.to(`service-provider:${serviceProvider.user}`).emit('job:assigned', jobPayload);
-      io.to(`service-provider:${serviceProvider._id}`).emit('instant:new_request', jobPayload);
-      io.to(`service-provider:${serviceProvider.user}`).emit('instant:new_request', jobPayload);
-      io.to(`service-provider:${serviceProvider._id}`).emit('instant:job_offered', jobPayload);
-      io.to(`service-provider:${serviceProvider.user}`).emit('instant:job_offered', jobPayload);
-
-      // Schedule 60-second waterfall cascade timeout for Candidate #1
-      scheduleDispatchTimeout(serviceRequest._id, serviceProvider._id);
-    } else {
-      await emitEligibleOffers(io, jobPayload, { city: customerCity, state: data.address?.state });
-    }
-  }
-
-  // An advance booking has to actually be charged. The advance amount was
-  // computed and stored, but nothing ever collected it — the payment screens
-  // navigated straight to the success page, so every "paid" booking was unpaid.
+  // An advance booking has to actually be charged: create the gateway order the
+  // customer pays against. If that fails, the held booking is closed rather
+  // than left behind as an unpayable ghost.
   let razorpay = null;
-  if (booking.advanceAmount > 0 && data.paymentMethod && data.paymentMethod !== 'Cash') {
-    const gatewayOrder = await createRazorpayOrder({
-      amount: booking.advanceAmount,
-      receipt: `booking_${booking.id}`,
-      notes: { bookingId: booking.id },
-    });
-    await Payment.create({
-      user: userId,
-      targetType: 'booking',
-      targetId: booking._id,
-      amount: booking.advanceAmount,
-      method: data.paymentMethod,
-      status: 'Pending',
-      gatewayRef: gatewayOrder.id,
-    });
-    razorpay = {
-      orderId: gatewayOrder.id,
-      amount: gatewayOrder.amount,
-      currency: gatewayOrder.currency,
-      keyId: env.razorpay.keyId,
-    };
+  if (holdForPayment) {
+    try {
+      const gatewayOrder = await createRazorpayOrder({
+        amount: booking.advanceAmount,
+        receipt: `booking_${booking.id}`,
+        notes: { bookingId: booking.id },
+      });
+      await Payment.create({
+        user: userId,
+        targetType: 'booking',
+        targetId: booking._id,
+        amount: booking.advanceAmount,
+        method: data.paymentMethod,
+        status: 'Pending',
+        gatewayRef: gatewayOrder.id,
+      });
+      razorpay = {
+        orderId: gatewayOrder.id,
+        amount: gatewayOrder.amount,
+        currency: gatewayOrder.currency,
+        keyId: env.razorpay.keyId,
+      };
+    } catch (err) {
+      await closeBooking(booking, { reason: 'Payment could not be started', timelineDescription: 'Payment could not be started — booking cancelled' }).catch(() => {});
+      if (quote.coinsToRedeem > 0) await creditCoins(userId, quote.coinsToRedeem, { reason: 'refund' }).catch(() => {});
+      throw err;
+    }
   }
 
   return { booking, serviceRequest, serviceProvider, razorpay };
 }
 
+/** Where a partner search for an address looks (city / state / pincode / pin). */
+function addressSearch(category, address = {}) {
+  const lat = address?.latitude != null ? Number(address.latitude) : null;
+  const lng = address?.longitude != null ? Number(address.longitude) : null;
+  return { category, city: address?.city || '', state: address?.state || '', pincode: address?.pincode, latitude: lat, longitude: lng };
+}
+
+/**
+ * Tells partners about a booking: the targeted `job:assigned` / `instant:*`
+ * events to the chosen partner (with the 60 s waterfall timer), or the open
+ * offer to every eligible partner nearby when nobody could be chosen. Reads
+ * everything from the saved booking, so it serves both a booking dispatched on
+ * creation and one released after its advance was paid.
+ */
+async function broadcastDispatch(booking, serviceRequest, serviceProvider) {
+  const io = getIO();
+  if (!io) return;
+  const categoryKey = booking.category;
+  const serviceName = booking.service?.name || categoryKey;
+  const isInstant = Boolean(booking.isInstant);
+  const initialInstantStatus = isInstant ? (serviceProvider ? 'ASSIGNED' : 'SEARCHING') : null;
+  const customerCity = booking.address?.city || '';
+  const customerState = booking.address?.state || '';
+
+  const estEarnings = await estimateServiceProviderEarnings(serviceRequest, booking).catch(() => 0);
+  const cleanServiceName = serviceName.replace(new RegExp(`^${escapeRegex(categoryKey)}\\s*[-—:]*\\s*`, 'i'), '');
+  const displayServiceTitle = serviceName.toLowerCase().startsWith(categoryKey.toLowerCase())
+    ? serviceName
+    : `${categoryKey} — ${cleanServiceName || serviceName}`;
+
+  const address = booking.address;
+  const jobPayload = {
+    bookingId: booking.id,
+    serviceRequestId: serviceRequest.id,
+    category: categoryKey,
+    serviceName,
+    product: displayServiceTitle,
+    address: address ? `${address.house || ''}, ${address.landmark || ''}, ${address.city || ''}`.trim().replace(/^,\s*/, '') : 'Customer Address',
+    city: customerCity,
+    state: customerState,
+    fullName: booking.fullName,
+    customerName: booking.fullName,
+    mobile: booking.mobile,
+    totalPrice: booking.totalPrice,
+    estEarnings,
+    isInstant,
+    scheduledTime: booking.timeSlot?.time || (isInstant ? 'ASAP' : 'Scheduled'),
+    scheduledDateLabel: booking.timeSlot?.date || 'Today',
+    assignedServiceProviderId: serviceProvider ? String(serviceProvider._id) : null,
+    assignedServiceProviderUserId: serviceProvider ? String(serviceProvider.user) : null,
+    instantStatus: initialInstantStatus,
+    isAvailableRequest: !serviceProvider,
+  };
+
+  if (serviceProvider) {
+    for (const room of [`service-provider:${serviceProvider._id}`, `service-provider:${serviceProvider.user}`]) {
+      io.to(room).emit('job:assigned', jobPayload);
+      io.to(room).emit('instant:new_request', jobPayload);
+      io.to(room).emit('instant:job_offered', jobPayload);
+    }
+    // Schedule 60-second waterfall cascade timeout for Candidate #1
+    scheduleDispatchTimeout(serviceRequest._id, serviceProvider._id);
+  } else {
+    await emitEligibleOffers(io, jobPayload, { city: customerCity, state: address?.state });
+  }
+}
+
+/**
+ * Releases a booking whose online advance has just been paid: lifts the
+ * payment hold, picks the nearest available partner (or opens it to all), and
+ * only now tells partners. Safe to call twice — the hold is claimed atomically,
+ * so exactly one caller dispatches.
+ */
+export async function releaseBookingToDispatch(bookingId) {
+  const booking = await Booking.findById(bookingId);
+  if (!booking || ['Cancelled', 'Completed'].includes(booking.status) || !booking.serviceRequest) return null;
+  const held = await ServiceRequest.findOneAndUpdate(
+    { _id: booking.serviceRequest, paymentHold: true },
+    { $set: { paymentHold: false } },
+    { new: true },
+  );
+  if (!held) return null;
+
+  const serviceProvider = await findAvailableServiceProvider(addressSearch(booking.category, booking.address));
+  let serviceRequest = held;
+  if (serviceProvider) {
+    await ServiceRequest.updateOne({ _id: held._id }, { $set: { serviceProvider: serviceProvider._id, assignedAt: new Date(), ...(held.isInstant ? { instantStatus: 'ASSIGNED' } : {}) } });
+    booking.serviceProvider = serviceProvider._id;
+    if (booking.isInstant) booking.instantStatus = 'ASSIGNED';
+    serviceRequest = await transitionStatus(held.id, 'Assigned', {
+      description: booking.isInstant ? `Instant auto-assigned to ${serviceProvider.name}` : `Auto-assigned to ${serviceProvider.name}`,
+    });
+  }
+  booking.paymentExpiresAt = null;
+  booking.searchExpiresAt = new Date(Date.now() + SEARCH_WINDOW_MS);
+  await booking.save();
+
+  await emitNotification('booking.created', { user: booking.user, category: booking.category, bookingId: booking.id });
+  if (serviceProvider) {
+    await emitNotification('serviceProvider.assigned', { user: booking.user, serviceProviderName: serviceProvider.name, serviceRequestId: serviceRequest.id });
+  }
+  await broadcastDispatch(booking, serviceRequest, serviceProvider);
+  return { booking, serviceRequest, serviceProvider };
+}
+
+/** Money is never kept for a booking that no longer exists. */
+async function refundCapturedPayment(payment, reason) {
+  try {
+    await refundPayment({ paymentId: payment.razorpayPaymentId, amount: payment.amount, notes: { reason, paymentRecord: String(payment._id) } });
+    await Payment.updateOne({ _id: payment._id }, { $set: { status: 'Refunded', refundReason: reason, refundError: null } });
+  } catch (err) {
+    // Money is held but could not be returned automatically — leave a mark
+    // finance/admin can find rather than losing it silently.
+    console.error('[refund] could not refund payment', payment.id, err.message);
+    await Payment.updateOne({ _id: payment._id }, { $set: { refundReason: reason, refundError: String(err.message || err).slice(0, 300) } });
+  }
+}
+
+/**
+ * The one place a booking advance becomes "paid", whoever noticed it first:
+ * the customer's browser (verifyBookingPayment), Razorpay's webhook, or the
+ * reconciliation sweep. The Pending -> Success flip is atomic, so only the first
+ * caller proceeds; everyone else gets the already-settled payment back.
+ */
+export async function settleBookingAdvance(payment, razorpayPaymentId, { method } = {}) {
+  const claimed = await Payment.findOneAndUpdate(
+    { _id: payment._id, status: 'Pending' },
+    { $set: { status: 'Success', razorpayPaymentId, ...(method ? { method } : {}) } },
+    { new: true },
+  );
+  if (!claimed) return { settled: false, payment: await Payment.findById(payment._id) };
+
+  const booking = await Booking.findById(payment.targetId);
+  if (!booking) return { settled: true, payment: claimed, booking: null };
+  if (booking.status === 'Cancelled') {
+    // The customer paid after we had already given up on the payment.
+    await refundCapturedPayment(claimed, 'Booking was cancelled before the payment arrived');
+    return { settled: true, payment: await Payment.findById(claimed._id), booking, refunded: true };
+  }
+  booking.advancePaid = true;
+  booking.paymentExpiresAt = null;
+  await booking.save();
+  await releaseBookingToDispatch(booking._id);
+  return { settled: true, payment: claimed, booking };
+}
+
+/** Looks at Razorpay itself: if the customer's order was in fact captured, settle it. */
+export async function reconcileBookingPayment(payment) {
+  const paymentId = await findCapturedPayment(payment.gatewayRef);
+  if (!paymentId) return false;
+  const capture = await verifyCapturedPayment({ orderId: payment.gatewayRef, paymentId, amount: payment.amount });
+  await settleBookingAdvance(payment, paymentId, { method: paymentMethodFromGateway(capture?.method) });
+  return true;
+}
+
 /**
  * Confirms a booking advance paid through Razorpay Checkout. The order id used
- * for signature verification is read from the Pending Payment this booking
- * created — never taken from the client (same reasoning as
- * order.service.js's verifyOrderPayment).
+ * for signature verification is read from the Payment this booking created —
+ * never taken from the client (same reasoning as order.service.js's
+ * verifyOrderPayment). Idempotent: if the webhook got there first the same
+ * payment id simply confirms again.
  */
 export async function verifyBookingPayment(userId, bookingId, { razorpayPaymentId, razorpaySignature }) {
   const booking = await findOwnedOr404(userId, bookingId);
 
-  const pendingPayment = await Payment.findOne({ targetType: 'booking', targetId: booking._id, status: 'Pending' });
-  if (!pendingPayment) throw new ApiError(400, 'No pending payment found for this booking');
+  const payment = await Payment.findOne({ targetType: 'booking', targetId: booking._id, status: { $in: ['Pending', 'Success', 'Refunded'] } }).sort({ createdAt: -1 });
+  if (!payment) throw new ApiError(400, 'No pending payment found for this booking');
 
   const valid = verifyRazorpaySignature({
-    orderId: pendingPayment.gatewayRef,
+    orderId: payment.gatewayRef,
     paymentId: razorpayPaymentId,
     signature: razorpaySignature,
   });
   if (!valid) throw new ApiError(400, 'Payment signature verification failed');
 
-  pendingPayment.status = 'Success';
-  pendingPayment.razorpayPaymentId = razorpayPaymentId;
-  await pendingPayment.save();
+  if (payment.status === 'Refunded') {
+    throw new ApiError(409, 'This booking was cancelled before your payment arrived. The amount is being refunded to your account.');
+  }
+  if (payment.status === 'Success') {
+    if (payment.razorpayPaymentId !== razorpayPaymentId) throw new ApiError(409, 'This booking was already paid with a different payment');
+  } else {
+    await settleBookingAdvance(payment, razorpayPaymentId);
+  }
 
-  booking.advancePaid = true;
-  await booking.save();
+  const fresh = await findOwnedOr404(userId, bookingId);
+  const settledPayment = await Payment.findById(payment._id);
+  if (settledPayment.status === 'Refunded') {
+    throw new ApiError(409, 'This booking was cancelled before your payment arrived. The amount is being refunded to your account.');
+  }
+  return { booking: fresh, payment: settledPayment };
+}
 
-  return { booking, payment: pendingPayment };
+/**
+ * Cancels bookings whose online advance was not paid within PAYMENT_WINDOW_MS.
+ * Before giving up it asks Razorpay whether the customer in fact paid (closed
+ * the tab, lost network) and settles instead of cancelling in that case.
+ */
+export async function expireUnpaidBookings(now = new Date()) {
+  const stale = await Booking.find({
+    paymentExpiresAt: { $ne: null, $lte: now },
+    advancePaid: { $ne: true },
+    status: { $nin: ['Cancelled', 'Completed'] },
+  });
+  let expired = 0;
+  for (const booking of stale) {
+    try {
+      const payment = await Payment.findOne({ targetType: 'booking', targetId: booking._id, status: 'Pending' }).sort({ createdAt: -1 });
+      if (payment && await reconcileBookingPayment(payment).catch(() => false)) continue;
+      if (payment) await Payment.updateOne({ _id: payment._id, status: 'Pending' }, { $set: { status: 'Failed' } });
+      await closeBooking(booking, {
+        reason: 'Advance payment was not completed in time',
+        timelineDescription: `Booking cancelled — the advance payment was not completed within ${PAYMENT_WINDOW_MS / 60000} minutes`,
+      });
+      await emitNotification('booking.payment_expired', { user: booking.user, category: booking.category });
+      expired += 1;
+    } catch (err) {
+      console.warn('[payment-expiry]', booking.id, err.message);
+    }
+  }
+  return { checked: stale.length, expired };
 }
 
 async function findOwnedOr404(userId, id) {

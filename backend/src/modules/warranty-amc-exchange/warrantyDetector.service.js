@@ -5,6 +5,21 @@ import { ExtendedWarrantyOrder } from './extendedWarrantyOrder.model.js';
 import { computeWarrantyStatus } from '../shared/warrantyEngine.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { brandWarrantyMonths } from '../shared/brandWarranty.js';
+import { ServiceRequest } from '../service-requests/serviceRequest.model.js';
+
+// A covered request uses its plan allowance when the job is completed. Until
+// then it is "in flight", and must still count against the allowance —
+// otherwise a 2-claim plan could have three covered bookings open at once and
+// all three would be done for free.
+const IN_FLIGHT = { status: { $nin: ['Cancelled', 'Customer Confirmation', 'Closed'] } };
+async function inFlightUse(field, ids) {
+  if (!ids.length) return new Map();
+  const rows = await ServiceRequest.aggregate([
+    { $match: { [field]: { $in: ids }, ...IN_FLIGHT } },
+    { $group: { _id: `$${field}`, n: { $sum: 1 } } },
+  ]);
+  return new Map(rows.map((r) => [String(r._id), r.n]));
+}
 
 /**
  * Automatically detects the warranty/AMC/Extended-Warranty status for a booking/complaint.
@@ -77,7 +92,7 @@ export async function detectWarrantyForAppliance({
     return !ownedModel || !model || ownedModel.trim().toLowerCase() === model.trim().toLowerCase();
   };
   const now = new Date();
-  const [amcCandidates, ewCandidates] = await Promise.all([
+  let [amcCandidates, ewCandidates] = await Promise.all([
     AMCSubscription.find({
       user: userId, paid: true, status: { $in: ['Active', 'Expiring Soon'] },
       visitsRemaining: { $gt: 0 }, expiryDate: { $gt: now },
@@ -85,8 +100,22 @@ export async function detectWarrantyForAppliance({
     ExtendedWarrantyOrder.find({
       user: userId, paid: true, status: 'Active', verificationStatus: { $ne: 'Rejected' },
       claimsRemaining: { $gt: 0 }, validTill: { $gt: now },
+      // An extended warranty only covers once the brand warranty has ended.
+      $or: [{ validFrom: null }, { validFrom: { $lte: now } }],
     }).sort({ createdAt: -1 }),
   ]);
+  // What the appliance *has* (shown in My Appliances) is decided before plans
+  // whose allowance is taken by open bookings are dropped — those still exist,
+  // they just cannot cover one more booking right now.
+  const hasAmc = amcCandidates.some((sub) => sub.plan && matchesAppliance(sub, sub.applianceCategory || sub.plan.applianceCategory, sub.model));
+  const hasEw = ewCandidates.some((order) => matchesAppliance(order, order.applianceCategory, order.modelNumber));
+  // Drop plans whose remaining allowance is already taken by open bookings.
+  const [amcBusy, ewBusy] = await Promise.all([
+    inFlightUse('amcSubscription', amcCandidates.map((s) => s._id)),
+    inFlightUse('extendedWarrantyOrder', ewCandidates.map((o) => o._id)),
+  ]);
+  amcCandidates = amcCandidates.filter((s) => s.visitsRemaining > (amcBusy.get(String(s._id)) || 0));
+  ewCandidates = ewCandidates.filter((o) => o.claimsRemaining > (ewBusy.get(String(o._id)) || 0));
   let amcSubscription = amcCandidates.find((sub) => sub.plan && matchesAppliance(
     sub, sub.applianceCategory || sub.plan.applianceCategory, sub.model,
   )) || null;
@@ -105,32 +134,56 @@ export async function detectWarrantyForAppliance({
 
   // 4. Compute status
   // The brand's own warranty length — not a flat 12 months for every brand.
+  const months = await brandWarrantyMonths(resolvedBrand);
+  // warrantyStatus: what the appliance has (display). coverageStatus: what
+  // this booking is actually covered by — the two differ when a plan's
+  // allowance is taken by open bookings, or a brand warranty cannot be billed.
   const warrantyStatus = computeWarrantyStatus({
+    purchaseDate: resolvedPurchaseDate, brandWarrantyMonths: months,
+    amcActive: hasAmc, extendedWarrantyActive: hasEw,
+  });
+  let coverageStatus = computeWarrantyStatus({
     purchaseDate: resolvedPurchaseDate,
-    brandWarrantyMonths: await brandWarrantyMonths(resolvedBrand),
+    brandWarrantyMonths: months,
     amcActive: !!amcSubscription,
     extendedWarrantyActive: !!extendedWarrantyOrder,
     extendedWarrantyValidTill: extendedWarrantyOrder?.validTill,
   });
 
+  // A free brand-warranty visit is billed to the brand, so it needs (a) a
+  // partner brand to bill and (b) proof of purchase. It used to be granted on
+  // the purchase date alone — a date the customer types — so any appliance
+  // could be booked for ₹0 and, for brands not onboarded, NCC absorbed it.
+  // Anything else is a normal paid visit; partner brands' customers can also
+  // raise a Partner Warranty claim, which the brand reviews.
+  let brandWarrantyNote = null;
+  if (coverageStatus === 'In Warranty') {
+    const hasInvoice = Boolean(appliance?.documents?.some((d) => d.kind === 'invoice'));
+    if (!brandDoc) brandWarrantyNote = `${resolvedBrand || 'This brand'} is not an NCC partner brand, so brand-warranty repairs are claimed from the manufacturer directly.`;
+    else if (!hasInvoice) brandWarrantyNote = 'Add the purchase invoice to this appliance in My Appliances to get the brand-warranty visit free.';
+    if (brandWarrantyNote) coverageStatus = 'Out of Warranty';
+  }
+
   // 5. Map to service provider job type
   let jobType = 'NCC Paid Service';
-  if (warrantyStatus === 'Extended Warranty') jobType = 'NCC Extended Warranty';
-  else if (warrantyStatus === 'AMC') jobType = 'AMC Visit';
-  else if (warrantyStatus === 'In Warranty') jobType = 'Brand Warranty';
+  if (coverageStatus === 'Extended Warranty') jobType = 'NCC Extended Warranty';
+  else if (coverageStatus === 'AMC') jobType = 'AMC Visit';
+  else if (coverageStatus === 'In Warranty') jobType = 'Brand Warranty';
 
   return {
     warrantyStatus,
+    coverageStatus,
     jobType,
     brandId: brandDoc?._id || null,
     applianceId: appliance?._id || null,
-    amcSubscriptionId: warrantyStatus === 'AMC' ? amcSubscription?._id || null : null,
-    extendedWarrantyOrderId: warrantyStatus === 'Extended Warranty' ? extendedWarrantyOrder?._id || null : null,
+    amcSubscriptionId: coverageStatus === 'AMC' ? amcSubscription?._id || null : null,
+    extendedWarrantyOrderId: coverageStatus === 'Extended Warranty' ? extendedWarrantyOrder?._id || null : null,
     purchaseDate: resolvedPurchaseDate || null,
     extendedWarrantyValidTill: extendedWarrantyOrder?.validTill || null,
     amcExpiryDate: amcSubscription?.expiryDate || null,
-    coverageSource: warrantyStatus === 'AMC' ? { kind:'amc', id:String(amcSubscription._id), name:amcSubscription.planSnapshot?.name || amcSubscription.plan.name, number:amcSubscription.humanId }
-      : warrantyStatus === 'Extended Warranty' ? { kind:'extended-warranty', id:String(extendedWarrantyOrder._id), name:extendedWarrantyOrder.planName || 'Extended Warranty', number:extendedWarrantyOrder.humanId }
-      : warrantyStatus === 'In Warranty' ? { kind:'brand', name:`${resolvedBrand || 'Manufacturer'} warranty` } : null,
+    brandWarrantyNote,
+    coverageSource: coverageStatus === 'AMC' ? { kind:'amc', id:String(amcSubscription._id), name:amcSubscription.planSnapshot?.name || amcSubscription.plan.name, number:amcSubscription.humanId }
+      : coverageStatus === 'Extended Warranty' ? { kind:'extended-warranty', id:String(extendedWarrantyOrder._id), name:extendedWarrantyOrder.planName || 'Extended Warranty', number:extendedWarrantyOrder.humanId }
+      : coverageStatus === 'In Warranty' ? { kind:'brand', name:`${resolvedBrand || 'Manufacturer'} warranty` } : null,
   };
 }

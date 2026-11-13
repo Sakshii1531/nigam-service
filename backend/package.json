@@ -7,8 +7,8 @@
     "node": ">=20.0.0 <25.0.0"
   },
   "scripts": {
-    "dev": "node api.js && nodemon src/server.js",
-    "start": "node api.js && node src/server.js",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
     "seed": "node scripts/seed.js",
     "seed:demo": "node scripts/seedDemoItems.js",
     "seed:catalogue": "node scripts/seedMasterCatalogue.js",
@@ -22,7 +22,7 @@
     "db:clean-test-data": "node scripts/cleanupTestData.mjs --apply",
     "push:doctor": "node scripts/pushDoctor.js",
     "loadtest": "node scripts/loadtest.js",
-    "test": "cross-env NODE_ENV=test OTP_PROVIDER=test node --experimental-vm-modules node_modules/.bin/jest --runInBand",
+    "test": "cross-env NODE_ENV=test OTP_PROVIDER=test node --experimental-vm-modules --max-old-space-size=6144 node_modules/jest/bin/jest.js --runInBand",
     "lint": "eslint ."
   },
   "dependencies": {

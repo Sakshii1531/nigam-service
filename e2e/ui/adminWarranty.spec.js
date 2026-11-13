@@ -130,7 +130,7 @@ test('Super Admin runs a stuck warranty claim to settlement', async ({ browser, 
   const srId = (await call(request, 'get', `/partner-warranty/claims/${claim.id}`, customer)).serviceRequestId;
   const job = await call(request, 'post', `/service-provider/jobs/accept/${srId}`, partnerToken, {});
   for (const step of ['start-travel', 'arrive']) await call(request, 'post', `/service-provider/jobs/${job.id}/${step}`, partnerToken);
-  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerToken, { notes: 'ok' });
+  await call(request, 'post', `/service-provider/jobs/${job.id}/diagnosis`, partnerToken, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'ok' });
   await call(request, 'post', `/service-provider/jobs/${job.id}/spare-parts`, partnerToken, { parts: [] });
   await call(request, 'post', `/service-provider/jobs/${job.id}/repair-complete`, partnerToken);
   await call(request, 'post', `/service-provider/jobs/${job.id}/billing`, partnerToken);

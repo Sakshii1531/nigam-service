@@ -35,7 +35,7 @@ function shape(item) {
 const Inventory = () => {
   const [parts, setParts] = useState([]);
   const STOCK_READ_ONLY =
-    'Stock belongs to each serviceProvider\'s own van inventory — a brand console can view it but not change it.';
+    'Stock belongs to each service partner\'s own van inventory — a brand console can view it but not change it.';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -244,7 +244,7 @@ const Inventory = () => {
                     <tr><td colSpan={8} className="px-6 py-10 text-center text-red-600 font-semibold">{error}</td></tr>
                   )}
                   {!loading && !error && filteredParts.length === 0 && (
-                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">No stock held by serviceProviders serving this brand.</td></tr>
+                    <tr><td colSpan={8} className="px-6 py-10 text-center text-[#64748B] font-semibold">No stock held by service partners serving this brand.</td></tr>
                   )}
                   {filteredParts.map((part) => (
                     <tr key={part.id} className="hover:bg-[#F8FAFC] transition-colors">

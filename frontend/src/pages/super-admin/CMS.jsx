@@ -71,7 +71,7 @@ const CMS = () => {
           { label: 'Response Time', value: '30 Mins' }
         ]);
         setDocTitle(pageData.title || 'Empowering Smart Home Care & Appliance Solutions');
-        setDocSubtitle(pageData.subtitle || "Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified serviceProviders.");
+        setDocSubtitle(pageData.subtitle || "Nigam Care Center (NCC) is India's leading home service network. We connect households with top-rated, background-verified service partners.");
         setTextContent(pageData.body || '');
         setDocVersion(pageData.version || 'v2.4.0');
         setDocContactEmail(pageData.contactEmail || (activeTab === 'policy' ? 'privacy@nccservice.in' : 'support@nccservice.in'));

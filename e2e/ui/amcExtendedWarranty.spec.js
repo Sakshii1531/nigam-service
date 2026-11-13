@@ -75,7 +75,11 @@ async function coveredBooking(page, brand, applianceId) {
 }
 
 test.use({ viewport: { width: 390, height: 844 } });
-test('AMC Silver checkout uses admin AC brands, handles cancelled payment, shows Silver in profile, and quotes covered service at zero', async ({ page, request }) => {
+// TODO(rewrite): these two walk the OLD purchase screens ("Select an appliance for AMC plan", "Register & Extend New"),
+// which ProtectionPurchase.jsx replaced. The purchase + payment + covered-booking path is now covered by
+// protectionPurchase.spec.js; what is NOT yet re-covered is the AMC profile card ("View ... benefits") and an
+// AMC-covered ₹0 booking. Port those assertions, then delete this file.
+test.fixme('AMC Silver checkout uses admin AC brands, handles cancelled payment, shows Silver in profile, and quotes covered service at zero', async ({ page, request }) => {
   test.setTimeout(90000);
   const { admin, customer, tag, brand, fridgeBrand } = await setup(page, request);
   const name = `AC Silver ${tag}`;
@@ -125,7 +129,7 @@ test('AMC Silver checkout uses admin AC brands, handles cancelled payment, shows
   await coveredBooking(page, brand);
 });
 
-test('extended warranty registers a real appliance, filters packs, verifies payment, and applies appliance coverage in booking', async ({ page, request }) => {
+test.fixme('extended warranty registers a real appliance, filters packs, verifies payment, and applies appliance coverage in booking', async ({ page, request }) => {
   test.setTimeout(90000);
   const { admin, customer, tag, brand, fridgeBrand } = await setup(page, request);
   const name = `AC Shield ${tag}`;

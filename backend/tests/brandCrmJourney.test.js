@@ -101,7 +101,7 @@ describe('Phase 19 client acceptance journeys', () => {
     });
     const { partner, job } = await acceptedJob(world, claim);
     for (const step of ['start-travel', 'arrive']) await api('post', `/service-provider/jobs/${job.id}/${step}`, partner).expect(200);
-    await api('post', `/service-provider/jobs/${job.id}/diagnosis`, partner, { notes: 'Fan motor failed' }).expect(200);
+    await api('post', `/service-provider/jobs/${job.id}/diagnosis`, partner, { photos: { product: 'https://example.test/product.jpg', serial: 'https://example.test/serial.jpg' }, notes: 'Fan motor failed' }).expect(200);
     await api('post', `/service-provider/jobs/${job.id}/spare-parts`, partner, {
       parts: [{ name: 'Fan Motor', sku: 'FM-19', price: 120, qty: 1, checked: true }]
     }).expect(200);
