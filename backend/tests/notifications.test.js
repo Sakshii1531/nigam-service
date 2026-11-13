@@ -20,13 +20,18 @@ import { testDbUri } from './helpers/testDb.js';
 
 // ── Mock firebase-admin before any import that touches it ─────────────────────
 const mockSendEachForMulticast = jest.fn();
-jest.unstable_mockModule('firebase-admin', () => ({
-  default: {
-    apps: [],
-    initializeApp: jest.fn(),
-    credential: { cert: jest.fn((sa) => sa) },
-    messaging: () => ({ sendEachForMulticast: mockSendEachForMulticast }),
-  },
+// Mirrors firebase-admin v14's real, modular-only API. The previous mock
+// emulated the old namespaced admin.messaging(), which v14 no longer has — so
+// these tests passed while push initialisation failed on every server.
+const mockApps = [];
+jest.unstable_mockModule('firebase-admin/app', () => ({
+  getApps: () => mockApps,
+  initializeApp: jest.fn((options) => { const app = { options }; mockApps.push(app); return app; }),
+  deleteApp: jest.fn(async (app) => { mockApps.splice(mockApps.indexOf(app), 1); }),
+  cert: jest.fn((sa) => sa),
+}));
+jest.unstable_mockModule('firebase-admin/messaging', () => ({
+  getMessaging: () => ({ sendEachForMulticast: mockSendEachForMulticast }),
 }));
 
 // ── Mock twilio ───────────────────────────────────────────────────────────────

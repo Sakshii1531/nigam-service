@@ -46,6 +46,10 @@ WEB_DIR="/var/www/nigamcare"
 FRONTEND_DIR="$ROOT_DIR/frontend"
 BACKEND_DIR="$ROOT_DIR/backend"
 
+# The whole deployment runs inside one { … } block: bash reads and parses it
+# completely before running any of it, so the `git reset` below cannot swap
+# in a different deploy.sh halfway through this run.
+{
 log_info "Starting deployment from repository root: $ROOT_DIR"
 
 # ------------------------------------------------------------------------------
@@ -56,7 +60,25 @@ CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 log_info "Current active branch: ${CURRENT_BRANCH}"
 
 git fetch origin "$CURRENT_BRANCH"
-git reset --hard "origin/$CURRENT_BRANCH"
+
+# Malware gate. This repository has been pushed with a hidden Node loader more
+# than once (in vite.config.js, backend/api.js and init files wired into the npm
+# scripts). Scan the incoming commit in a throw-away checkout BEFORE it replaces
+# the working tree or anything is installed, built or restarted — and scan it
+# with the scanner from the code already deployed here, so a malicious push
+# cannot also disable the check.
+INCOMING="$(git rev-parse "origin/$CURRENT_BRANCH")"
+VERIFY_DIR="$(mktemp -d /tmp/ncc-verify.XXXXXX)"
+git worktree add --detach "$VERIFY_DIR" "$INCOMING" >/dev/null 2>&1
+if ! (cd "$VERIFY_DIR" && node "$ROOT_DIR/scripts/scan-malware.mjs"); then
+    git worktree remove --force "$VERIFY_DIR" >/dev/null 2>&1 || true
+    log_error "Malware scan FAILED for commit ${INCOMING:0:7} — deployment aborted. Nothing was changed on this server."
+    exit 1
+fi
+git worktree remove --force "$VERIFY_DIR" >/dev/null 2>&1 || true
+log_success "Malware scan passed for commit ${INCOMING:0:7}"
+
+git reset --hard "$INCOMING"
 log_success "Git repository updated to latest commit $(git rev-parse --short HEAD)"
 
 # ------------------------------------------------------------------------------
@@ -138,13 +160,23 @@ fi
 # 6. Verification Health Checks
 # ------------------------------------------------------------------------------
 log_info "Running backend health check..."
-sleep 2
-
-HEALTH_CHECK=$(curl -s http://127.0.0.1:4000/api/v1/health || true)
-if echo "$HEALTH_CHECK" | grep -q "up"; then
+# The backend needs ~20-30 s to connect to MongoDB and build indexes after a
+# restart; the old single check after 2 s always ran too early and reported an
+# empty response even when everything was fine (or wrongly said nothing when it
+# was not). Poll for up to 2 minutes and fail the deploy if it never comes up.
+HEALTH_CHECK=""
+for _ in $(seq 1 40); do
+    HEALTH_CHECK=$(curl -s -m 5 http://127.0.0.1:4000/api/v1/health || true)
+    if echo "$HEALTH_CHECK" | grep -q '"status":"up"'; then break; fi
+    sleep 3
+done
+if echo "$HEALTH_CHECK" | grep -q '"status":"up"'; then
     log_success "Backend is UP and healthy: $HEALTH_CHECK"
 else
-    log_warning "Backend health check response: $HEALTH_CHECK"
+    log_error "Backend did not become healthy within 2 minutes. Last response: ${HEALTH_CHECK:-<none>}"
+    pm2 status nigam-backend || true
+    log_error "Check: pm2 logs nigam-backend --lines 100"
+    exit 1
 fi
 
 pm2 status nigam-backend
@@ -153,3 +185,5 @@ echo ""
 log_success "========================================================"
 log_success " Deployment Completed Successfully!"
 log_success "========================================================"
+}
+exit $?

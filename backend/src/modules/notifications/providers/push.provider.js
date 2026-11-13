@@ -15,12 +15,11 @@ async function getMessaging() {
   }
 
   try {
-    const adminModule = await import('firebase-admin');
-    const admin = adminModule.default || adminModule;
-    const apps = admin.apps || admin.getApps?.() || [];
-    const certFn = admin.credential?.cert || adminModule.cert;
-    const initAppFn = admin.initializeApp || adminModule.initializeApp;
-    const getMessagingFn = admin.messaging || adminModule.getMessaging;
+    // firebase-admin v12+ is modular: the old namespaced admin.messaging() /
+    // admin.apps no longer exist (v14 removed them), so initialisation always
+    // failed with "getMessagingFn is not a function" and no push was ever sent.
+    const { initializeApp, getApps, deleteApp, cert } = await import('firebase-admin/app');
+    const { getMessaging: messagingFor } = await import('firebase-admin/messaging');
 
     let serviceAccount;
     try {
@@ -30,16 +29,12 @@ async function getMessaging() {
     }
 
     // Reset the app if the credential changed
-    if (apps.length && initializedWith !== serviceAccountJson) {
-      await Promise.all(apps.map((a) => (a.delete ? a.delete().catch(() => {}) : Promise.resolve())));
+    if (getApps().length && initializedWith !== serviceAccountJson) {
+      await Promise.all(getApps().map((app) => deleteApp(app).catch(() => {})));
     }
 
-    const currentApps = admin.apps || admin.getApps?.() || [];
-    if (!currentApps.length) {
-      initAppFn({ credential: certFn(serviceAccount) });
-    }
-
-    messagingInstance = getMessagingFn();
+    const app = getApps()[0] || initializeApp({ credential: cert(serviceAccount) });
+    messagingInstance = messagingFor(app);
     initializedWith = serviceAccountJson;
     return messagingInstance;
   } catch (err) {
