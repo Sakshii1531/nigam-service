@@ -161,7 +161,11 @@ export function createApp() {
     app.use(
       rateLimit({
         windowMs: 15 * 60 * 1000,
-        limit: isProd ? 600 : 5000,
+        // A page makes ~15 API calls and some screens poll (Bookings every 5 s),
+        // so 600 per IP per 15 minutes was reached by one active customer — and
+        // far sooner by users sharing an office or mobile-carrier IP. This is a
+        // flood backstop; the credential endpoints have their own tight limit.
+        limit: isProd ? 4000 : 20000,
         standardHeaders: true,
         legacyHeaders: false,
         message: {

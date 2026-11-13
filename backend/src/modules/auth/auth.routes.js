@@ -28,11 +28,17 @@ import {
 
 export const authRouter = Router();
 
-// Tighter than the app-wide default (app.js) — these are the brute-force-sensitive
-// endpoints (password checks, OTP guesses). Skipped in NODE_ENV=test.
+// Tighter than the app-wide default (app.js) — for the brute-force-sensitive
+// endpoints only (password checks, OTP guesses, signup, password reset). It used
+// to cover the whole /auth router, including GET /auth/me, which the app calls
+// on every page load: a customer opening ~30 pages in 15 minutes (or several
+// users behind one office / mobile-carrier IP) was locked out with "Too many
+// login attempts". Only failed attempts count, so legitimate logins never
+// consume the budget. Skipped in NODE_ENV=test.
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: isProd ? 30 : 1000,
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -41,7 +47,7 @@ const authRateLimit = rateLimit({
     meta: {},
   },
 });
-if (!isTest) authRouter.use(authRateLimit);
+if (!isTest) authRouter.use(['/login', '/signup', '/otp', '/forgot-password', '/reset-password'], authRateLimit);
 
 // Separate, role+device-aware budgets for the two endpoints that actually
 // send an OTP (see otpRateLimit.js) — narrower and more targeted than the
