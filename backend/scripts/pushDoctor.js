@@ -83,20 +83,15 @@ function checkCredentials() {
 /** Does Firebase actually accept these credentials? */
 async function checkFirebaseAuth(account) {
   try {
-    const adminModule = await import('firebase-admin');
-    const admin = adminModule.default || adminModule;
-    const apps = admin.apps || admin.getApps?.() || [];
-    const certFn = admin.credential?.cert || adminModule.cert;
-    const initAppFn = admin.initializeApp || adminModule.initializeApp;
-
-    if (!apps.length) {
-      initAppFn({ credential: certFn(account) });
-    }
+    // firebase-admin v14 is modular-only (no admin.apps / admin.messaging()).
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getMessaging } = await import('firebase-admin/messaging');
+    const app = getApps()[0] || initializeApp({ credential: cert(account) });
     // getAccessToken() is the cheapest call that proves the key is live: it
     // round-trips to Google rather than just validating the JSON shape.
-    await certFn(account).getAccessToken();
+    await cert(account).getAccessToken();
     console.log(`${PASS} Firebase accepted the credentials`);
-    return admin;
+    return { messaging: () => getMessaging(app) };
   } catch (err) {
     console.log(`${FAIL} Firebase would not authenticate: ${err.message}`);
     // Two very different causes reach here, so name both rather than guess.
