@@ -15,8 +15,7 @@ import {
   CheckSquare,
   Radio,
   CheckCircle2,
-  ShieldCheck,
-} from "lucide-react";
+  ShieldCheck, UserCheck, Home } from "lucide-react";
 import { apiRequest, getStoredTokens } from "../lib/apiClient";
 import { io } from "socket.io-client";
 
@@ -326,7 +325,7 @@ const BookingSuccess = () => {
 
   // Time slot display
   const timeSlotDisplay = isInstant
-    ? "⚡ Right Now (Instant ASAP Service)"
+    ? "Right Now (Instant ASAP Service)"
     : {
         Morning: "8 AM – 11 AM",
         Afternoon: "12 PM – 3 PM",
@@ -530,19 +529,19 @@ const BookingSuccess = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] md:text-xs font-black uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    ⚡ Live Express Dispatch
+                    Live Express Dispatch
                   </span>
                   <span className="text-[11px] md:text-xs font-extrabold">
                     {isAccepted && serviceProvider
                       ? instantStatus === "EN_ROUTE"
-                        ? "🚗 On The Way"
-                        : "✅ Service Provider Booked"
-                      : "⏳ Looking for Nearby Tech..."}
+                        ? "On The Way"
+                        : "Service Provider Booked"
+                      : "Looking for Nearby Tech..."}
                   </span>
                 </div>
                 <div className="flex items-center gap-3.5 mt-3">
                   <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold shrink-0">
-                    {isAccepted && serviceProvider ? "👨‍🔧" : "⏱️"}
+                    {isAccepted && serviceProvider ? <UserCheck className="w-5 h-5" aria-hidden="true" /> : <Clock className="w-5 h-5" aria-hidden="true" />}
                   </div>
                   <div className="flex-1">
                     <p className="text-xs md:text-sm font-black leading-tight">
@@ -628,8 +627,8 @@ const BookingSuccess = () => {
                   </span>
                   <span className="text-brand-blue font-black shrink-0">
                     {instantStatus === "EN_ROUTE"
-                      ? "🚗 Driving to Location"
-                      : "⚡ On the way"}
+                      ? "Driving to Location"
+                      : "On the way"}
                   </span>
                 </div>
               </div>
@@ -698,15 +697,15 @@ const BookingSuccess = () => {
             <div className="bg-white rounded-2xl shadow-xs border border-slate-100 px-4 py-3 md:hidden">
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { icon: "👨‍🔧", label: "Verified\nServiceProviders" },
-                  { icon: "🔩", label: "Genuine\nSpare Parts" },
-                  { icon: "🛡️", label: "7-Day\nWarranty" },
-                  { icon: "🏠", label: "Doorstep\nService" },
+                  { icon: UserCheck, label: "Verified\nService Partners" },
+                  { icon: Wrench, label: "Genuine\nSpare Parts" },
+                  { icon: ShieldCheck, label: "7-Day\nWarranty" },
+                  { icon: Home, label: "Doorstep\nService" },
                 ].map((item) => (
                   <div
                     key={item.label}
                     className="flex flex-col items-center gap-1.5 text-center">
-                    <span className="text-xl">{item.icon}</span>
+                    <item.icon className="w-5 h-5 text-brand-blue" aria-hidden="true" />
                     <span className="text-[9px] text-slate-500 font-semibold leading-tight whitespace-pre-line">
                       {item.label}
                     </span>
@@ -752,15 +751,15 @@ const BookingSuccess = () => {
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { icon: "👨‍🔧", title: "Verified", sub: "Certified Experts" },
-                  { icon: "🔩", title: "Genuine", sub: "Spare Parts" },
-                  { icon: "🛡️", title: "7-Day", sub: "Job Warranty" },
-                  { icon: "🏠", title: "Doorstep", sub: "Service Delivery" },
+                  { icon: UserCheck, title: "Verified", sub: "Certified Experts" },
+                  { icon: Wrench, title: "Genuine", sub: "Spare Parts" },
+                  { icon: ShieldCheck, title: "7-Day", sub: "Job Warranty" },
+                  { icon: Home, title: "Doorstep", sub: "Service Delivery" },
                 ].map((item) => (
                   <div
                     key={item.title}
                     className="flex flex-col gap-1 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                    <span className="text-2xl">{item.icon}</span>
+                    <item.icon className="w-6 h-6 text-brand-blue" aria-hidden="true" />
                     <span className="text-xs font-black text-slate-900">
                       {item.title}
                     </span>

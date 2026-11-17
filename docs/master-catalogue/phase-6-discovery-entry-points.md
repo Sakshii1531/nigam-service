@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-25) |
+| **Status** | Done (2026-09-25) |
 | **Estimate** | 5–6 developer-days |
 | **Depends on** | Phase 4 |
 | **Client requirements** | 1, 15, 21, 22 |
@@ -87,7 +87,7 @@ page anywhere shows a price that did not come from the catalogue.
 - [x] `npm test -- catalogSearch` green
 - [x] `grep -rn "price=\${\|&price=\|?price=" frontend/src` → no hits in customer booking paths
 - [x] Entry-point matrix (6.5) filled in the log, all equal
-- [x] Client test 10 marked ✅
+- [x] Client test 10 marked Done
 
 ## Out of scope
 
@@ -99,7 +99,7 @@ Typo tolerance / fuzzy search (Atlas Search) if Mongo text search proves too str
 
 | Date | Commit | Notes |
 |---|---|---|
-| 2026-09-25 | `686c217` | (Phase 7 follow-up: a label naming a product type — "Split AC Installation" — now resolves to that type's price.) Search API + resolve + service-groups, deep links, short link, search UI, every customer entry point re-pointed. Backend 685/685, e2e 192 passed / 1 skipped, frontend build ✅ |
+| 2026-09-25 | `686c217` | (Phase 7 follow-up: a label naming a product type — "Split AC Installation" — now resolves to that type's price.) Search API + resolve + service-groups, deep links, short link, search UI, every customer entry point re-pointed. Backend 685/685, e2e 192 passed / 1 skipped, frontend build Done |
 
 ### What was built
 
@@ -169,9 +169,9 @@ Client's example queries (`backend/tests/catalogSearch.test.js`, 12 tests):
 
 | Offering | Quote | Search | Home tile | Deep link | Short link `/book/o/` | Category page | Step 2 | Step 4 |
 |---|---|---|---|---|---|---|---|---|
-| Split AC 1.5T Install | ₹1,768.82 | ✅ (group → pt+svc preselected) | — (no seeded tile) | ✅ `?pt=split&variant=15t&svc=installation` | ✅ | ✅ | ✅ | ✅ |
-| Fan × 2 | ₹705.64 | ✅ Dashboard search | — | ✅ (search link) | — | — | ✅ | ✅ |
-| Tank 501–1000 L | ₹824.82 | ✅ Categories search | — | ✅ (search link) | — | — | ✅ | ✅ |
+| Split AC 1.5T Install | ₹1,768.82 | (group → pt+svc preselected) | — (no seeded tile) | `?pt=split&variant=15t&svc=installation` | Done | Done | Done | Done |
+| Fan × 2 | ₹705.64 | Dashboard search | — | (search link) | — | — | Done | Done |
+| Tank 501–1000 L | ₹824.82 | Categories search | — | (search link) | — | — | Done | Done |
 
 The home tiles were checked separately:
 - The seeded "Repair" tile shows **from ₹349** (lowest AC repair: Window AC).

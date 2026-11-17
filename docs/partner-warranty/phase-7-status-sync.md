@@ -1,6 +1,6 @@
 # Phase 7 — Status sync + tracking + realtime
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Backend · **Delivers:** #4, #12, #13
+**Status:** Done (2026-09-30) · **Layer:** Backend · **Delivers:** #4, #12, #13
 
 ## Goal
 Whatever happens on the Service Job shows up on the claim — for customer,

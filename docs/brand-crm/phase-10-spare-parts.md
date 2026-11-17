@@ -1,6 +1,6 @@
 # Phase 10: Spare parts connection
 
-**Status:** ✅ Complete · **Layer:** Full stack + Partner app · **Delivers:** client §10, §14 (parts events), §20 (Parts section) · **Depends on:** Phases 6–8
+**Status:** Complete · **Layer:** Full stack + Partner app · **Delivers:** client §10, §14 (parts events), §20 (Parts section) · **Depends on:** Phases 6–8
 
 ## Goal
 Partner App → Parts Request → NCC/Brand Approval → Dispatch → Received →

@@ -1,6 +1,6 @@
 # Phase 5 — Approval → automatic Service Job
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Backend · **Delivers:** #8, #19
+**Status:** Done (2026-09-30) · **Layer:** Backend · **Delivers:** #8, #19
 
 ## Goal
 Brand approval creates the separate Service Job and starts dispatch, with no

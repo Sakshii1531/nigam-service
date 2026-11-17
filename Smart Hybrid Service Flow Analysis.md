@@ -4,7 +4,7 @@ Note: _This is purely the output of the chat conversation and does not contain a
 
 ### User Input
 
-Theplatform is a SmartHybridServiceManagement System that enables users to: Raise service requests (warranty / non-warranty) Automatically detect warranty eligibility Get instant serviceProvider assignment Track serviceProvider live via map Communicate securely using masked numbers The system eliminates manual vendor dependency and introduces privacy-first communication. 🎯 Key Objectives Automate service request lifecycle Enable real-time serviceProvider tracking Protect user & serviceProvider privacy via number masking Provide seamless warranty + paid service integration Build a scalable, high-performance service ecosystem 🧠 Core Business Logic 👉 Warranty Valid → Apply benefits → Notify brand → Assign serviceProvider Warranty Invalid → Paid service → Assign serviceProvider In all cases: ServiceProvider assignment is system-driven (no vendor assignment)APPLICATION TIMELINE: A PLAN FOR SUCCESS 🟢 🔄 End-to-End Workflow Step 1: User Request Initiation User can: Claim warranty OR Book normal service Inputs: Appliance details Issue description Address Time slot Media upload 🟡 Step 2: Smart Warranty Detection System checks: Invoice data Purchase date Warranty period Brand rules 👉 Warranty auto-applied if eligible 🔵 Step 3: Validation & Request Creation Request ID generated Service category validated Location mapped 🔴 Step 4: Intelligent ServiceProvider Assignment System assigns serviceProvider based on: Location proximity Skill match Availability Rating WorkloadAPPLICATION TIMELINE: A PLAN FOR SUCCESS 📍 Step5:LiveTrackingSystem(Google Maps Integration) Features: Real-time serviceProvider location tracking Route navigation using Google Maps ETA (Estimated Time of Arrival) Live movement updates User View: ServiceProvider on map Distance + arrival time ServiceProvider View: Navigation assistance Route optimization 🔐 Step 6: Secure Communication (Number Masking) Problem Solved: Direct number sharing leads to: Privacy issues Off-platform communication Solution: Number Masking System Temporary virtual numbers assigned User ↔ ServiceProvider communication via masked number Real numbers never exposed Features: Call masking Optional chat masking Session-based communication Auto-expiry after job completionAPPLICATION TIMELINE: A PLAN FOR SUCCESS Flow: 1.Job assigned 2.System generates masked number 3.Both parties communicate securely 4.Number expires after job closure 🏢 Step 7: Brand (Vendor) Role Warranty visibility Service monitoring Analy tics Escalation handling 👉 No serviceProvider assignment rights 🛠 Step 8: Service Execution ServiceProvider: Accepts job Navigates using maps Updates status: En Route In Progress Completes service 💳 Step 9: Payment System Warranty Case: Discount / free service Non-Warranty: Full payment Modes: UPI Card Wallet CashAPPLICATION TIMELINE: A PLAN FOR SUCCESS 🟣 Step 10: Job Completion&Closure Report + images uploaded Job marked complete User feedback collected Invoice generated Request closed 🔔 Step 11: Notification System Triggers: Request created ServiceProvider assigned ServiceProvider en route (with live tracking link) Job completed Payment done Channels: Push SMS WhatsApp 👥 Role-Based Modules 🧑‍💻 USER PANEL Raise request Upload warranty Track serviceProvider live Communicate via masked number Make payment Give feedbackAPPLICATION TIMELINE: A PLAN FOR SUCCESS 🏢 🛠 🧑‍💼 BRAND PANEL View warranty jobs Monitor service Analytics dashboard Escalation control SERVICE_PROVIDER PANEL Receive jobs Accept/reject Navigate via Google Maps Update status Communicate via masked number Upload reports ADMIN PANEL Manage users, brands, serviceProviders Configure assignment logic Manage masking system Monitor live tracking Commission control Reports & analytics
+Theplatform is a SmartHybridServiceManagement System that enables users to: Raise service requests (warranty / non-warranty) Automatically detect warranty eligibility Get instant serviceProvider assignment Track serviceProvider live via map Communicate securely using masked numbers The system eliminates manual vendor dependency and introduces privacy-first communication. Key Objectives Automate service request lifecycle Enable real-time serviceProvider tracking Protect user & serviceProvider privacy via number masking Provide seamless warranty + paid service integration Build a scalable, high-performance service ecosystem Core Business Logic Warranty Valid → Apply benefits → Notify brand → Assign serviceProvider Warranty Invalid → Paid service → Assign serviceProvider In all cases: ServiceProvider assignment is system-driven (no vendor assignment)APPLICATION TIMELINE: A PLAN FOR SUCCESS End-to-End Workflow Step 1: User Request Initiation User can: Claim warranty OR Book normal service Inputs: Appliance details Issue description Address Time slot Media upload Step 2: Smart Warranty Detection System checks: Invoice data Purchase date Warranty period Brand rules Warranty auto-applied if eligible Step 3: Validation & Request Creation Request ID generated Service category validated Location mapped Step 4: Intelligent ServiceProvider Assignment System assigns serviceProvider based on: Location proximity Skill match Availability Rating WorkloadAPPLICATION TIMELINE: A PLAN FOR SUCCESS Step5:LiveTrackingSystem(Google Maps Integration) Features: Real-time serviceProvider location tracking Route navigation using Google Maps ETA (Estimated Time of Arrival) Live movement updates User View: ServiceProvider on map Distance + arrival time ServiceProvider View: Navigation assistance Route optimization Step 6: Secure Communication (Number Masking) Problem Solved: Direct number sharing leads to: Privacy issues Off-platform communication Solution: Number Masking System Temporary virtual numbers assigned User ↔ ServiceProvider communication via masked number Real numbers never exposed Features: Call masking Optional chat masking Session-based communication Auto-expiry after job completionAPPLICATION TIMELINE: A PLAN FOR SUCCESS Flow: 1.Job assigned 2.System generates masked number 3.Both parties communicate securely 4.Number expires after job closure Step 7: Brand (Vendor) Role Warranty visibility Service monitoring Analy tics Escalation handling No serviceProvider assignment rights 🛠 Step 8: Service Execution ServiceProvider: Accepts job Navigates using maps Updates status: En Route In Progress Completes service Step 9: Payment System Warranty Case: Discount / free service Non-Warranty: Full payment Modes: UPI Card Wallet CashAPPLICATION TIMELINE: A PLAN FOR SUCCESS Step 10: Job Completion&Closure Report + images uploaded Job marked complete User feedback collected Invoice generated Request closed Step 11: Notification System Triggers: Request created ServiceProvider assigned ServiceProvider en route (with live tracking link) Job completed Payment done Channels: Push SMS WhatsApp Role-Based Modules USER PANEL Raise request Upload warranty Track serviceProvider live Communicate via masked number Make payment Give feedbackAPPLICATION TIMELINE: A PLAN FOR SUCCESS 🛠 BRAND PANEL View warranty jobs Monitor service Analytics dashboard Escalation control SERVICE_PROVIDER PANEL Receive jobs Accept/reject Navigate via Google Maps Update status Communicate via masked number Upload reports ADMIN PANEL Manage users, brands, serviceProviders Configure assignment logic Manage masking system Monitor live tracking Commission control Reports & analytics
 
 this the scope of work for this project so please deeply analyze and tell me the exact flow of 
 extended warranty
@@ -52,7 +52,7 @@ Let's present a clear, professional, and detailed report.Aapke provided **Smart 
 
 ---
 
-# 1. 🛡️ Extended Warranty Flow (Extended Warranty Kharidne se Claim tak)
+# 1. Extended Warranty Flow (Extended Warranty Kharidne se Claim tak)
 
 Extended Warranty service users ko unke appliance ki primary manufacturer warranty khatam hone ke baad extra coverage guarantee karti hai.
 
@@ -97,7 +97,7 @@ Extended Warranty service users ko unke appliance ki primary manufacturer warran
 
 ---
 
-# 2. 🔄 Appliance Exchange Flow (Old Product Exchange)
+# 2. Appliance Exchange Flow (Old Product Exchange)
 
 Old appliance exchange flow users ko apna purana product dekar new appliance kharidne ya platform credits/cashback lene me help karta hai.
 
@@ -129,7 +129,7 @@ Old appliance exchange flow users ko apna purana product dekar new appliance kha
 
 ---
 
-# 3. 🛍️ Buy Flow (New Appliance / Spare Parts / Accessories Purchase)
+# 3. Buy Flow (New Appliance / Spare Parts / Accessories Purchase)
 
 Platform se naye products, genuine spare parts, ya accessories kharidne ka direct flow:
 
@@ -158,7 +158,7 @@ Platform se naye products, genuine spare parts, ya accessories kharidne ka direc
 
 ---
 
-# 4. 📅 AMC (Annual Maintenance Contract) Plans Flow
+# 4. AMC (Annual Maintenance Contract) Plans Flow
 
 AMC plan users ko regular maintenance, periodic checkups, Free breakdown visits, aur discounted spare parts provide karta hai.
 
@@ -198,7 +198,7 @@ AMC plan users ko regular maintenance, periodic checkups, Free breakdown visits,
 
 ---
 
-### 📊 Comprehensive Flow Summary Table
+### Comprehensive Flow Summary Table
 
 | Module | Trigger Point | Validation / Engine | Primary Outcome | Key Panel Stakeholders |
 | :--- | :--- | :--- | :--- | :--- |
@@ -320,54 +320,54 @@ Niche **Available vs. Missing Features Ka Detailed Checklist** diya gaya hai:
 
 ---
 
-# 📋 Phase A: Purchase & Activation (Extended Warranty Purchase) Checklist
+# Phase A: Purchase & Activation (Extended Warranty Purchase) Checklist
 
 ---
 
 ### Step 1: User Initiation
 | Requirement | Status | Available in Code | Missing in Code |
 | :--- | :---: | :--- | :--- |
-| **Select Existing Appliance / Register New** | 🟡 Partial | UI present in [`ExtendWarranty.jsx`](file:///c:/Users/HP/Desktop/nigam-service/frontend/src/pages/ExtendWarranty.jsx) to select registered appliance or input Category/Brand/Model/Serial No. | Real-time fetch of user's registered appliances from backend DB `OwnedAppliance`. |
-| **Invoice Upload** | 🟡 Partial | UI file input & upload progress bar state in `ExtendWarranty.jsx`. | Cloud Storage integration (e.g. AWS S3 / Cloudinary upload route) to store invoice PDF/Image URL in backend. |
-| **System Check (Purchase Date, Category, Brand)** | 🟢 Available | `warrantyDetector.service.js` has brand/category resolution and purchase date check logic. | Linking frontend date input directly to rule-check API before plan display. |
-| **Display Extended Warranty Plans (1 Year / 2 Year)** | 🟢 Available | Frontend UI displays 1-Year (₹799) & 2-Year Gold (₹1399) extension packs. | Admin API to dynamically configure plan prices based on Appliance Category/Brand (currently static in UI). |
+| **Select Existing Appliance / Register New** | Partial | UI present in [`ExtendWarranty.jsx`](file:///c:/Users/HP/Desktop/nigam-service/frontend/src/pages/ExtendWarranty.jsx) to select registered appliance or input Category/Brand/Model/Serial No. | Real-time fetch of user's registered appliances from backend DB `OwnedAppliance`. |
+| **Invoice Upload** | Partial | UI file input & upload progress bar state in `ExtendWarranty.jsx`. | Cloud Storage integration (e.g. AWS S3 / Cloudinary upload route) to store invoice PDF/Image URL in backend. |
+| **System Check (Purchase Date, Category, Brand)** | Available | `warrantyDetector.service.js` has brand/category resolution and purchase date check logic. | Linking frontend date input directly to rule-check API before plan display. |
+| **Display Extended Warranty Plans (1 Year / 2 Year)** | Available | Frontend UI displays 1-Year (₹799) & 2-Year Gold (₹1399) extension packs. | Admin API to dynamically configure plan prices based on Appliance Category/Brand (currently static in UI). |
 
 ---
 
 ### Step 2: Eligibility & Plan Selection
 | Requirement | Status | Available in Code | Missing in Code |
 | :--- | :---: | :--- | :--- |
-| **Smart Rule Engine Check** <br> *(Appliance Age < 3 or 5 Years & Invoice Validity)* | 🟡 Partial | `computeWarrantyStatus` in `warrantyEngine.js` checks purchase date relative to warranty age. | Strict backend API validation blocking purchase if age exceeds brand limit (e.g. >3/5 years). |
-| **User Plan Selection** | 🟢 Available | Interactive selection state (`setSelectedPlan`) in `ExtendWarranty.jsx`. | Storing transient selection in checkout session state. |
+| **Smart Rule Engine Check** <br> *(Appliance Age < 3 or 5 Years & Invoice Validity)* | Partial | `computeWarrantyStatus` in `warrantyEngine.js` checks purchase date relative to warranty age. | Strict backend API validation blocking purchase if age exceeds brand limit (e.g. >3/5 years). |
+| **User Plan Selection** | Available | Interactive selection state (`setSelectedPlan`) in `ExtendWarranty.jsx`. | Storing transient selection in checkout session state. |
 
 ---
 
 ### Step 3: Payment & Policy Generation
 | Requirement | Status | Available in Code | Missing in Code |
 | :--- | :---: | :--- | :--- |
-| **Payment Gateway Integration** <br> *(UPI / Card / Wallet / Netbanking)* | 🟡 Partial | UI has Payment Options (UPI & Card Mock Flow). Backend `payments-wallet` module exists. | Real Razorpay / Cashfree / PhonePe gateway webhook verification for Extended Warranty order creation. |
-| **Unique Warranty Certificate & Policy ID Generation** | 🟢 Available | Backend `extendedWarrantyOrder.model.js` auto-generates prefixed ID (e.g., `EW-XXXXX`). | Auto PDF Certificate Generation Service (e.g. via `pdfkit` / `puppeteer`) to generate downloadable certificate PDF. |
-| **PDF Attachment to User Panel** | 🔴 Missing | Policy details table shown on success screen in UI. | PDF generation & file attachment link stored in `invoiceFileUrl` / `certificateUrl`. |
-| **Policy State set to 'Active'** <br> *(ValidTill calculation & Claim count initialization)* | 🟢 Available | `extendedWarrantyOrder.model.js` schema includes `status: 'Active'`, `validTill`, `claimsTotal`, `claimsRemaining`. | API endpoint to execute database saving upon payment webhook trigger. |
+| **Payment Gateway Integration** <br> *(UPI / Card / Wallet / Netbanking)* | Partial | UI has Payment Options (UPI & Card Mock Flow). Backend `payments-wallet` module exists. | Real Razorpay / Cashfree / PhonePe gateway webhook verification for Extended Warranty order creation. |
+| **Unique Warranty Certificate & Policy ID Generation** | Available | Backend `extendedWarrantyOrder.model.js` auto-generates prefixed ID (e.g., `EW-XXXXX`). | Auto PDF Certificate Generation Service (e.g. via `pdfkit` / `puppeteer`) to generate downloadable certificate PDF. |
+| **PDF Attachment to User Panel** | Missing | Policy details table shown on success screen in UI. | PDF generation & file attachment link stored in `invoiceFileUrl` / `certificateUrl`. |
+| **Policy State set to 'Active'** <br> *(ValidTill calculation & Claim count initialization)* | Available | `extendedWarrantyOrder.model.js` schema includes `status: 'Active'`, `validTill`, `claimsTotal`, `claimsRemaining`. | API endpoint to execute database saving upon payment webhook trigger. |
 
 ---
 
 ### Step 4: Notification
 | Requirement | Status | Available in Code | Missing in Code |
 | :--- | :---: | :--- | :--- |
-| **WhatsApp / SMS / Email Notifications** | 🟡 Partial | `notifications` backend module exists for SMS / Push. | Trigger event on Extended Warranty Order creation sending WhatsApp/SMS with policy link. |
-| **Brand/System Admin Notification** | 🟡 Partial | Socket notification structure & Admin notification log exist. | Automatic sync event notifying Brand Admin panel of new Extended Warranty registration. |
+| **WhatsApp / SMS / Email Notifications** | Partial | `notifications` backend module exists for SMS / Push. | Trigger event on Extended Warranty Order creation sending WhatsApp/SMS with policy link. |
+| **Brand/System Admin Notification** | Partial | Socket notification structure & Admin notification log exist. | Automatic sync event notifying Brand Admin panel of new Extended Warranty registration. |
 
 ---
 
-## 🎯 Summary Checklist & Action Plan (Without Code Modification)
+## Summary Checklist & Action Plan (Without Code Modification)
 
-### ✅ What is ALREADY BUILT:
+### What is ALREADY BUILT:
 1. **Frontend Flow UI**: Complete multi-step wizard in `ExtendWarranty.jsx` (Select Appliance -> Select Plan -> Payment -> Success Certificate Summary).
 2. **Database Schema**: `ExtendedWarrantyOrder` Mongoose model defined with all required fields (`user`, `appliance`, `brand`, `purchaseDate`, `validTill`, `status`, `claimsRemaining`).
 3. **Detection Engine**: `warrantyDetector.service.js` which detects active extended warranty orders during service booking.
 
-### ⚠️ What is MISSING & Needs Integration:
+### Warning: What is MISSING & Needs Integration:
 1. **Dynamic Backend Plan API**: Endpoint to fetch dynamic plans per brand/category.
 2. **Strict Eligibility API Check**: Endpoint returning eligibility response based on purchase date (e.g., Appliance Age <= 3/5 years).
 3. **Automated PDF Certificate Generator**: Server script generating the downloadable Warranty Certificate PDF upon payment success.

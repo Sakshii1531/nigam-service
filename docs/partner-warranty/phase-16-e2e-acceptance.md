@@ -1,12 +1,12 @@
 # Phase 16 — End-to-end verification + acceptance
 
-**Status:** ✅ Done (commit awaiting go-ahead) · **Layer:** All · **Delivers:** #19 and sign-off for all
+**Status:** Done (commit awaiting go-ahead) · **Layer:** All · **Delivers:** #19 and sign-off for all
 
 ## Tasks
 - [x] Backend journey test `partnerWarrantyJourney.test.js` running the CLIENT-ACCEPTANCE scenario end to end (two brands, three partners, reject + timeout + accept, info request, completion, events, audit, payout)
 - [x] Playwright spec in `e2e/` across customer, brand, admin and partner apps
 - [x] Manual browser walkthrough with screenshots in `screenshots/`
-- [x] CLIENT-ACCEPTANCE.md: every row ✅ with evidence links
+- [x] CLIENT-ACCEPTANCE.md: every row with evidence links
 - [x] Remove dead code: mock data, the stub brand approval, unused `WARRANTY_TICKET` comment
 - [ ] Commit to `main` (on the user's go-ahead)
 

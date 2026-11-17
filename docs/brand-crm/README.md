@@ -132,27 +132,27 @@ chat. Order follows dependencies.
 
 | # | Phase | Layer | Client § | Status |
 |---|---|---|---|---|
-| 1 | [Unified ticket foundation](phase-1-unified-ticket.md) | Backend | 1, 7, 14, 19 | ✅ |
-| 2 | [Brand RBAC: roles, departments, permission enforcement](phase-2-brand-rbac.md) | Full stack | 5, 18 | ✅ |
-| 3 | [Customer 360 and mobile search](phase-3-customer-360.md) | Full stack | 6, 13 | ✅ |
-| 4 | [Multi-channel ticket registration (CCE / Toll-Free / Manual) + intake fields](phase-4-ticket-registration.md) | Full stack | 1, 2, 5, 13 | ✅ |
-| 5 | [Warranty policy engine and verification](phase-5-warranty-policy.md) | Full stack | 4 | ✅ |
-| 6 | [Approval workflow v2 + unified ticket queue](phase-6-approval-and-queue.md) | Full stack | 1, 3, 7 | ✅ |
-| 7 | [Ticket detail page: single source of truth](phase-7-ticket-detail.md) | Full stack | 20 | ✅ |
-| 8 | [Live NCC job-stage sync, allocation visibility, closure](phase-8-job-stage-sync.md) | Full stack | 8, 9, 20 | ✅ |
-| 9 | [Communication and activity timeline](phase-9-communication-timeline.md) | Full stack | 5, 14 | ✅ |
-| 10 | [Spare parts connection](phase-10-spare-parts.md) | Full stack + Partner app | 10 | ✅ |
-| 11 | [SLA v2 and automatic escalation](phase-11-sla-escalation.md) | Full stack | 11 | ✅ |
-| 12 | [Call rates v2 (Brand → Service → State → City) + charge capture](phase-12-call-rates.md) | Full stack | 15 | ✅ |
-| 13 | [Brand billing, invoices, dues and payments](phase-13-brand-billing.md) | Full stack | 16 | ✅ |
-| 14 | [Reports: state/city call and billing + analytics + export](phase-14-reports.md) | Full stack | 17, 21 | ✅ |
-| 15 | [Dashboard on live ticket data](phase-15-dashboard.md) | Full stack | 21 | ✅ |
-| 16 | [Audit log coverage + brand audit page](phase-16-audit-log.md) | Full stack | 19 | ✅ |
-| 17 | [Intake API + WhatsApp-ready backend](phase-17-intake-api.md) | Backend + docs | 12 | ✅ |
-| 18 | [Multi-brand hardening and isolation suite](phase-18-multi-brand.md) | Backend + tests | 22 | ✅ |
-| 19 | [End-to-end verification and client acceptance](phase-19-e2e-acceptance.md) | All | all | ✅ |
+| 1 | [Unified ticket foundation](phase-1-unified-ticket.md) | Backend | 1, 7, 14, 19 | Done |
+| 2 | [Brand RBAC: roles, departments, permission enforcement](phase-2-brand-rbac.md) | Full stack | 5, 18 | Done |
+| 3 | [Customer 360 and mobile search](phase-3-customer-360.md) | Full stack | 6, 13 | Done |
+| 4 | [Multi-channel ticket registration (CCE / Toll-Free / Manual) + intake fields](phase-4-ticket-registration.md) | Full stack | 1, 2, 5, 13 | Done |
+| 5 | [Warranty policy engine and verification](phase-5-warranty-policy.md) | Full stack | 4 | Done |
+| 6 | [Approval workflow v2 + unified ticket queue](phase-6-approval-and-queue.md) | Full stack | 1, 3, 7 | Done |
+| 7 | [Ticket detail page: single source of truth](phase-7-ticket-detail.md) | Full stack | 20 | Done |
+| 8 | [Live NCC job-stage sync, allocation visibility, closure](phase-8-job-stage-sync.md) | Full stack | 8, 9, 20 | Done |
+| 9 | [Communication and activity timeline](phase-9-communication-timeline.md) | Full stack | 5, 14 | Done |
+| 10 | [Spare parts connection](phase-10-spare-parts.md) | Full stack + Partner app | 10 | Done |
+| 11 | [SLA v2 and automatic escalation](phase-11-sla-escalation.md) | Full stack | 11 | Done |
+| 12 | [Call rates v2 (Brand → Service → State → City) + charge capture](phase-12-call-rates.md) | Full stack | 15 | Done |
+| 13 | [Brand billing, invoices, dues and payments](phase-13-brand-billing.md) | Full stack | 16 | Done |
+| 14 | [Reports: state/city call and billing + analytics + export](phase-14-reports.md) | Full stack | 17, 21 | Done |
+| 15 | [Dashboard on live ticket data](phase-15-dashboard.md) | Full stack | 21 | Done |
+| 16 | [Audit log coverage + brand audit page](phase-16-audit-log.md) | Full stack | 19 | Done |
+| 17 | [Intake API + WhatsApp-ready backend](phase-17-intake-api.md) | Backend + docs | 12 | Done |
+| 18 | [Multi-brand hardening and isolation suite](phase-18-multi-brand.md) | Backend + tests | 22 | Done |
+| 19 | [End-to-end verification and client acceptance](phase-19-e2e-acceptance.md) | All | all | Done |
 
-Status legend: ⬜ Not started · 🟨 In progress · ✅ Done
+Status legend: Not started · In progress · Done
 
 **Dependencies:**
 - 1 → everything.
@@ -207,6 +207,6 @@ Paste this into a new chat (replace N):
 > its Implementation Log, update the README status table and CLIENT-ACCEPTANCE.md,
 > and run the tests listed in the phase. Don't commit until I say so.
 
-If a phase was left half-done, its file shows 🟨 and unticked tasks. The
+If a phase was left half-done, its file shows and unticked tasks. The
 Implementation Log says what was in progress. Run `git status` / `git diff`
 to see uncommitted work before continuing.

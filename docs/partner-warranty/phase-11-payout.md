@@ -1,6 +1,6 @@
 # Phase 11 — B2B2C payout (manual, product-wise)
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Backend · **Delivers:** #20
+**Status:** Done (2026-09-30) · **Layer:** Backend · **Delivers:** #20
 
 ## Goal
 Partners see B2B2C (partner brand warranty) earnings in Invoice Payout as

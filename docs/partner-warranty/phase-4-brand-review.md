@@ -1,6 +1,6 @@
 # Phase 4 — Brand review: approve / reject / request info
 
-**Status:** ✅ Done (2026-09-29) · **Layer:** Backend · **Delivers:** #5, #6, #7, #17
+**Status:** Done (2026-09-29) · **Layer:** Backend · **Delivers:** #5, #6, #7, #17
 
 ## Goal
 Each brand works its own queue and makes the warranty decision.
@@ -73,5 +73,5 @@ Phase 3's service now saves through `saveClaim()` too.
 ### Verification
 - Partner warranty tests (Phases 1, 3, 4 together): **40/40 passed**.
 - Full backend suite: **54 suites, 820 tests passed**.
-- ⚠️ One earlier full run had **one** failure in `partnerWarrantyClaim.test.js` (Phase 3). I could not reproduce it: that file passed 6/6 runs alone and the next full run was fully green, and the failing run's summary did not include the error. Cause **not identified** — watch for it; if it recurs, capture the full output.
+- Warning: One earlier full run had **one** failure in `partnerWarrantyClaim.test.js` (Phase 3). I could not reproduce it: that file passed 6/6 runs alone and the next full run was fully green, and the failing run's summary did not include the error. Cause **not identified** — watch for it; if it recurs, capture the full output.
 - ESLint clean.

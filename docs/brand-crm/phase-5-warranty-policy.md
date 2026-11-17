@@ -1,6 +1,6 @@
 # Phase 5: Warranty policy engine and verification
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §4, §22 (policy per brand) · **Depends on:** Phases 1, 2, 4
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §4, §22 (policy per brand) · **Depends on:** Phases 1, 2, 4
 
 ## Goal
 Warranty is configured **per brand, per product and model**. The system

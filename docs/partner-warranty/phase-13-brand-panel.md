@@ -1,6 +1,6 @@
 # Phase 13 — Brand panel: Warranty Claims
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Frontend · **Delivers:** #4, #6, #7, #12
+**Status:** Done (2026-09-30) · **Layer:** Frontend · **Delivers:** #4, #6, #7, #12
 
 ## Tasks
 - [x] Sidebar: **Warranty Claims** (new customer-claim queue) and **Parts Claims** (existing FOC list, renamed)

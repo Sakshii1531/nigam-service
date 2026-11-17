@@ -153,7 +153,7 @@ const BuyProduct = () => {
           <SkeletonCards count={3} />
         ) : filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <span className="text-4xl mb-2">🔍</span>
+            <Search className="w-10 h-10 mb-2 text-slate-300" aria-hidden="true" />
             <h3 className="font-bold text-text-primary text-sm">No products found</h3>
             <p className="text-xs text-text-secondary mt-1">Try tweaking your search query or filter tags!</p>
           </div>

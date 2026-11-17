@@ -1,6 +1,6 @@
 # Phase 18: Multi-brand hardening and isolation suite
 
-**Status:** ✅ Done · **Layer:** Backend + tests (+ small fixes in UI) · **Delivers:** client §22 · **Depends on:** Phases 1–17
+**Status:** Done · **Layer:** Backend + tests (+ small fixes in UI) · **Delivers:** client §22 · **Depends on:** Phases 1–17
 
 ## Goal
 Prove that nothing is hardcoded for one brand. Each brand has its own:

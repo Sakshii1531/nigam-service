@@ -28,3 +28,6 @@ jobs:
       # so a compromised lockfile cannot disable the thing meant to catch it.
       - name: Scan tracked files for injected loader signatures
         run: node scripts/scan-malware.mjs
+
+      - name: Check no emoji in source
+        run: node scripts/check-no-emoji.mjs
