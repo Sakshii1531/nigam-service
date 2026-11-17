@@ -24,7 +24,7 @@ export const MASTER_CATALOGUE_SEED = [
     keywords: ['air conditioner', 'aircon', 'split', 'window', 'cooling'],
     productTypes: [
       {
-        slug: 'split', name: 'Split AC', icon: '❄️', desc: '1 ton · 1.5 ton · 2 ton',
+        slug: 'split', name: 'Split AC', icon: '', desc: '1 ton · 1.5 ton · 2 ton',
         variantDimension: { key: 'capacity', label: 'Capacity' },
         variants: [
           { slug: '1t', label: '1 Ton' },
@@ -32,15 +32,15 @@ export const MASTER_CATALOGUE_SEED = [
           { slug: '2t', label: '2 Ton' },
         ],
       },
-      { slug: 'window', name: 'Window AC', icon: '🪟', desc: 'Single wall-mount unit', variantDimension: null, variants: [] },
+      { slug: 'window', name: 'Window AC', icon: '', desc: 'Single wall-mount unit', variantDimension: null, variants: [] },
     ],
     services: [
-      { slug: 'installation', name: 'Installation', icon: '🔩', desc: 'New AC fitting & setup', keywords: ['install', 'fitting'] },
-      { slug: 'uninstallation', name: 'Uninstallation', icon: '📤', desc: 'Safe removal & packing', keywords: ['uninstall', 'removal', 'dismantle'] },
-      { slug: 'repair', name: 'Repair', icon: '🔧', desc: 'Diagnose & fix breakdowns', keywords: ['not cooling', 'fix'] },
-      { slug: 'deep_cleaning', name: 'Deep Cleaning', icon: '✨', desc: 'Foam-jet wash & coil clean', keywords: ['service', 'wash', 'jet'] },
-      { slug: 'gas_refilling', name: 'Gas Refilling', icon: '💨', desc: 'Refrigerant top-up', keywords: ['gas', 'refrigerant'] },
-      { slug: 'inspection', name: 'Inspection', icon: '🔍', desc: 'Health check & diagnosis', keywords: ['checkup'] },
+      { slug: 'installation', name: 'Installation', icon: '', desc: 'New AC fitting & setup', keywords: ['install', 'fitting'] },
+      { slug: 'uninstallation', name: 'Uninstallation', icon: '', desc: 'Safe removal & packing', keywords: ['uninstall', 'removal', 'dismantle'] },
+      { slug: 'repair', name: 'Repair', icon: '', desc: 'Diagnose & fix breakdowns', keywords: ['not cooling', 'fix'] },
+      { slug: 'deep_cleaning', name: 'Deep Cleaning', icon: '', desc: 'Foam-jet wash & coil clean', keywords: ['service', 'wash', 'jet'] },
+      { slug: 'gas_refilling', name: 'Gas Refilling', icon: '', desc: 'Refrigerant top-up', keywords: ['gas', 'refrigerant'] },
+      { slug: 'inspection', name: 'Inspection', icon: '', desc: 'Health check & diagnosis', keywords: ['checkup'] },
     ],
     offerings: [
       {
@@ -124,7 +124,7 @@ export const MASTER_CATALOGUE_SEED = [
     keywords: ['television', 'led', 'smart tv', 'wall mount', 'tv installation'],
     productTypes: [
       {
-        slug: 'led', name: 'LED TV', icon: '📺', desc: 'Standard LED/LCD flat screen',
+        slug: 'led', name: 'LED TV', icon: '', desc: 'Standard LED/LCD flat screen',
         variantDimension: { key: 'screen_size', label: 'Screen Size' },
         variants: [
           { slug: '32', label: '32 inch' },
@@ -135,8 +135,8 @@ export const MASTER_CATALOGUE_SEED = [
       },
     ],
     services: [
-      { slug: 'installation', name: 'Installation', icon: '🔩', desc: 'Wall mount & setup', keywords: ['install', 'wall mount', 'mounting'] },
-      { slug: 'uninstallation', name: 'Uninstallation', icon: '📤', desc: 'Safe removal from wall', keywords: ['uninstall', 'removal'] },
+      { slug: 'installation', name: 'Installation', icon: '', desc: 'Wall mount & setup', keywords: ['install', 'wall mount', 'mounting'] },
+      { slug: 'uninstallation', name: 'Uninstallation', icon: '', desc: 'Safe removal from wall', keywords: ['uninstall', 'removal'] },
     ],
     offerings: [
       {
@@ -176,10 +176,10 @@ export const MASTER_CATALOGUE_SEED = [
     key: 'Washing Machine',
     keywords: ['washer', 'front load', 'top load'],
     productTypes: [
-      { slug: 'front_load', name: 'Front Load', icon: '🔄', desc: 'Auto, drum in front', variantDimension: null, variants: [] },
+      { slug: 'front_load', name: 'Front Load', icon: '', desc: 'Auto, drum in front', variantDimension: null, variants: [] },
     ],
     services: [
-      { slug: 'installation', name: 'Installation', icon: '🔩', desc: 'New machine setup & demo', keywords: ['install'] },
+      { slug: 'installation', name: 'Installation', icon: '', desc: 'New machine setup & demo', keywords: ['install'] },
     ],
     offerings: [
       {
@@ -197,7 +197,7 @@ export const MASTER_CATALOGUE_SEED = [
     keywords: ['water heater', 'geezer'],
     productTypes: [
       {
-        slug: 'storage', name: 'Storage Geyser', icon: '🛢️', desc: '10 L · 15 L · 25 L tank',
+        slug: 'storage', name: 'Storage Geyser', icon: '', desc: '10 L · 15 L · 25 L tank',
         variantDimension: { key: 'capacity', label: 'Capacity' },
         variants: [
           { slug: '10l', label: '10 L' },
@@ -207,7 +207,7 @@ export const MASTER_CATALOGUE_SEED = [
       },
     ],
     services: [
-      { slug: 'installation', name: 'Installation', icon: '🔩', desc: 'New geyser fitting & safety check', keywords: ['install'] },
+      { slug: 'installation', name: 'Installation', icon: '', desc: 'New geyser fitting & safety check', keywords: ['install'] },
     ],
     offerings: [
       {
@@ -232,10 +232,10 @@ export const MASTER_CATALOGUE_SEED = [
     },
     keywords: ['camera', 'cctv', 'wifi camera', 'security camera'],
     productTypes: [
-      { slug: 'wifi_camera', name: 'Wi-Fi Camera', icon: '📷', desc: 'Smart home camera', variantDimension: null, variants: [] },
+      { slug: 'wifi_camera', name: 'Wi-Fi Camera', icon: '', desc: 'Smart home camera', variantDimension: null, variants: [] },
     ],
     services: [
-      { slug: 'installation', name: 'Installation', icon: '🔩', desc: 'Mount, power & app setup', keywords: ['install', 'setup'] },
+      { slug: 'installation', name: 'Installation', icon: '', desc: 'Mount, power & app setup', keywords: ['install', 'setup'] },
     ],
     offerings: [
       {
@@ -253,13 +253,13 @@ export const MASTER_CATALOGUE_SEED = [
     keywords: ['electrician', 'electrical', 'wiring', 'switch', 'socket', 'fan', 'mcb'],
     productTypes: [],
     services: [
-      { slug: 'fan_installation', name: 'Fan Installation', icon: '🌀', desc: 'Ceiling, wall or exhaust fan fitting', keywords: ['ceiling fan', 'fan fitting'] },
-      { slug: 'switch_installation', name: 'Switch Installation', icon: '🔘', desc: 'New or replacement switch', keywords: ['switch', 'switchboard'] },
-      { slug: 'socket_installation', name: 'Socket Installation', icon: '🔌', desc: 'New or replacement socket', keywords: ['socket', 'plug point'] },
-      { slug: 'mcb_installation', name: 'MCB Installation', icon: '🛠️', desc: 'MCB fitting or replacement', keywords: ['mcb', 'db box', 'breaker'] },
-      { slug: 'consultation', name: 'Electrician Consultation', icon: '🔍', desc: 'Visit to diagnose and advise', keywords: ['electrician', 'visit', 'diagnose'] },
-      { slug: 'inspection', name: 'Electrical Inspection', icon: '📋', desc: 'Safety check of wiring & points', keywords: ['safety', 'audit'] },
-      { slug: 'wiring_repair', name: 'Wiring Repair', icon: '⚡', desc: 'Faulty wiring & short circuit fix', keywords: ['short circuit', 'tripping'] },
+      { slug: 'fan_installation', name: 'Fan Installation', icon: '', desc: 'Ceiling, wall or exhaust fan fitting', keywords: ['ceiling fan', 'fan fitting'] },
+      { slug: 'switch_installation', name: 'Switch Installation', icon: '', desc: 'New or replacement switch', keywords: ['switch', 'switchboard'] },
+      { slug: 'socket_installation', name: 'Socket Installation', icon: '', desc: 'New or replacement socket', keywords: ['socket', 'plug point'] },
+      { slug: 'mcb_installation', name: 'MCB Installation', icon: '', desc: 'MCB fitting or replacement', keywords: ['mcb', 'db box', 'breaker'] },
+      { slug: 'consultation', name: 'Electrician Consultation', icon: '', desc: 'Visit to diagnose and advise', keywords: ['electrician', 'visit', 'diagnose'] },
+      { slug: 'inspection', name: 'Electrical Inspection', icon: '', desc: 'Safety check of wiring & points', keywords: ['safety', 'audit'] },
+      { slug: 'wiring_repair', name: 'Wiring Repair', icon: '', desc: 'Faulty wiring & short circuit fix', keywords: ['short circuit', 'tripping'] },
     ],
     offerings: [
       {
@@ -314,7 +314,7 @@ export const MASTER_CATALOGUE_SEED = [
     productTypes: [],
     services: [
       {
-        slug: 'water_tank_cleaning', name: 'Water Tank Cleaning', icon: '💧', desc: 'Drain, scrub & sanitise',
+        slug: 'water_tank_cleaning', name: 'Water Tank Cleaning', icon: '', desc: 'Drain, scrub & sanitise',
         keywords: ['tank', 'sanitise'],
         optionDimension: { key: 'tank_capacity', label: 'Tank Capacity' },
         options: [
@@ -324,8 +324,8 @@ export const MASTER_CATALOGUE_SEED = [
           { slug: '2000l-plus', label: '2000 L+' },
         ],
       },
-      { slug: 'overhead_tank_cleaning', name: 'Overhead Tank Cleaning', icon: '🏠', desc: 'Rooftop tank cleaning', keywords: ['overhead', 'roof tank'] },
-      { slug: 'underground_tank_cleaning', name: 'Underground Tank Cleaning', icon: '⬇️', desc: 'Sump / underground tank cleaning', keywords: ['underground', 'sump'] },
+      { slug: 'overhead_tank_cleaning', name: 'Overhead Tank Cleaning', icon: '', desc: 'Rooftop tank cleaning', keywords: ['overhead', 'roof tank'] },
+      { slug: 'underground_tank_cleaning', name: 'Underground Tank Cleaning', icon: '', desc: 'Sump / underground tank cleaning', keywords: ['underground', 'sump'] },
     ],
     offerings: [
       {
@@ -375,9 +375,9 @@ export const MASTER_CATALOGUE_SEED = [
     keywords: ['ro', 'water purifier', 'purifier', 'filter'],
     productTypes: [],
     services: [
-      { slug: 'prefilter_service', name: 'RO Pre-Filter Service / Replacement', icon: '🔄', desc: 'Pre-filter cleaning or replacement', keywords: ['pre filter', 'prefilter', 'sediment'] },
-      { slug: 'inspection', name: 'RO Inspection', icon: '🔍', desc: 'TDS & performance check', keywords: ['tds', 'checkup'] },
-      { slug: 'maintenance', name: 'RO Maintenance', icon: '🛠️', desc: 'Periodic service & sanitisation', keywords: ['service', 'amc'] },
+      { slug: 'prefilter_service', name: 'RO Pre-Filter Service / Replacement', icon: '', desc: 'Pre-filter cleaning or replacement', keywords: ['pre filter', 'prefilter', 'sediment'] },
+      { slug: 'inspection', name: 'RO Inspection', icon: '', desc: 'TDS & performance check', keywords: ['tds', 'checkup'] },
+      { slug: 'maintenance', name: 'RO Maintenance', icon: '', desc: 'Periodic service & sanitisation', keywords: ['service', 'amc'] },
     ],
     offerings: [
       {

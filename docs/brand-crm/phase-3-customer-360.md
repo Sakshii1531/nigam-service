@@ -1,6 +1,6 @@
 # Phase 3: Customer 360 and mobile search
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §6, §13 (customer part) · **Depends on:** Phases 1, 2
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §6, §13 (customer part) · **Depends on:** Phases 1, 2
 
 ## Goal
 Search by mobile opens the existing profile; a new customer is created only

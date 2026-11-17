@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-25) |
+| **Status** | Done (2026-09-25) |
 | **Depends on** | Phases 8–13 |
 
 ## Goal

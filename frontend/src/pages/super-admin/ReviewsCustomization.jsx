@@ -3,8 +3,7 @@ import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
 import {
-  Star, Plus, Pencil, Trash2, Eye, EyeOff, X, Check, AlertTriangle
-} from 'lucide-react';
+  Star, Plus, Pencil, Trash2, Eye, EyeOff, X, Check, AlertTriangle, User } from 'lucide-react';
 
 const THEMES = [
   { key: 'pink',   label: 'Rose Pink',      bg: 'bg-linear-to-br from-[#FFF5F8] to-[#FCE7F3]', border: 'border-pink-200',   title: 'text-[#BE185D]',   badge: 'bg-pink-100 text-[#BE185D]',   dot: 'bg-pink-400' },
@@ -53,7 +52,7 @@ function CardPreview({ form }) {
         </div>
       </div>
       <div className={`flex items-center justify-end gap-1 mt-3 text-xs font-bold ${theme.title}`}>
-        <span>👤</span>
+        <User size={12} aria-hidden="true" />
         <span>{form.authorName || 'Author Name'}</span>
       </div>
     </div>

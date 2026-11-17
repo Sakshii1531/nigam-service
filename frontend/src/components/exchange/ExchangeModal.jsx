@@ -529,7 +529,7 @@ const ExchangeModal = ({
             {step === 5 && (
               <div className="flex flex-col gap-5 text-left">
                 <div>
-                  <h4 className="text-base font-extrabold text-brand-navy">✅ Exchange Details Summary</h4>
+                  <h4 className="text-base font-extrabold text-brand-navy">Exchange Details Summary</h4>
                   <p className="text-xs text-slate-500 mt-1 font-semibold">Review your evaluated specifications before applying</p>
                 </div>
 

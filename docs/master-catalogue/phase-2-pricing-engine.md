@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-24) |
+| **Status** | Done (2026-09-24) |
 | **Estimate** | 5–6 developer-days |
 | **Depends on** | Phase 1 |
 | **Unblocks** | Phase 3, Phase 4 |

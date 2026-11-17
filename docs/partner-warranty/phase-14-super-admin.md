@@ -1,6 +1,6 @@
 # Phase 14 — Super Admin: Partner Warranty module
 
-**Status:** ✅ Done · **Layer:** Frontend · **Delivers:** #3, #4, #14, #15
+**Status:** Done · **Layer:** Frontend · **Delivers:** #3, #4, #14, #15
 
 ## Tasks
 - [x] Sidebar group **Partner Warranty**: Claims, SLA Overview, Catalogue (groups/issues/brand coverage), B2B2C Payouts, Webhook Logs

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, AlertTriangle, Plus } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Plus, Package } from 'lucide-react';
 
 const INITIAL_CHECKLIST = [
   { id: 'carbon', label: 'Carbon Filter Check', note: '', done: false, type: 'due', urgent: false },
@@ -50,7 +50,7 @@ const AMCOverview = ({ job, additionalServices, setAdditionalServices, setShowAd
         <h4 className="text-sm font-medium text-[#052355]">Product Details</h4>
         <div className="flex gap-4 items-center">
           <div className="w-14 h-14 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center shrink-0">
-            <span className="text-2xl">🧺</span>
+            <Package className="w-7 h-7 text-slate-400" aria-hidden="true" />
           </div>
           <div className="text-left flex-1">
             <h5 className="text-sm font-medium text-[#052355]">{job?.brand} {job?.model || 'Front Load 8kg'}</h5>

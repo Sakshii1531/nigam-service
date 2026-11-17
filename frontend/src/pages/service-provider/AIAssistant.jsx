@@ -118,7 +118,7 @@ const AIAssistant = () => {
 
           {/* Greeting Speech Card */}
           <div className="w-full bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm text-left relative">
-            <h3 className="text-sm font-medium text-[#052355]">Hello Alex! 👋</h3>
+            <h3 className="text-sm font-medium text-[#052355]">Hello Alex!</h3>
             <p className="text-xs text-slate-500 font-normal mt-1.5 leading-relaxed">
               I am your AI Assistant. How can I help you today?
             </p>

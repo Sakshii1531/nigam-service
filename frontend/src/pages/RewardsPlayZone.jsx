@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, CheckCircle2, Star, Sparkles, Trophy, Coins, 
-  ArrowUpRight, Play, RefreshCw, Flame, ChevronRight
-} from 'lucide-react';
+  ArrowUpRight, Play, RefreshCw, Flame, ChevronRight, CalendarCheck, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/apiClient';
@@ -12,14 +11,14 @@ import { LoadingSection, SkeletonList, Skeleton } from '../components/common/Ske
 
 // Clean, vibrant segment color palette matching app aesthetics
 const PRESET_COLORS = [
-  { color: '#14B8A6', textColor: '#FFFFFF', icon: '🪙' },
-  { color: '#F43F5E', textColor: '#FFFFFF', icon: '🎟️' },
-  { color: '#F59E0B', textColor: '#FFFFFF', icon: '🪙' },
-  { color: '#8B5CF6', textColor: '#FFFFFF', icon: '⚡' },
-  { color: '#3B82F6', textColor: '#FFFFFF', icon: '💎' },
-  { color: '#10B981', textColor: '#FFFFFF', icon: '🎁' },
-  { color: '#EC4899', textColor: '#FFFFFF', icon: '🌟' },
-  { color: '#D97706', textColor: '#FFFFFF', icon: '🔥' },
+  { color: '#14B8A6', textColor: '#FFFFFF' },
+  { color: '#F43F5E', textColor: '#FFFFFF' },
+  { color: '#F59E0B', textColor: '#FFFFFF' },
+  { color: '#8B5CF6', textColor: '#FFFFFF' },
+  { color: '#3B82F6', textColor: '#FFFFFF' },
+  { color: '#10B981', textColor: '#FFFFFF' },
+  { color: '#EC4899', textColor: '#FFFFFF' },
+  { color: '#D97706', textColor: '#FFFFFF' },
 ];
 
 // Helper to convert polar coordinates to Cartesian for SVG path drawing
@@ -115,9 +114,9 @@ const RewardsPlayZone = () => {
   }, [user]);
 
   const [tasks, setTasks] = useState([
-    { id: 'book_service', icon: '📅', task: 'Book a Service', reward: 50, rewardLabel: '+50 Coins', done: false, targetPath: '/booking' },
-    { id: 'write_review', icon: '⭐', task: 'Write a Review', reward: 20, rewardLabel: '+20 Coins', done: false, targetPath: '/partner-warranty/rate-service' },
-    { id: 'refer_friend', icon: '👥', task: 'Refer a Friend', reward: 100, rewardLabel: '+100 Coins', done: false, targetPath: '/refer-earn' },
+    { id: 'book_service', icon: CalendarCheck, task: 'Book a Service', reward: 50, rewardLabel: '+50 Coins', done: false, targetPath: '/booking' },
+    { id: 'write_review', icon: Star, task: 'Write a Review', reward: 20, rewardLabel: '+20 Coins', done: false, targetPath: '/partner-warranty/rate-service' },
+    { id: 'refer_friend', icon: Users, task: 'Refer a Friend', reward: 100, rewardLabel: '+100 Coins', done: false, targetPath: '/refer-earn' },
   ]);
 
   const fetchTasksData = async () => {
@@ -155,9 +154,9 @@ const RewardsPlayZone = () => {
       }
 
       setTasks([
-        { id: 'book_service', icon: '📅', task: 'Book a Service', reward: 50, rewardLabel: '+50 Coins', done: isBookingDone, targetPath: '/booking' },
-        { id: 'write_review', icon: '⭐', task: 'Write a Review', reward: 20, rewardLabel: '+20 Coins', done: isReviewDone, targetPath: '/partner-warranty/rate-service' },
-        { id: 'refer_friend', icon: '👥', task: 'Refer a Friend', reward: 100, rewardLabel: '+100 Coins', done: isReferralDone, targetPath: '/refer-earn' },
+        { id: 'book_service', icon: CalendarCheck, task: 'Book a Service', reward: 50, rewardLabel: '+50 Coins', done: isBookingDone, targetPath: '/booking' },
+        { id: 'write_review', icon: Star, task: 'Write a Review', reward: 20, rewardLabel: '+20 Coins', done: isReviewDone, targetPath: '/partner-warranty/rate-service' },
+        { id: 'refer_friend', icon: Users, task: 'Refer a Friend', reward: 100, rewardLabel: '+100 Coins', done: isReferralDone, targetPath: '/refer-earn' },
       ]);
     } catch (err) {
       console.warn('Error loading real tasks progress:', err);
@@ -211,7 +210,6 @@ const RewardsPlayZone = () => {
             winningType: s.winningType || 'none',
             value: s.value || 0,
             probability: s.probability || 0,
-            icon: s.winningType === 'spin' ? '🎟️' : s.winningType === 'coins' ? '🪙' : preset.icon,
             color: preset.color,
             textColor: preset.textColor
           };
@@ -308,11 +306,11 @@ const RewardsPlayZone = () => {
         }
 
         if (wonSegment.winningType === 'spin') {
-          triggerToast(`🎉 Awesome! Won ${wonSegment.label} + 20 XP!`);
+          triggerToast(`Awesome! Won ${wonSegment.label} + 20 XP!`);
         } else if (wonSegment.winningType === 'coins' || wonSegment.winningType === 'money') {
-          triggerToast(`🏆 Won ${wonSegment.label}!`);
+          triggerToast(`Won ${wonSegment.label}!`);
         } else {
-          triggerToast('✨ Earned 20 Participation XP.');
+          triggerToast('Earned 20 Participation XP.');
         }
       }, 3600);
 
@@ -530,7 +528,7 @@ const RewardsPlayZone = () => {
                             dominantBaseline="central"
                             className="select-none font-black tracking-wide uppercase drop-shadow-xs"
                           >
-                            {seg.icon} {seg.label}
+                            {seg.label}
                           </text>
                         </g>
                       </g>
@@ -555,7 +553,7 @@ const RewardsPlayZone = () => {
                 animate={{ scale: 1, opacity: 1 }}
                 className="bg-emerald-50 border border-emerald-200/60 rounded-2xl px-5 py-2 inline-flex items-center gap-1.5"
               >
-                <span className="text-xs font-black text-emerald-800">🎉 Landed on: {lastResult.label}</span>
+                <span className="text-xs font-black text-emerald-800">Landed on: {lastResult.label}</span>
               </motion.div>
             )}
 
@@ -615,7 +613,7 @@ const RewardsPlayZone = () => {
                   >
                     <div className="flex items-center gap-3.5">
                       <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100/50 flex items-center justify-center text-2xl shadow-xs shrink-0 select-none">
-                        {task.icon}
+                        <task.icon className="w-6 h-6 text-indigo-600" aria-hidden="true" />
                       </div>
                       <div className="text-left">
                         <span className="text-[13px] font-black text-slate-900 block leading-snug tracking-wide">{task.task}</span>

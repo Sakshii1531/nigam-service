@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-25) |
+| **Status** | Done (2026-09-25) |
 | **Estimate** | 5–6 developer-days |
 | **Depends on** | Phases 1–6 |
 | **Client requirements** | 24, 25 (documented and tested seam), 27, 28 |
@@ -71,8 +71,8 @@ Delete, then prove with grep:
 - [x] Rate limit on `/catalog/quote` and `/catalog/search` confirmed
 
 ### 7.6 Close-out
-- [x] Every row in [CLIENT-ACCEPTANCE.md](CLIENT-ACCEPTANCE.md) ✅ with the verifying test name
-- [x] README phase table all ✅; ARCHITECTURE.md matches what shipped
+- [x] Every row in [CLIENT-ACCEPTANCE.md](CLIENT-ACCEPTANCE.md) with the verifying test name
+- [x] README phase table all Done; ARCHITECTURE.md matches what shipped
 - [x] Short "how to add a new product/service" admin guide appended to README (e.g. adding Refrigerator Double Door 250–350 L Gas Refilling end to end with no code)
 
 ---
@@ -202,8 +202,8 @@ ARCHITECTURE.md §4 now has **"Turning on location pricing"**: exactly what the 
 
 ### 7.6 Close-out
 
-- CLIENT-ACCEPTANCE.md: every test and requirement ✅, each with its verifying test.
-- README: all phases ✅, plus **§7 Admin guide**. It walks through adding *Refrigerator · Double Door · 250–350 L · Gas Refilling* with no code; the code, final price and margin quoted there were checked against the code.
+- CLIENT-ACCEPTANCE.md: every test and requirement Done, each with its verifying test.
+- README: all phases Done, plus **§7 Admin guide**. It walks through adding *Refrigerator · Double Door · 250–350 L · Gas Refilling* with no code; the code, final price and margin quoted there were checked against the code.
 - ARCHITECTURE.md: new APIs (search, resolve, service-groups, margin report), tree cache, rate limits, and the old→new table marked done.
 
 ### Fixes found while verifying

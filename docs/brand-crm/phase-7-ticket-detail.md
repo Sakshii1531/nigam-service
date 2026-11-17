@@ -1,6 +1,6 @@
 # Phase 7: Ticket detail page (single source of truth)
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §20 (shell + 7 of 11 sections) · **Depends on:** Phase 6
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §20 (shell + 7 of 11 sections) · **Depends on:** Phase 6
 
 ## Goal
 One Brand Panel page shows the complete history of a ticket. Sections:

@@ -12,3 +12,8 @@ if command -v node >/dev/null 2>&1; then
 else
   echo "pre-commit: node not found — malware scan SKIPPED" >&2
 fi
+
+# No emoji in source: item pictures are uploaded images, status marks are line icons.
+if command -v node >/dev/null 2>&1; then
+  node "$(git rev-parse --show-toplevel)/scripts/check-no-emoji.mjs" --staged || exit 1
+fi

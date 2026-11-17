@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Search, ChevronRight, AlertTriangle } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import { apiRequest } from '../lib/apiClient';
 import tvImg from '../assets/categories/television.png';
@@ -135,13 +135,13 @@ const AllBrands = () => {
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <span className="text-4xl mb-2">⚠️</span>
+            <AlertTriangle className="w-10 h-10 mb-2 text-amber-500" aria-hidden="true" />
             <h3 className="font-bold text-text-primary text-sm">Could not load brands</h3>
             <p className="text-xs text-text-secondary mt-1">{loadError}</p>
           </div>
         ) : filteredBrands.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <span className="text-4xl mb-2">🔍</span>
+            <Search className="w-10 h-10 mb-2 text-slate-300" aria-hidden="true" />
             <h3 className="font-bold text-text-primary text-sm">No brands found</h3>
             <p className="text-xs text-text-secondary mt-1">
               {brands.length === 0

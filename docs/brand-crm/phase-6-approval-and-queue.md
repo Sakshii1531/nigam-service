@@ -1,6 +1,6 @@
 # Phase 6: Approval workflow v2 + unified ticket queue
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §1, §3, §7 · **Depends on:** Phases 1–5
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §1, §3, §7 · **Depends on:** Phases 1–5
 
 ## Goal
 One **Tickets** queue in the Brand Panel replaces both "All Complaints" and

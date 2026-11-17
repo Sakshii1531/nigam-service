@@ -488,7 +488,7 @@ const LoyaltyProgram = () => {
                         {milestones.map((m) => (
                           <tr key={m.id} className="hover:bg-slate-50/50 font-semibold text-slate-700">
                             <td className="p-3 font-bold text-slate-800">{m.title}</td>
-                            <td className="p-3">⚡ {m.threshold}</td>
+                            <td className="p-3">{m.threshold}</td>
                             <td className="p-3 text-slate-500">{m.benefit}</td>
                             <td className="p-3"><span className="bg-green-50 text-green-600 px-2 py-0.5 rounded-full text-[10px] border border-green-200">Active</span></td>
                             <td className="p-3 text-center">
@@ -845,7 +845,7 @@ const LoyaltyProgram = () => {
                   </div>
                   <div className="border border-slate-150 p-4.5 rounded-xl bg-slate-50/50 text-left">
                     <span className="text-[10px] text-slate-400 font-bold uppercase block">Coins Awarded Value</span>
-                    <span className="text-lg font-black text-slate-800 block mt-1">⚡ {referralStats.totalCoinsPaid.toLocaleString()}</span>
+                    <span className="text-lg font-black text-slate-800 block mt-1">{referralStats.totalCoinsPaid.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -913,7 +913,7 @@ const LoyaltyProgram = () => {
                         {referralCampaigns.map((c) => (
                           <tr key={c.id} className="hover:bg-slate-50/50">
                             <td className="p-3 font-bold text-slate-800">{c.name}</td>
-                            <td className="p-3">⚡ {c.bonus} Coins</td>
+                            <td className="p-3">{c.bonus} Coins</td>
                             <td className="p-3">{c.discount}% OFF</td>
                             <td className="p-3">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] border ${

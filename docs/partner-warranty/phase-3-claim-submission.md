@@ -1,6 +1,6 @@
 # Phase 3 — Claim submission + customer APIs
 
-**Status:** ✅ Done (2026-09-29) · **Layer:** Backend · **Delivers:** #1, #2, #5, #7 (customer side), #13 (API)
+**Status:** Done (2026-09-29) · **Layer:** Backend · **Delivers:** #1, #2, #5, #7 (customer side), #13 (API)
 
 ## Goal
 The customer's "Submit Claim" creates a real `WarrantyClaim`, routed to the

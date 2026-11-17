@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-24) |
+| **Status** | Done (2026-09-24) |
 | **Estimate** | 5–6 developer-days |
 | **Depends on** | Phase 4 (bookings carry `commercial.spPayoutTotal`) |
 | **Client requirements** | 7, 8, 9, 10, 13 (incentive), 23 |
@@ -63,7 +63,7 @@ inside the booking snapshot, that would double-tax.
 ## Tasks: Service Partner app (`frontend/src/pages/service-provider/`)
 
 ### 5.5 Job request & job detail
-- [x] `Dashboard.jsx` request cards: **service line** ("Split AC · 1.5 Ton · Installation × 2") + "⚡ Express" badge, **"You earn ₹1,850"** (the total incl. bonus; the base/bonus split shows in the job summary, not on the card)
+- [x] `Dashboard.jsx` request cards: **service line** ("Split AC · 1.5 Ton · Installation × 2") + "Express" badge, **"You earn ₹1,850"** (the total incl. bonus; the base/bonus split shows in the job summary, not on the card)
 - [x] `ActiveJob.jsx` + `job-flows/*` detail header:
   - Service name, product type / variant (if any), quantity, pricing unit
   - Customer name, phone (existing masking rules), address, scheduled time / EXPRESS badge
@@ -75,7 +75,7 @@ inside the booking snapshot, that would double-tax.
 - [~] Add-on picker: the existing "Add More Services" list/checkboxes now use catalogue offerings (price + GST, "you earn ₹X") and sync through `updateAddOns`; **no search box or qty stepper in the UI** (API supports quantity)
 
 ### 5.6 Earnings screens
-- [~] `EarningDetail.jsx`: per-job breakdown booked-service payout / express bonus / extra work ✅. `RecentEarnings.jsx` / `Earnings.jsx` **unchanged**: they show `billingEstimate.serviceProviderEarnings`, which is now the fixed payout
+- [~] `EarningDetail.jsx`: per-job breakdown booked-service payout / express bonus / extra work Done. `RecentEarnings.jsx` / `Earnings.jsx` **unchanged**: they show `billingEstimate.serviceProviderEarnings`, which is now the fixed payout
 - [~] `ServiceHistory.jsx` **unchanged**: it shows `billingEstimate.serviceProviderEarnings` / `estEarnings`, both of which now equal `payout.total`
 
 ---
@@ -100,9 +100,9 @@ Collect ₹3,806.68 · Your payout ₹1,925*.
 ## Acceptance
 
 - [x] Backend tests above green
-- [~] Walk the example above on the partner app (mobile width): dashboard, job summary and earning detail ✅ with screenshots; the add-on tick and the Billing screen are not browser-verified (see log)
+- [~] Walk the example above on the partner app (mobile width): dashboard, job summary and earning detail with screenshots; the add-on tick and the Billing screen are not browser-verified (see log)
 - [x] `grep -rn "serviceProviderShare" backend/src` → only the RateCard/no-booking path and the function definition remain
-- [x] Client tests 8 and 9 marked ✅ in [CLIENT-ACCEPTANCE.md](CLIENT-ACCEPTANCE.md)
+- [x] Client tests 8 and 9 marked in [CLIENT-ACCEPTANCE.md](CLIENT-ACCEPTANCE.md)
 
 ## Out of scope
 
@@ -136,7 +136,7 @@ Customer approval of add-ons before billing (today only spare parts need approva
 | `pages/service-provider/ActiveJob.jsx` | add-ons seeded from the job + catalogue; `updateAddOns` syncs every tick/untick to the add-on endpoints (reverts on failure) and refreshes the summary; bill preview no longer re-taxes the booked amount (GST on parts only); `finalAmountCollected` = server `amountToCollect`; pre-accept card: fake "Est. Spare Cost ₹950" → real service line, "Customer pays", "You earn (fixed)"; resume list shows the service line |
 | `pages/service-provider/BillingEstimate.jsx` | server bill figures; earnings = fixed payout (the `extras × 0.3` and `|| 850` fallbacks are gone); "GST on parts"; "Already paid" + "Collect now" |
 | `pages/service-provider/EarningDetail.jsx` | Payout breakdown = booked-service payout / express bonus / extra work → total. The old "Service Amount − Platform Fee" (which exposed NCC's margin to partners) is removed |
-| `context/ServiceProviderContext.jsx`, `Dashboard.jsx` | job lists carry `serviceLine`, `isExpress`, `payout`; request cards show "Split AC · 1.5 Ton · Installation × 2 · ⚡ Express" + "You earn ₹1,850" |
+| `context/ServiceProviderContext.jsx`, `Dashboard.jsx` | job lists carry `serviceLine`, `isExpress`, `payout`; request cards show "Split AC · 1.5 Ton · Installation × 2 · Express" + "You earn ₹1,850" |
 
 **Tests**
 
@@ -154,9 +154,9 @@ Customer booked **Split AC 1.5 Ton Installation × 2, Express**, pay after servi
 
 | Screen | Result |
 |---|---|
-| Dashboard request card | "Split AC · 1.5 Ton · Installation × 2 · ⚡ Express", "You earn ₹1,850" ✅ |
-| Job progress → JobSummaryCard | "Split AC 1.5 Ton Installation × 2 · EXPRESS · Collect ₹3,654.46 · Your payout ₹1,850 (₹1,800 base + ₹50 express) · Wall type: Concrete" ✅ |
-| Earning detail | "Booked service payout", "Express bonus", no "Platform Fee" ✅ |
+| Dashboard request card | "Split AC · 1.5 Ton · Installation × 2 · Express", "You earn ₹1,850" Done |
+| Job progress → JobSummaryCard | "Split AC 1.5 Ton Installation × 2 · EXPRESS · Collect ₹3,654.46 · Your payout ₹1,850 (₹1,800 base + ₹50 express) · Wall type: Concrete" Done |
+| Earning detail | "Booked service payout", "Express bonus", no "Platform Fee" Done |
 | Ticking a catalogue add-on in the job UI | **not browser-verified.** The add-on checkboxes are on the inspection overview, reached only after photo uploads the harness can't do. API endpoints are covered by tests |
 | Billing & Estimate screen | **not browser-verified with this job**: the scratch partner had several open jobs and the script couldn't reliably select this one at the billing step. Its figures are the server bill (API-verified); the earnings row showed the fixed ₹1,850 |
 

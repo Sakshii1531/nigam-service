@@ -338,7 +338,7 @@ const ServiceProviders = ({ pendingOnly = false }) => {
           auth: true,
           body: {
             recipientId: provider.userId,
-            title: "🎉 Account Approved!",
+            title: "Account Approved!",
             body: msg,
           },
         });
@@ -618,7 +618,7 @@ const ServiceProviders = ({ pendingOnly = false }) => {
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-6 text-xs text-slate-600 font-medium">
               <span className="flex items-center gap-2">
-                📍 Operating City:{" "}
+                Operating City:{" "}
                 <strong className="text-slate-900">{provider.city}</strong>
                 {/* Direct change is super-admin only; an ASM decides the
                     provider's own requests on the City Change Requests page. */}
@@ -634,7 +634,7 @@ const ServiceProviders = ({ pendingOnly = false }) => {
                   — showing it here would just be their own name on every row. */}
               {!isAsm && (
                 <span>
-                  🧭 ASM Manager:{" "}
+                  ASM Manager:{" "}
                   {provider.asm ? (
                     <button
                       onClick={() =>
@@ -652,13 +652,13 @@ const ServiceProviders = ({ pendingOnly = false }) => {
                 </span>
               )}
               <span>
-                ⭐ Rating:{" "}
+                Rating:{" "}
                 <strong className="text-slate-900">
                   {provider.rating ?? 0} / 5.0
                 </strong>
               </span>
               <span>
-                🛠️ Active Jobs:{" "}
+                Active Jobs:{" "}
                 <strong className="text-slate-900">
                   {provider.activeJobs || 0}
                 </strong>

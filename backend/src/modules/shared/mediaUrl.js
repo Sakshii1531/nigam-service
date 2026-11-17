@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hasEmoji, NO_EMOJI_MESSAGE } from './noEmoji.js';
 
 // Image fields hold a URL (Cloudinary, or /uploads/… in development) or a
 // preset icon name — never the image itself. Clients upload through
@@ -9,4 +10,5 @@ export const mediaUrl = (max = 2048) =>
     .string()
     .trim()
     .max(max)
-    .refine((v) => !/^data:/i.test(v), { message: 'Upload the image first — embedded (base64) images are not accepted' });
+    .refine((v) => !/^data:/i.test(v), { message: 'Upload the image first — embedded (base64) images are not accepted' })
+    .refine((v) => !hasEmoji(v), { message: NO_EMOJI_MESSAGE });

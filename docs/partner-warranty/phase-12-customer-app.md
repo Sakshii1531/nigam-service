@@ -1,6 +1,6 @@
 # Phase 12 — Customer app wiring
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Frontend · **Delivers:** #1, #7, #12, #13
+**Status:** Done (2026-09-30) · **Layer:** Frontend · **Delivers:** #1, #7, #12, #13
 
 ## Goal
 Same screens and flow the client approved, now driven entirely by the APIs.

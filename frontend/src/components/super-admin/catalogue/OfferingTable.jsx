@@ -111,7 +111,7 @@ export default function OfferingTable({ rows, loading, filters, onFilters, focus
                           {row.needsRateReview && <DemoBadge />}
                           {row.localRateCount > 0 && (
                             <span title={`${row.localRateCount} city / pincode price(s)`} className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black bg-purple-50 text-purple-700">
-                              📍 {row.localRateCount}
+                              {row.localRateCount} local
                             </span>
                           )}
                           {row.express.enabled && <span className="text-[9px] font-black uppercase text-purple-700 bg-purple-50 px-1 rounded">Express</span>}

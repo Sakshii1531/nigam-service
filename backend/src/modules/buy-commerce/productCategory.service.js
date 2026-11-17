@@ -3,14 +3,14 @@ import { ApiError } from '../../middleware/errorHandler.js';
 
 /** Default seed data — applied on first request if the collection is empty. */
 const SEED_CATEGORIES = [
-  { name: 'Television',     slug: 'television',      icon: '📺', sortOrder: 1 },
-  { name: 'Refrigerator',   slug: 'refrigerator',    icon: '🧊', sortOrder: 2 },
-  { name: 'Washing Machine',slug: 'washing-machine', icon: '🫧', sortOrder: 3 },
-  { name: 'Air Conditioner',slug: 'air-conditioner', icon: '❄️', sortOrder: 4 },
-  { name: 'Water Purifier', slug: 'water-purifier',  icon: '💧', sortOrder: 5 },
-  { name: 'Geyser',         slug: 'geyser',          icon: '🔥', sortOrder: 6 },
-  { name: 'Microwave Oven', slug: 'microwave-oven',  icon: '⏱️', sortOrder: 7 },
-  { name: 'Others',         slug: 'others',          icon: '📦', sortOrder: 99 },
+  { name: 'Television',     slug: 'television',      icon: '', sortOrder: 1 },
+  { name: 'Refrigerator',   slug: 'refrigerator',    icon: '', sortOrder: 2 },
+  { name: 'Washing Machine',slug: 'washing-machine', icon: '', sortOrder: 3 },
+  { name: 'Air Conditioner',slug: 'air-conditioner', icon: '', sortOrder: 4 },
+  { name: 'Water Purifier', slug: 'water-purifier',  icon: '', sortOrder: 5 },
+  { name: 'Geyser',         slug: 'geyser',          icon: '', sortOrder: 6 },
+  { name: 'Microwave Oven', slug: 'microwave-oven',  icon: '', sortOrder: 7 },
+  { name: 'Others',         slug: 'others',          icon: '', sortOrder: 99 },
 ];
 
 async function ensureSeed() {

@@ -82,33 +82,33 @@ additive (nothing existing breaks). Phase 4 is the cut-over.
 
 | Phase | Name | Delivers | Client tests closed | Est. | Status |
 |---|---|---|---|---|---|
-| 1 | [Catalogue data model + seed](phase-1-data-model.md) | New models, rate versioning, wipe + seed scripts | — (foundation) | 4–5 d | ✅ Done 2026-09-24 |
-| 2 | [Pricing engine + Quote & Browse APIs](phase-2-pricing-engine.md) | One backend calculator, `/catalog/quote`, offering tree API, location-override seam | 1, 2, 3, 4, 9 (API level) | 5–6 d | ✅ Done 2026-09-24 |
-| 3 | [Super Admin — Master Catalogue module](phase-3-admin-catalogue.md) | Full CRUD, rate changes with reason + history, activate/deactivate | 8 (admin side) | 7–9 d | ✅ Done 2026-09-24 |
-| 4 | [Booking engine cut-over + customer booking flow](phase-4-booking-cutover.md) | Offering-based `createBooking`, full snapshot, BookingFlow/Payment/Success driven by quote | 5, 6, 7, 10, 11, 12 | 8–10 d | ✅ Done 2026-09-24 |
-| 5 | [Fixed payout engine + Service Partner app](phase-5-payout-partner-app.md) | Payout from snapshot, on-site add-ons from catalogue, partner screens | 8, 9 (payout side) | 5–6 d | ✅ Done 2026-09-24 |
-| 6 | [Discovery — search + all entry points](phase-6-discovery-entry-points.md) | Offering search, home/service pages/dashboards routed into offerings, URL-price path removed | 10 (every entry point) | 5–6 d | ✅ Done 2026-09-25 |
-| 7 | [NCC margin reporting + legacy cleanup + acceptance suite](phase-7-reporting-cleanup.md) | Margin report, old models/code deleted, 12-test automated suite | all, re-verified | 5–6 d | ✅ Done 2026-09-25 |
-| 8 | [Rates for every service](phase-8-full-catalogue-seed.md) | Offerings + DEMO rates for all 39 categories | — | 1–2 d | ✅ Done 2026-09-25 |
-| 9 | [Remove dead CMS screens](phase-9-dead-cms-cleanup.md) | Service-page / category-config editors and modules deleted | — | 1 d | ✅ Done 2026-09-25 |
-| 10 | [Location / pincode pricing admin](phase-10-location-pricing-admin.md) | City & pincode price overrides from the admin | Req 25 (UI) | 2 d | ✅ Done 2026-09-25 |
-| 11 | [Search v2](phase-11-search-v2.md) | Typo tolerance, synonyms, suggestions | Req 21+ | 1–2 d | ✅ Done 2026-09-25 |
-| 12 | [AMC Plans (membership merged)](phase-12-amc-plans.md) | One AMC Plan product, admin-managed, one route | — | 2–3 d | ✅ Done 2026-09-25 |
-| 13 | [Warranty, Buy hub & store lists configurable](phase-13-warranty-buy-configurable.md) | EW plan admin; no hardcoded customer prices | — | 2 d | ✅ Done 2026-09-25 |
-| 14 | [Browser test suite green](phase-14-browser-suite-green.md) | Every UI spec passes | — | 1–2 d | ✅ Done 2026-09-25 |
-| 15 | [Remove finance page; review synonyms](phase-15-finance-removal-synonyms.md) | Finance page gone; synonym list checked | — | 0.5 d | ✅ Done 2026-09-25 |
-| 16 | [Brand-admin dashboard & payments real data](phase-16-brand-admin-real-data.md) | No hardcoded brand figures | — | 1 d | ✅ Done 2026-09-25 |
-| 17 | [Images through Cloudinary](phase-17-cloudinary-images.md) | Uploads, not base64; category images | — | 1–2 d | ✅ Done 2026-09-25 |
-| 18 | [Tests updated, green, commit](phase-18-tests-and-commit.md) | All suites green; committed | — | 0.5 d | ✅ Done 2026-09-25 |
-| 19 | [Catalogue brands vs partner brands; brand warranty length](phase-19-catalogue-brands.md) | Customer brand picker from catalogue brands (product-linked only); warranty months honoured | — | 1 d | ✅ Done 2026-09-25 |
-| 20 | [NCC Products detailed](phase-20-ncc-products-detailed.md) | Marketplace-style listing, product page, per-product services | — | 1–2 d | ✅ Done 2026-09-25 |
-| 21 | [Inventory detailed](phase-21-inventory-detailed.md) | Part page, fits, pricing, stock history | — | 1–2 d | ✅ Done 2026-09-25 |
-| 22 | [Home sections from real data](phase-22-home-sections-real-data.md) | Most Booked / Appliance tiles are bookable catalogue services with live price, Instant and real ratings; stories can book | — | 1–2 d | ✅ Done 2026-09-25 |
-| 23 | [Skeleton loaders & partial loading](phase-23-skeleton-loading.md) | Every section of the customer and service-provider apps shows its data as soon as it lands, with a skeleton only where data is pending | — | 1–2 d | ✅ Done 2026-09-26 |
+| 1 | [Catalogue data model + seed](phase-1-data-model.md) | New models, rate versioning, wipe + seed scripts | — (foundation) | 4–5 d | Done 2026-09-24 |
+| 2 | [Pricing engine + Quote & Browse APIs](phase-2-pricing-engine.md) | One backend calculator, `/catalog/quote`, offering tree API, location-override seam | 1, 2, 3, 4, 9 (API level) | 5–6 d | Done 2026-09-24 |
+| 3 | [Super Admin — Master Catalogue module](phase-3-admin-catalogue.md) | Full CRUD, rate changes with reason + history, activate/deactivate | 8 (admin side) | 7–9 d | Done 2026-09-24 |
+| 4 | [Booking engine cut-over + customer booking flow](phase-4-booking-cutover.md) | Offering-based `createBooking`, full snapshot, BookingFlow/Payment/Success driven by quote | 5, 6, 7, 10, 11, 12 | 8–10 d | Done 2026-09-24 |
+| 5 | [Fixed payout engine + Service Partner app](phase-5-payout-partner-app.md) | Payout from snapshot, on-site add-ons from catalogue, partner screens | 8, 9 (payout side) | 5–6 d | Done 2026-09-24 |
+| 6 | [Discovery — search + all entry points](phase-6-discovery-entry-points.md) | Offering search, home/service pages/dashboards routed into offerings, URL-price path removed | 10 (every entry point) | 5–6 d | Done 2026-09-25 |
+| 7 | [NCC margin reporting + legacy cleanup + acceptance suite](phase-7-reporting-cleanup.md) | Margin report, old models/code deleted, 12-test automated suite | all, re-verified | 5–6 d | Done 2026-09-25 |
+| 8 | [Rates for every service](phase-8-full-catalogue-seed.md) | Offerings + DEMO rates for all 39 categories | — | 1–2 d | Done 2026-09-25 |
+| 9 | [Remove dead CMS screens](phase-9-dead-cms-cleanup.md) | Service-page / category-config editors and modules deleted | — | 1 d | Done 2026-09-25 |
+| 10 | [Location / pincode pricing admin](phase-10-location-pricing-admin.md) | City & pincode price overrides from the admin | Req 25 (UI) | 2 d | Done 2026-09-25 |
+| 11 | [Search v2](phase-11-search-v2.md) | Typo tolerance, synonyms, suggestions | Req 21+ | 1–2 d | Done 2026-09-25 |
+| 12 | [AMC Plans (membership merged)](phase-12-amc-plans.md) | One AMC Plan product, admin-managed, one route | — | 2–3 d | Done 2026-09-25 |
+| 13 | [Warranty, Buy hub & store lists configurable](phase-13-warranty-buy-configurable.md) | EW plan admin; no hardcoded customer prices | — | 2 d | Done 2026-09-25 |
+| 14 | [Browser test suite green](phase-14-browser-suite-green.md) | Every UI spec passes | — | 1–2 d | Done 2026-09-25 |
+| 15 | [Remove finance page; review synonyms](phase-15-finance-removal-synonyms.md) | Finance page gone; synonym list checked | — | 0.5 d | Done 2026-09-25 |
+| 16 | [Brand-admin dashboard & payments real data](phase-16-brand-admin-real-data.md) | No hardcoded brand figures | — | 1 d | Done 2026-09-25 |
+| 17 | [Images through Cloudinary](phase-17-cloudinary-images.md) | Uploads, not base64; category images | — | 1–2 d | Done 2026-09-25 |
+| 18 | [Tests updated, green, commit](phase-18-tests-and-commit.md) | All suites green; committed | — | 0.5 d | Done 2026-09-25 |
+| 19 | [Catalogue brands vs partner brands; brand warranty length](phase-19-catalogue-brands.md) | Customer brand picker from catalogue brands (product-linked only); warranty months honoured | — | 1 d | Done 2026-09-25 |
+| 20 | [NCC Products detailed](phase-20-ncc-products-detailed.md) | Marketplace-style listing, product page, per-product services | — | 1–2 d | Done 2026-09-25 |
+| 21 | [Inventory detailed](phase-21-inventory-detailed.md) | Part page, fits, pricing, stock history | — | 1–2 d | Done 2026-09-25 |
+| 22 | [Home sections from real data](phase-22-home-sections-real-data.md) | Most Booked / Appliance tiles are bookable catalogue services with live price, Instant and real ratings; stories can book | — | 1–2 d | Done 2026-09-25 |
+| 23 | [Skeleton loaders & partial loading](phase-23-skeleton-loading.md) | Every section of the customer and service-provider apps shows its data as soon as it lands, with a skeleton only where data is pending | — | 1–2 d | Done 2026-09-26 |
 
 **Total: ~39–48 developer-days** (≈ 8–10 weeks for one full-stack developer).
 
-Status legend: ⬜ Not started · 🟨 In progress · ✅ Done · ⏸ Blocked
+Status legend: Not started · In progress · Done · ⏸ Blocked
 
 ### Dependency order
 

@@ -1,6 +1,6 @@
 # Phase 10 — Notifications matrix + domain events + webhooks
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Backend · **Delivers:** #16, #18
+**Status:** Done (2026-09-30) · **Layer:** Backend · **Delivers:** #16, #18
 
 ## Goal
 Every party hears about the events that matter to them, and the platform is

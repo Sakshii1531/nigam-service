@@ -348,7 +348,7 @@ const Payment = () => {
               </button>
 
               <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-100 text-slate-400 text-xs font-bold">
-                <span>🔒 100% Guaranteed &amp; Safe Checkout</span>
+                <span>100% Guaranteed &amp; Safe Checkout</span>
               </div>
             </div>
           </div>

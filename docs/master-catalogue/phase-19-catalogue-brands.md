@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-25) |
+| **Status** | Done (2026-09-25) |
 | **Depends on** | Phases 3, 4, 13 |
 
 ## Goal
@@ -11,8 +11,8 @@ Super Admin → **Categories & Brands** had two tabs. The review found:
 
 | Tab | What it did | Used? |
 |---|---|---|
-| Product Categories | the Buy New store's product categories (`ProductCategory`): store category chips and the admin Products dropdown | ✅ yes, and kept (renamed **Store Categories**) |
-| Product Brands | edited the **same `Brand` records as Brand Partners**. These are the companies with a brand-admin login. The public `/catalog/brands` also listed them to customers, and inserted 16 default "partners" into that collection if it was empty. | ⚠️ it mixed up two different things |
+| Product Categories | the Buy New store's product categories (`ProductCategory`): store category chips and the admin Products dropdown | yes, and kept (renamed **Store Categories**) |
+| Product Brands | edited the **same `Brand` records as Brand Partners**. These are the companies with a brand-admin login. The public `/catalog/brands` also listed them to customers, and inserted 16 default "partners" into that collection if it was empty. | Warning: it mixed up two different things |
 
 The user's decision (2026-09-25):
 - A **partner brand** is a company that logs in to the brand-admin panel.

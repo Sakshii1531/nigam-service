@@ -435,7 +435,7 @@ const PartRequests = () => {
                         ? '✓ Customer approved this cost'
                         : selectedRequest.customerApprovalStatus === 'Rejected'
                           ? '✕ Customer declined this cost'
-                          : '⏳ Awaiting customer approval'}
+                          : 'Awaiting customer approval'}
                     </span>
                   )}
                 </div>

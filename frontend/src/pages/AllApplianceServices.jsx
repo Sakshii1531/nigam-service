@@ -3,14 +3,8 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { listServiceGroups, formatRupees } from '../lib/catalogueApi';
 import { useLocationContext } from '../context/LocationContext';
-import mostBookedAc1 from '../assets/most_booked_ac_1.png';
-import mostBookedAc2 from '../assets/most_booked_ac_2.png';
-import mostBookedWm from '../assets/most_booked_wm.png';
-import applianceFridge from '../assets/appliance_fridge.png';
+import ItemIcon from '../components/common/ItemIcon';
 import { LoadingSection, SkeletonCardRow } from '../components/common/Skeleton';
-
-// Illustration per category — artwork, not data.
-const CATEGORY_IMAGES = [mostBookedAc1, mostBookedAc2, mostBookedWm, applianceFridge];
 
 const AllApplianceServices = () => {
   const navigate = useNavigate();
@@ -63,14 +57,14 @@ const AllApplianceServices = () => {
           skeleton={<SkeletonCardRow count={10} columns="grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5" cardClassName="w-auto" imageClassName="h-32" />}
         >
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {services.map((service, i) => (
+          {services.map((service) => (
             <div 
               key={service.deepLink}
               onClick={() => navigate(service.deepLink)}
               className="flex flex-col gap-2 cursor-pointer border border-border-color rounded-2xl p-2 bg-white hover:border-brand-blue transition-all"
             >
               <div className="w-full h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden relative">
-                <img src={CATEGORY_IMAGES[i % CATEGORY_IMAGES.length]} alt={service.title} className="w-full h-full object-cover" />
+                <ItemIcon src={service.imageUrl} alt={service.title} className="w-full h-full p-3" />
 
               </div>
               <div className="flex flex-col gap-0.5">

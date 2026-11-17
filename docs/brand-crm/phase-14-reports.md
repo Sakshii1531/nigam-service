@@ -1,6 +1,6 @@
 # Phase 14: Reports: state/city call and billing + analytics + export
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §17, §21 (reports list) · **Depends on:** Phases 11–13
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §17, §21 (reports list) · **Depends on:** Phases 11–13
 
 ## Goal
 The brand can see State → City → number of calls → applicable rate → total

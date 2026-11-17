@@ -99,7 +99,7 @@ const ServiceProviderLogin = () => {
         {/* Error message */}
         {error && (
           <div className="mb-4 bg-rose-50 border border-rose-100 rounded-2xl p-3.5 text-center text-xs font-bold text-rose-600 animate-shake">
-            ⚠️ {error}
+            {error}
           </div>
         )}
 

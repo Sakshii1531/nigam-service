@@ -40,7 +40,7 @@ const EVENT_TEMPLATES = {
     message: `Your ${p.category} service booking has been confirmed.`,
     cta: p.bookingId ? { label: 'View Booking', route: `/bookings/${p.bookingId}` } : undefined,
     smsBody: `Your ${p.category} service booking is confirmed. Track via Nigam Care app.`,
-    whatsappBody: `✅ *Booking Confirmed!*\n\nYour *${p.category}* service has been booked successfully.\n\nOpen the Nigam Care app to track your booking.`,
+    whatsappBody: `*Booking Confirmed!*\n\nYour *${p.category}* service has been booked successfully.\n\nOpen the Nigam Care app to track your booking.`,
   }),
   'job.search_expired': (p) => ({
     recipient: p.user, type: 'jobs', title: 'Job offer expired',
@@ -70,7 +70,7 @@ const EVENT_TEMPLATES = {
     message: p.message,
     cta: { label: 'Book again', route: '/services' },
     smsBody: p.message,
-    whatsappBody: `⏳ *We couldn't find a service provider*\n\n${p.message}`,
+    whatsappBody: `*We couldn't find a service provider*\n\n${p.message}`,
   }),
   'serviceProvider.city_change_approved': (p) => ({
     recipient: p.user,
@@ -79,7 +79,7 @@ const EVENT_TEMPLATES = {
     message: `You now serve ${p.cityName}. New jobs will come from ${p.cityName}.${p.note ? ` Note: ${p.note}` : ''}`,
     cta: { label: 'View profile', route: '/service-provider/personal-info' },
     smsBody: `Your request to serve ${p.cityName} is approved. New jobs will come from ${p.cityName}.`,
-    whatsappBody: `✅ *Service city updated*\n\nYou now serve *${p.cityName}*. New jobs will come from there.`,
+    whatsappBody: `*Service city updated*\n\nYou now serve *${p.cityName}*. New jobs will come from there.`,
   }),
   'serviceProvider.city_change_rejected': (p) => ({
     recipient: p.user,
@@ -88,7 +88,7 @@ const EVENT_TEMPLATES = {
     message: `Your request to move to ${p.cityName} was not approved.${p.note ? ` Reason: ${p.note}` : ''}`,
     cta: { label: 'View request', route: '/service-provider/personal-info' },
     smsBody: `Your request to move to ${p.cityName} was not approved.${p.note ? ` Reason: ${p.note}` : ''}`,
-    whatsappBody: `❌ *Service city change not approved*\n\nYour request to move to *${p.cityName}* was not approved.${p.note ? `\nReason: ${p.note}` : ''}`,
+    whatsappBody: `*Service city change not approved*\n\nYour request to move to *${p.cityName}* was not approved.${p.note ? `\nReason: ${p.note}` : ''}`,
   }),
   'serviceProvider.city_changed_by_admin': (p) => ({
     recipient: p.user,
@@ -97,7 +97,7 @@ const EVENT_TEMPLATES = {
     message: `An admin changed your service city to ${p.cityName}. New jobs will come from ${p.cityName}.${p.note ? ` Note: ${p.note}` : ''}`,
     cta: { label: 'View profile', route: '/service-provider/personal-info' },
     smsBody: `Your service city was changed to ${p.cityName} by the admin team.`,
-    whatsappBody: `📍 *Service city changed*\n\nThe admin team set your service city to *${p.cityName}*.`,
+    whatsappBody: `*Service city changed*\n\nThe admin team set your service city to *${p.cityName}*.`,
   }),
   'serviceProvider.assigned': (p) => ({
     recipient: p.user,
@@ -106,25 +106,25 @@ const EVENT_TEMPLATES = {
     message: `${p.serviceProviderName || 'A serviceProvider'} has been assigned to your service request.`,
     cta: p.serviceRequestId ? { label: 'View Details', route: `/service-requests/${p.serviceRequestId}` } : undefined,
     smsBody: `${p.serviceProviderName || 'A serviceProvider'} has been assigned to your service request. Track live on the Nigam Care app.`,
-    whatsappBody: `🔧 *Service Provider Assigned!*\n\n*${p.serviceProviderName || 'A serviceProvider'}* is assigned to your request.\n\nOpen the Nigam Care app to track details.`,
+    whatsappBody: `*Service Provider Assigned!*\n\n*${p.serviceProviderName || 'A serviceProvider'}* is assigned to your request.\n\nOpen the Nigam Care app to track details.`,
   }),
   'serviceProvider.ontheway': (p) => ({
     recipient: p.user,
     type: 'assigned',
-    title: 'ServiceProvider is On The Way! 🚗',
+    title: 'ServiceProvider is On The Way! ',
     message: `${p.serviceProviderName || 'Your serviceProvider'} has started the trip and is heading to your address.`,
     cta: p.bookingId ? { label: 'Track Live', route: `/bookings/${p.bookingId}` } : undefined,
     smsBody: `${p.serviceProviderName || 'Your serviceProvider'} is on the way to your location for service. Track live on the Nigam Care app.`,
-    whatsappBody: `🚗 *Service Provider is On The Way!*\n\n*${p.serviceProviderName || 'Your serviceProvider'}* has started the trip and is heading to your address.\n\nOpen the Nigam Care app to track live.`,
+    whatsappBody: `*Service Provider is On The Way!*\n\n*${p.serviceProviderName || 'Your serviceProvider'}* has started the trip and is heading to your address.\n\nOpen the Nigam Care app to track live.`,
   }),
   'serviceProvider.parts_pending': (p) => ({
     recipient: p.user,
     type: 'assigned',
-    title: 'Approve Spare Part Request ⏳',
+    title: 'Approve Spare Part Request ',
     message: `Your ${p.category || 'service'} technician has requested a spare part (${p.partName || 'Spare Part'}) worth ₹${p.amount ?? 0}. Please approve this cost to continue — it won't be ordered until you do.`,
     cta: p.bookingId ? { label: 'Review & Approve', route: `/bookings/${p.bookingId}` } : undefined,
     smsBody: `Your technician has requested a spare part (${p.partName || 'Spare Part'}) worth ₹${p.amount ?? 0}. Approve it in the Nigam Care app to continue.`,
-    whatsappBody: `⏳ *Spare Part Approval Needed*\n\nYour technician has requested *${p.partName || 'Spare Part'}* worth *₹${p.amount ?? 0}* for your *${p.category || 'service'}*.\n\nOpen the Nigam Care app to approve or decline this cost before it's ordered.`,
+    whatsappBody: `*Spare Part Approval Needed*\n\nYour technician has requested *${p.partName || 'Spare Part'}* worth *₹${p.amount ?? 0}* for your *${p.category || 'service'}*.\n\nOpen the Nigam Care app to approve or decline this cost before it's ordered.`,
   }),
   // Sent to the SERVICE PROVIDER (not the customer) — the customer declined
   // the part's cost, so the job that was parked at 'completed_pending'
@@ -136,7 +136,7 @@ const EVENT_TEMPLATES = {
     message: `The customer declined the ${p.partName || 'spare part'} request (₹${p.amount ?? 0}) for their ${p.category || 'service'} job. The service is cancelled.`,
     cta: p.jobId ? { label: 'View Job', route: `/service-provider/active-job` } : undefined,
     smsBody: `Customer declined the spare part request for their ${p.category || 'service'} job. The service is cancelled.`,
-    whatsappBody: `❌ *Job Cancelled*\n\nThe customer declined the *${p.partName || 'spare part'}* request (₹${p.amount ?? 0}) for their *${p.category || 'service'}* job.\n\nThe service is now cancelled.`,
+    whatsappBody: `*Job Cancelled*\n\nThe customer declined the *${p.partName || 'spare part'}* request (₹${p.amount ?? 0}) for their *${p.category || 'service'}* job.\n\nThe service is now cancelled.`,
   }),
   // Sent to the SERVICE PROVIDER when a customer who previously rejected a
   // part request changes their mind and re-approves it, reopening the job.
@@ -147,16 +147,16 @@ const EVENT_TEMPLATES = {
     message: `The customer re-approved the ${p.partName || 'spare part'} request for their ${p.category || 'service'} job. It's back with Super Admin for approval and will be scheduled once actioned.`,
     cta: p.jobId ? { label: 'View Job', route: `/service-provider/active-job` } : undefined,
     smsBody: `Customer re-approved the spare part request for their ${p.category || 'service'} job. Awaiting Super Admin approval again.`,
-    whatsappBody: `✅ *Spare Part Re-approved*\n\nThe customer re-approved *${p.partName || 'spare part'}* for their *${p.category || 'service'}* job.\n\nIt's back with Super Admin for approval.`,
+    whatsappBody: `*Spare Part Re-approved*\n\nThe customer re-approved *${p.partName || 'spare part'}* for their *${p.category || 'service'}* job.\n\nIt's back with Super Admin for approval.`,
   }),
   'service.rescheduled': (p) => ({
     recipient: p.user,
     type: 'assigned',
-    title: 'Service Revisit Rescheduled 📅',
+    title: 'Service Revisit Rescheduled ',
     message: `Your ${p.category || 'service'} revisit has been scheduled for ${p.scheduledDate || 'the scheduled date'} (${p.timeSlot || '10:00 AM - 01:00 PM'}). Spare part has been delivered to your serviceProvider.`,
     cta: p.bookingId ? { label: 'View Booking', route: `/bookings` } : undefined,
     smsBody: `Your ${p.category || 'service'} revisit is scheduled for ${p.scheduledDate || 'upcoming date'} (${p.timeSlot || '10:00 AM - 01:00 PM'}). Track live on Nigam Care app.`,
-    whatsappBody: `📅 *Service Rescheduled!*\n\nYour *${p.category || 'service'}* revisit is confirmed for *${p.scheduledDate || 'the scheduled date'}* (*${p.timeSlot || '10:00 AM - 01:00 PM'}*).\n\nThe spare part is delivered and ${p.serviceProviderName || 'your serviceProvider'} will visit to complete the repair.`,
+    whatsappBody: `*Service Rescheduled!*\n\nYour *${p.category || 'service'}* revisit is confirmed for *${p.scheduledDate || 'the scheduled date'}* (*${p.timeSlot || '10:00 AM - 01:00 PM'}*).\n\nThe spare part is delivered and ${p.serviceProviderName || 'your serviceProvider'} will visit to complete the repair.`,
   }),
   'payment.success': (p) => ({
     recipient: p.user,
@@ -164,7 +164,7 @@ const EVENT_TEMPLATES = {
     title: 'Payment Successful',
     message: `Payment of ₹${p.amount} was successful.`,
     smsBody: `Payment of Rs.${p.amount} received for your Nigam Care service. Thank you!`,
-    whatsappBody: `💰 *Payment Received!*\n\nWe've received your payment of *₹${p.amount}*.\n\nThank you for choosing Nigam Care!`,
+    whatsappBody: `*Payment Received!*\n\nWe've received your payment of *₹${p.amount}*.\n\nThank you for choosing Nigam Care!`,
   }),
   'service.completed': (p) => ({
     recipient: p.user,
@@ -173,7 +173,7 @@ const EVENT_TEMPLATES = {
     message: 'Your service request has been completed.',
     cta: p.serviceRequestId ? { label: 'View Details', route: `/service-requests/${p.serviceRequestId}` } : undefined,
     smsBody: 'Your Nigam Care service is complete. Please rate your experience on the app.',
-    whatsappBody: `✅ *Service Completed!*\n\nYour service request has been completed successfully.\n\nPlease rate your experience on the Nigam Care app — your feedback helps us improve! ⭐`,
+    whatsappBody: `*Service Completed!*\n\nYour service request has been completed successfully.\n\nPlease rate your experience on the Nigam Care app — your feedback helps us improve! `,
   }),
   'claim.approved': (p) => ({
     recipient: p.user,
@@ -181,7 +181,7 @@ const EVENT_TEMPLATES = {
     title: 'Claim Approved',
     message: `Your claim for "${p.item || 'a part'}" has been approved.`,
     smsBody: `Your claim for "${p.item || 'a part'}" has been approved by Nigam Care.`,
-    whatsappBody: `✅ *Claim Approved!*\n\nYour claim for *"${p.item || 'a part'}"* has been approved.\n\nOur team will process it shortly.`,
+    whatsappBody: `*Claim Approved!*\n\nYour claim for *"${p.item || 'a part'}"* has been approved.\n\nOur team will process it shortly.`,
   }),
   'escalation.raised': (p) => ({
     broadcastRole: 'All',
@@ -217,7 +217,7 @@ const EVENT_TEMPLATES = {
     cta: p.cta,
     priority: 'Medium',
     smsBody: `Nigam Care: warranty claim ${p.humanId} submitted to ${p.brandName}. Track it in the app.`,
-    whatsappBody: `🛡️ *Warranty Claim Submitted*\n\nTicket: *${p.humanId}*\n${p.brandName} · ${p.productName}\n\nWe've sent it to ${p.brandName} for verification. You can track it in the Nigam Care app.`,
+    whatsappBody: `*Warranty Claim Submitted*\n\nTicket: *${p.humanId}*\n${p.brandName} · ${p.productName}\n\nWe've sent it to ${p.brandName} for verification. You can track it in the Nigam Care app.`,
   }),
   'warranty.new_claim_brand': (p) => ({
     recipient: p.user,
@@ -243,7 +243,7 @@ const EVENT_TEMPLATES = {
     cta: p.cta,
     priority: 'High',
     smsBody: `Nigam Care: ${p.brandName} needs more information for warranty claim ${p.humanId}. Open the app to respond.`,
-    whatsappBody: `📎 *More Information Needed*\n\nTicket: *${p.humanId}*\n${p.brandName} says: "${p.message}"\n\nPlease open the Nigam Care app to upload it.`,
+    whatsappBody: `*More Information Needed*\n\nTicket: *${p.humanId}*\n${p.brandName} says: "${p.message}"\n\nPlease open the Nigam Care app to upload it.`,
   }),
   'warranty.claim_approved': (p) => ({
     recipient: p.user,
@@ -253,7 +253,7 @@ const EVENT_TEMPLATES = {
     cta: p.cta,
     priority: 'High',
     smsBody: `Nigam Care: ${p.brandName} approved warranty claim ${p.humanId}. A service partner will be assigned shortly.`,
-    whatsappBody: `✅ *Warranty Claim Approved*\n\nTicket: *${p.humanId}*\n${p.brandName} has approved your claim. We're assigning a service partner near you.`,
+    whatsappBody: `*Warranty Claim Approved*\n\nTicket: *${p.humanId}*\n${p.brandName} has approved your claim. We're assigning a service partner near you.`,
   }),
   'warranty.claim_rejected': (p) => ({
     recipient: p.user,
@@ -263,7 +263,7 @@ const EVENT_TEMPLATES = {
     cta: p.cta,
     priority: 'High',
     smsBody: `Nigam Care: ${p.brandName} did not approve warranty claim ${p.humanId}. See the reason in the app.`,
-    whatsappBody: `❌ *Warranty Claim Not Approved*\n\nTicket: *${p.humanId}*\nReason from ${p.brandName}: "${p.reason}"`,
+    whatsappBody: `*Warranty Claim Not Approved*\n\nTicket: *${p.humanId}*\nReason from ${p.brandName}: "${p.reason}"`,
   }),
   'warranty.claim_decided_admin': (p) => ({
     recipient: p.user,
@@ -346,7 +346,7 @@ const EVENT_TEMPLATES = {
     cta: p.cta,
     priority: p.title === 'Technician On the Way' ? 'High' : 'Medium',
     smsBody: `Nigam Care: ${p.title} for warranty claim ${p.humanId}.${p.detail ? ` ${p.detail}.` : ''}`,
-    whatsappBody: `🛠️ *${p.title}*\n\nTicket: *${p.humanId}*${p.detail ? `\n${p.detail}` : ''}`,
+    whatsappBody: `*${p.title}*\n\nTicket: *${p.humanId}*${p.detail ? `\n${p.detail}` : ''}`,
   }),
   'warranty.progress_brand': (p) => ({
     recipient: p.user,
@@ -429,11 +429,11 @@ const EVENT_TEMPLATES = {
   'referral.code_used': (p) => ({
     recipient: p.referrerId,
     type: 'referral',
-    title: 'Your referral code was used! 🎉',
+    title: 'Your referral code was used! ',
     message: `${p.refereeName || 'Someone'} just signed up using your referral code — ₹${p.bonusAmount} has been credited to your wallet.`,
     cta: { label: 'View Rewards', route: '/rewards-play-zone' },
     smsBody: `${p.refereeName || 'Someone'} signed up using your Nigam Care referral code. ₹${p.bonusAmount} credited to your wallet!`,
-    whatsappBody: `🎉 *Referral Bonus!*\n\n${p.refereeName || 'Someone'} just signed up using your referral code.\n\n₹${p.bonusAmount} has been credited to your Nigam Care wallet!`,
+    whatsappBody: `*Referral Bonus!*\n\n${p.refereeName || 'Someone'} just signed up using your referral code.\n\n₹${p.bonusAmount} has been credited to your Nigam Care wallet!`,
   }),
 };
 

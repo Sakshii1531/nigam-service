@@ -1,6 +1,6 @@
 # Phase 19: End-to-end verification and client acceptance
 
-**Status:** ✅ Implemented and regression-tested · **Layer:** All · **Client sign-off:** pending actual brand configuration and business-default confirmation · **Depends on:** Phases 1–18
+**Status:** Implemented and regression-tested · **Layer:** All · **Client sign-off:** pending actual brand configuration and business-default confirmation · **Depends on:** Phases 1–18
 
 ## Goal
 Prove the client's final flow end to end, across the Customer App, Brand
@@ -43,14 +43,14 @@ NCC App / CCE / Toll-Free / WhatsApp → Central Ticket → Brand verification &
 - [x] **Isolation walk:** a Samsung user sees none of the LG data created above (UI + API).
 - [x] **Regression:** full backend suite, all `e2e/api`, all `e2e/ui` (incl. the partner-warranty specs) green. Record the counts.
 - [x] **Docs:**
-  - CLIENT-ACCEPTANCE: every row ✅ with evidence (test file + test name, screenshot)
-  - README status table all ✅
+  - CLIENT-ACCEPTANCE: every row with evidence (test file + test name, screenshot)
+  - README status table all Done
   - ARCHITECTURE updated to as-built (note every deviation)
   - add `docs/brand-crm/USER-GUIDE.md`: a short role-by-role guide (CCE, Warranty Exec, Service Ops, Spare Parts, Finance, Quality, Manager, Super Admin) with the screens they use
 - [x] List any open questions (Q1–Q5) still on default answers, for the client to confirm.
 
 ## Acceptance
-- All 22 requirements are ✅ with evidence.
+- All 22 requirements are with evidence.
 - All suites are green.
 - The walkthrough screenshots are committed (on go-ahead).
 

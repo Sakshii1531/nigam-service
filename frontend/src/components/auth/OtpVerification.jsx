@@ -156,7 +156,7 @@ const OtpVerification = ({
 
   const demoHint = (
     <div className="flex items-center justify-center gap-1.5 py-1 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium mx-auto">
-      <span>💡 Demo OTP:</span>
+      <span>Demo OTP:</span>
       <span className="font-mono font-bold tracking-wider text-amber-900">123456</span>
     </div>
   );

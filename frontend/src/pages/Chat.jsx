@@ -144,7 +144,7 @@ const Chat = () => {
       {/* Messages */}
       <div className="flex-1 p-4 flex flex-col gap-3 overflow-y-auto bg-slate-50">
         <div className="bg-white p-3 rounded-xl text-center text-xs text-text-secondary shadow-sm">
-          🔒 Your phone number is masked for security.
+          Your phone number is masked for security.
         </div>
 
         {historyLoading && (

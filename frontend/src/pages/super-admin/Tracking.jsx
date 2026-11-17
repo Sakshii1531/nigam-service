@@ -120,10 +120,6 @@ const Tracking = () => {
           strokeWeight: 2,
           scale: 10,
         },
-        label: {
-          text: tracking.status === 'On the way' ? '🚚' : tracking.status === 'Repairing' ? '🔧' : '✅',
-          fontSize: '14px',
-        },
       });
 
       marker.addListener('click', () => {

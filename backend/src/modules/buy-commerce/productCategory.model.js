@@ -13,7 +13,7 @@ const productCategorySchema = new mongoose.Schema(
   {
     name:      { type: String, required: true, unique: true, trim: true },
     slug:      { type: String, required: true, unique: true, lowercase: true, trim: true },
-    icon:      { type: String, default: '📦' },   // emoji or icon identifier
+    icon:      { type: String, default: '' },     // uploaded picture URL
     sortOrder: { type: Number, default: 0, index: true },
     isActive:  { type: Boolean, default: true, index: true },
   },

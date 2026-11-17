@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-26) |
+| **Status** | Done (2026-09-26) |
 | **Depends on** | — |
 
 ## Goal

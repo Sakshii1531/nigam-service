@@ -1,6 +1,6 @@
 # Phase 15: Dashboard on live ticket data
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §21 · **Depends on:** Phases 6, 8, 11, 13, 14
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §21 · **Depends on:** Phases 6, 8, 11, 13, 14
 
 ## Goal
 Keep the current dashboard look, but make every card and chart read the

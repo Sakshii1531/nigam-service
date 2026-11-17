@@ -597,8 +597,8 @@ const Cities = () => {
                     value={newCity.status}
                     onChange={(e) => setNewCity({ ...newCity, status: e.target.value })}
                   >
-                    <option value="Active">🟢 Active (Open for Bookings)</option>
-                    <option value="Inactive">🔴 Inactive (Coming Soon / Suspended)</option>
+                    <option value="Active">Active (Open for Bookings)</option>
+                    <option value="Inactive">Inactive (Coming Soon / Suspended)</option>
                   </select>
                 </div>
               </div>
@@ -770,8 +770,8 @@ const Cities = () => {
                     value={editingCity.status}
                     onChange={(e) => setEditingCity({ ...editingCity, status: e.target.value })}
                   >
-                    <option value="Active">🟢 Active (Open for Bookings)</option>
-                    <option value="Inactive">🔴 Inactive (Suspended)</option>
+                    <option value="Active">Active (Open for Bookings)</option>
+                    <option value="Inactive">Inactive (Suspended)</option>
                   </select>
                 </div>
               </div>

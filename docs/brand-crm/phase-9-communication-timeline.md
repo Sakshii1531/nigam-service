@@ -1,6 +1,6 @@
 # Phase 9: Communication and activity timeline
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §5 (CCE work), §14 · **Depends on:** Phases 6, 7
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §5 (CCE work), §14 · **Depends on:** Phases 6, 7
 
 ## Goal
 Every customer interaction and every CCE activity is on the ticket timeline with:

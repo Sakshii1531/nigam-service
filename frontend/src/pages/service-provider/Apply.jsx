@@ -741,7 +741,7 @@ const ServiceProviderApply = () => {
                       />
                     ) : (
                       <span className="text-[10px] font-bold text-brand-blue text-center">
-                        📷 Upload Front
+                        Upload Front
                       </span>
                     )}
                     <input
@@ -773,7 +773,7 @@ const ServiceProviderApply = () => {
                       />
                     ) : (
                       <span className="text-[10px] font-bold text-brand-blue text-center">
-                        📷 Upload Back
+                        Upload Back
                       </span>
                     )}
                     <input

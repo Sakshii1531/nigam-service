@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Sidebar from '../../components/super-admin/Sidebar';
 import Topbar from '../../components/super-admin/Topbar';
 import { apiRequest } from '../../lib/apiClient';
+import PictureField from '../../components/super-admin/common/PictureField';
+import ItemIcon, { isImageIcon } from '../../components/common/ItemIcon';
 import { 
   Plus, 
   Search, 
@@ -13,10 +15,8 @@ import {
   Tag, 
   Loader2, 
   Check, 
-  Award,
-} from 'lucide-react';
+  Award, Package } from 'lucide-react';
 
-const COMMON_EMOJIS = ['📺', '🧊', '🫧', '❄️', '💧', '🔥', '⏱️', '📦', '⚡', '🍳', '🧹', '🛋️', '☕', '💡'];
 
 // Two unrelated lists live here (docs/master-catalogue Phase 19):
 //  • Store categories — the Buy New shop's product categories.
@@ -47,7 +47,7 @@ const ProductCategories = () => {
   const [catFormData, setCatFormData] = useState({
     name: '',
     slug: '',
-    icon: '📦',
+    icon: '',
     sortOrder: 0,
     isActive: true,
   });
@@ -127,7 +127,7 @@ const ProductCategories = () => {
     setCatFormData({
       name: '',
       slug: '',
-      icon: '📦',
+      icon: '',
       sortOrder: (categories.length + 1) * 1,
       isActive: true,
     });
@@ -140,7 +140,7 @@ const ProductCategories = () => {
     setCatFormData({
       name: cat.name || '',
       slug: cat.slug || '',
-      icon: cat.icon || '📦',
+      icon: isImageIcon(cat.icon) ? cat.icon : '',
       sortOrder: cat.sortOrder ?? 0,
       isActive: cat.isActive !== false,
     });
@@ -173,7 +173,7 @@ const ProductCategories = () => {
           body: {
             name: catFormData.name.trim(),
             slug: catFormData.slug.trim() || slugify(catFormData.name),
-            icon: catFormData.icon || '📦',
+            icon: isImageIcon(catFormData.icon) ? catFormData.icon : '',
             sortOrder: Number(catFormData.sortOrder) || 0,
             isActive: Boolean(catFormData.isActive),
           },
@@ -187,7 +187,7 @@ const ProductCategories = () => {
           body: {
             name: catFormData.name.trim(),
             slug: catFormData.slug.trim() || slugify(catFormData.name),
-            icon: catFormData.icon || '📦',
+            icon: isImageIcon(catFormData.icon) ? catFormData.icon : '',
             sortOrder: Number(catFormData.sortOrder) || 0,
             isActive: Boolean(catFormData.isActive),
           },
@@ -510,8 +510,8 @@ const ProductCategories = () => {
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-3">
-                              <span className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-lg shadow-2xs shrink-0">
-                                {cat.icon || '📦'}
+                              <span className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shadow-2xs shrink-0">
+                                <ItemIcon src={cat.icon} fallback={Package} className="w-6 h-6" />
                               </span>
                               <div>
                                 <p className="font-extrabold text-slate-900 text-sm leading-tight">
@@ -736,39 +736,11 @@ const ProductCategories = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Icon / Emoji
-                </label>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-xl shrink-0">
-                    {catFormData.icon || '📦'}
-                  </span>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={catFormData.icon}
-                    onChange={(e) => setCatFormData({ ...catFormData, icon: e.target.value })}
-                    placeholder="Emoji"
-                    className="w-24 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-center outline-none focus:bg-white focus:border-[#0D47A1]"
-                  />
-                  <span className="text-[10px] text-slate-400">Quick pick:</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-100">
-                  {COMMON_EMOJIS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setCatFormData({ ...catFormData, icon: emoji })}
-                      className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center hover:bg-white transition-all cursor-pointer ${
-                        catFormData.icon === emoji ? 'bg-white shadow-xs border border-blue-400' : ''
-                      }`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <PictureField
+                label="Category picture"
+                value={catFormData.icon}
+                onChange={(url) => setCatFormData({ ...catFormData, icon: url })}
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

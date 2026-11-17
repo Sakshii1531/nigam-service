@@ -1,6 +1,6 @@
 # Phase 9 — SLA engine
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Backend · **Delivers:** #15
+**Status:** Done (2026-09-30) · **Layer:** Backend · **Delivers:** #15
 
 ## Goal
 Every stage has a deadline; warnings and breaches surface to Super Admin.

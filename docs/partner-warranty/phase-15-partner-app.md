@@ -1,6 +1,6 @@
 # Phase 15 — Partner app: warranty jobs + B2B2C payout
 
-**Status:** ✅ Done · **Layer:** Frontend · **Delivers:** #11, #20
+**Status:** Done · **Layer:** Frontend · **Delivers:** #11, #20
 
 ## Tasks
 - [x] Incoming offer card for warranty jobs: "Warranty Service" badge, brand, product, issue, area/pincode, NCCJ job ID, visit details, payout; accept / reject with the 60 s countdown

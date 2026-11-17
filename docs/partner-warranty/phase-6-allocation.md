@@ -1,6 +1,6 @@
 # Phase 6 — Warranty-aware partner allocation
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Backend · **Delivers:** #9, #10, #11 (payload)
+**Status:** Done (2026-09-30) · **Layer:** Backend · **Delivers:** #9, #10, #11 (payload)
 
 ## Goal
 The job reaches the right nearby partner, and never gets stuck.

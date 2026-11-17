@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Info } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
 import { payWithRazorpay } from '../lib/razorpayCheckout';
 import { submitBookingsForMeta, totalPriceFromResults } from '../lib/bookingSubmission';
@@ -203,7 +203,7 @@ const CardPayment = () => {
               {/* Information Notice */}
               <div className="bg-blue-50/70 border border-blue-100 rounded-2xl md:rounded-3xl p-3.5 sm:p-5 flex items-start gap-3">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-white text-brand-blue flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
-                  ℹ️
+                  <Info className="w-4 h-4" aria-hidden="true" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs sm:text-sm font-black text-slate-900">Secure Gateway Redirect</span>
@@ -251,7 +251,7 @@ const CardPayment = () => {
                 </button>
 
                 <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-slate-100 text-slate-400 text-[10px] sm:text-xs font-bold">
-                  <span>🔒 100% Secure &amp; Verified Checkout</span>
+                  <span>100% Secure &amp; Verified Checkout</span>
                 </div>
 
               </div>

@@ -1,6 +1,6 @@
 # Phase 1 — Groundwork: data model, IDs, status machine, bug fixes
 
-**Status:** ✅ Done (2026-09-29) · **Layer:** Backend · **Delivers:** #2, #5, #8 (IDs), #17 (foundation)
+**Status:** Done (2026-09-29) · **Layer:** Backend · **Delivers:** #2, #5, #8 (IDs), #17 (foundation)
 
 ## Goal
 Create the entities everything else hangs off, with the rules enforced in one

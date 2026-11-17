@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mediaUrl } from '../shared/mediaUrl.js';
 
 const slugify = (s) =>
   s
@@ -11,7 +12,7 @@ export const createProductCategorySchema = z
   .object({
     name:      z.string().min(1).max(80),
     slug:      z.string().min(1).max(80).optional(), // auto-generated when omitted
-    icon:      z.string().optional(),
+    icon:      mediaUrl(500).optional(),
     sortOrder: z.coerce.number().int().nonnegative().optional(),
     isActive:  z.boolean().optional(),
   })
@@ -21,7 +22,7 @@ export const updateProductCategorySchema = z
   .object({
     name:      z.string().min(1).max(80).optional(),
     slug:      z.string().min(1).max(80).optional(),
-    icon:      z.string().optional(),
+    icon:      mediaUrl(500).optional(),
     sortOrder: z.coerce.number().int().nonnegative().optional(),
     isActive:  z.boolean().optional(),
   })

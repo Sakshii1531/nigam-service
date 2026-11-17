@@ -1,6 +1,6 @@
 # Phase 1: Unified ticket foundation
 
-**Status:** ✅ Done (2026-10-06) · **Layer:** Backend · **Delivers:** client §1, §7, §14, §19 (foundation) · **Depends on:** nothing
+**Status:** Done (2026-10-06) · **Layer:** Backend · **Delivers:** client §1, §7, §14, §19 (foundation) · **Depends on:** nothing
 
 ## Goal
 Make `WarrantyClaim` the single master **Ticket** for every source:

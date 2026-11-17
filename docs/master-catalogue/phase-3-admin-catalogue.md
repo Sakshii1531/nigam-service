@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-24) |
+| **Status** | Done (2026-09-24) |
 | **Estimate** | 7–9 developer-days |
 | **Depends on** | Phase 1, Phase 2 (the admin shows computed GST/final/margin using the engine) |
 | **Can run in parallel with** | Phase 4 |

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-24) |
+| **Status** | Done (2026-09-24) |
 | **Estimate** | 8–10 developer-days (≈ 4 backend, 5–6 frontend) |
 | **Depends on** | Phase 2 (Phase 3 recommended so real rates can be entered, but not required; seed data is enough) |
 | **Unblocks** | Phase 5, Phase 6 |
@@ -134,7 +134,7 @@ Admin changes Fan to ₹329 at 10:02. The customer taps Pay at 10:03 → 409 →
 - [x] `npm test` (backend) green, including the rewritten `booking.test.js`
 - [x] Manual walk-through of examples A–E on mobile width (375 px) and desktop; screenshots in the log
 - [x] `grep -rn "priceAddon\|resolveBookedService\|advanceAmt = 199\|?? 299\|\|\| 299" frontend/src backend/src` → no hits in booking code paths
-- [x] Client tests 1–7, 11, 12 marked ✅ in [CLIENT-ACCEPTANCE.md](CLIENT-ACCEPTANCE.md)
+- [x] Client tests 1–7, 11, 12 marked in [CLIENT-ACCEPTANCE.md](CLIENT-ACCEPTANCE.md)
 
 ## Out of scope
 

@@ -27,6 +27,7 @@ import {
   Tag,
   Coins,
   AlertTriangle,
+  Lightbulb,
 } from "lucide-react";
 import { apiRequest, getStoredTokens, storeTokens } from "../lib/apiClient";
 import {
@@ -49,6 +50,7 @@ import {
   standaloneOffering,
   formatRupees,
 } from "../lib/catalogueApi";
+import ItemIcon from "../components/common/ItemIcon";
 import { Skeleton } from '../components/common/Skeleton';
 import { INDIAN_STATES, getCitiesForState } from '../utils/indiaGeoData';
 
@@ -105,23 +107,6 @@ const StepBar = ({ currentStep, total = 4 }) => (
   </div>
 );
 
-const isImageIcon = (val) => {
-  if (typeof val !== "string") return false;
-  const s = val.toLowerCase().trim();
-  return (
-    s.startsWith("data:image/") ||
-    s.startsWith("http://") ||
-    s.startsWith("https://") ||
-    s.startsWith("/") ||
-    s.includes("/assets/") ||
-    s.endsWith(".png") ||
-    s.endsWith(".jpg") ||
-    s.endsWith(".jpeg") ||
-    s.endsWith(".svg") ||
-    s.endsWith(".webp")
-  );
-};
-
 // ─── Option Card (Step 1) ─────────────────────────────────────────────────────
 const OptionCard = ({ icon, name, desc, note, selected, onClick }) => (
   <button
@@ -142,15 +127,7 @@ const OptionCard = ({ icon, name, desc, note, selected, onClick }) => (
       className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl transition-transform ${
         selected ? "bg-white shadow-xs scale-105" : "bg-slate-50"
       }`}>
-      {isImageIcon(icon) ? (
-        <img
-          src={icon}
-          alt={name}
-          className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
-        />
-      ) : (
-        icon || "⚡"
-      )}
+      <ItemIcon src={icon} alt={name} className="w-6 h-6 sm:w-7 sm:h-7" />
     </div>
 
     <span
@@ -221,11 +198,7 @@ const BottomBar = ({
       <div className="w-full flex items-center justify-between px-3.5 sm:px-5 pt-2.5 pb-1.5 gap-2.5">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-base shrink-0">
-            {isImageIcon(icon) ? (
-              <img src={icon} alt="" className="w-5 h-5 object-contain" />
-            ) : (
-              icon || "🔧"
-            )}
+            <ItemIcon src={icon} className="w-5 h-5" />
           </div>
           <div className="flex flex-col min-w-0 flex-1 text-left">
             {label && (
@@ -967,7 +940,7 @@ const BookingFlow = () => {
       label: "Service Needed Now (ASAP)",
       timeRange: "Assigned in 5 mins • Tech arrives in 30-45 mins",
       isInstant: true,
-      badge: "⚡ EXPRESS DISPATCH",
+      badge: "EXPRESS DISPATCH",
     },
     {
       id: "Morning",
@@ -1448,11 +1421,7 @@ const BookingFlow = () => {
                                 className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 text-xl overflow-hidden border transition-all ${
                                   isSelected ? "bg-white border-blue-200 shadow-xs" : "bg-slate-50 border-slate-100"
                                 }`}>
-                                {isImageIcon(svc.icon) ? (
-                                  <img src={svc.icon} alt="" className="w-6 h-6 object-contain" />
-                                ) : (
-                                  svc.icon || "🔧"
-                                )}
+                                <ItemIcon src={svc.icon} className="w-6 h-6" />
                               </div>
                               <div className="flex-1 min-w-0 pt-0.5">
                                 <h3 className={`text-[13px] sm:text-[15px] font-black leading-snug ${isSelected ? "text-brand-blue" : "text-slate-900"}`}>
@@ -1646,7 +1615,7 @@ const BookingFlow = () => {
                 )}
 
                 <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3 sm:p-3.5 flex items-start gap-2.5 mt-1 shadow-2xs">
-                  <span className="text-base sm:text-lg leading-none shrink-0 mt-0.5">💡</span>
+                  <Lightbulb className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0 mt-0.5 text-amber-600" aria-hidden="true" />
                   <p className="text-[10px] text-amber-800 font-medium leading-relaxed">
                     Prices are before GST, which is added in your total. Spare parts, if needed, are quoted on site and added only with your approval.
                   </p>
@@ -1693,7 +1662,7 @@ const BookingFlow = () => {
                     </div>
                     {!brand && (
                       <p className="text-[10px] sm:text-[11px] text-amber-600 font-bold mt-2 flex items-center gap-1">
-                        <span>⚠️</span> Please select an appliance brand to
+                        <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" /> Please select an appliance brand to
                         proceed
                       </p>
                     )}
@@ -2201,7 +2170,7 @@ const BookingFlow = () => {
                             </button>
                           </div>
                           <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                            <span className="text-blue-500">📍</span>
+                            <MapPin className="w-3 h-3 text-blue-500 shrink-0" aria-hidden="true" />
                             <span>
                               Tap <strong>Select on Map</strong> or{" "}
                               <strong>Current GPS</strong> to pin exact door
@@ -2595,11 +2564,7 @@ const BookingFlow = () => {
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-xl shrink-0">
-                    {isImageIcon(data.icon) ? (
-                      <img src={data.icon} alt="" className="w-6 h-6 object-contain" />
-                    ) : (
-                      data.icon || "🔧"
-                    )}
+                    <ItemIcon src={data.icon} className="w-6 h-6" />
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="text-sm font-black text-slate-900 line-clamp-2 leading-tight">
@@ -2673,7 +2638,7 @@ const BookingFlow = () => {
       {/* ── Fixed Bottom Bar ── */}
       {step !== 3 ? (
         <BottomBar
-          icon={data.icon || "🔧"}
+          icon={data.icon}
           label={getBarLabel()}
           sublabel={getBarSublabel()}
           price={
