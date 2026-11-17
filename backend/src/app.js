@@ -75,6 +75,7 @@ import { auditLogRouter } from './modules/super-admin/auditLog.routes.js';
 import { liveTrackingRouter } from './modules/super-admin/liveTracking.routes.js';
 import { cmsRouter } from './modules/super-admin/cms.routes.js';
 import { homeTileRouter } from './modules/super-admin/homeTile.routes.js';
+import { homeSectionRouter } from './modules/super-admin/homeSection.routes.js';
 import { loyaltyConfigRouter } from './modules/super-admin/loyaltyConfig.routes.js';
 import { platformRoleRouter } from './modules/super-admin/platformRole.routes.js';
 import { platformUserRouter } from './modules/super-admin/platformUser.routes.js';
@@ -303,6 +304,7 @@ export function createApp() {
   app.use('/api/v1/super-admin/b2b2c-payouts', adminB2b2cPayoutRouter);
   app.use('/api/v1/cms', cmsRouter);
   app.use('/api/v1/cms/home-tiles', homeTileRouter);
+  app.use('/api/v1/cms/home-layout', homeSectionRouter);
   app.use('/api/v1/chat', chatRouter);
   app.use('/api/v1/notifications', notificationRouter);
   app.use('/api/v1/reviews', reviewRouter);

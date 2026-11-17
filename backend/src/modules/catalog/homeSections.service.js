@@ -85,12 +85,18 @@ async function build(loc) {
       pinned: Boolean(tile),
     };
   };
-  const curated = (placement) =>
-    tiles
-      .filter((t) => t.placement === placement)
+  const cardsOf = (rows) =>
+    rows
       .map((t) => ({ tile: t, group: byId.get(targetGroupId(t)) }))
       .filter((x) => x.group)
       .map(({ tile, group }) => card(group, tile));
+  // The built-in rows own the tiles with no section; a custom service row owns
+  // the tiles that name it.
+  const curated = (placement) => cardsOf(tiles.filter((t) => t.placement === placement && !t.section));
+  const custom = {};
+  for (const tile of tiles.filter((t) => t.section && t.placement === 'appliance-service')) {
+    (custom[String(tile.section)] ||= []).push(tile);
+  }
 
   // Most Booked: the admin's pinned tiles first, then the services customers
   // actually booked most in the last 90 days.
@@ -104,6 +110,8 @@ async function build(loc) {
   return {
     mostBooked: [...pinned, ...popular].slice(0, Math.max(MOST_BOOKED_LIMIT, pinned.length)),
     applianceServices: curated('appliance-service'),
+    // Custom service rows an admin created, by section id.
+    custom: Object.fromEntries(Object.entries(custom).map(([sectionId, rows]) => [sectionId, cardsOf(rows)])),
   };
 }
 

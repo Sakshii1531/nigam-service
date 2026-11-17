@@ -3,16 +3,18 @@ import { mediaUrl } from '../shared/mediaUrl.js';
 
 const PLACEMENTS = ['category', 'dashboard-service', 'most-booked', 'appliance-service', 'brand-card'];
 
+const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
+
 export const listTilesQuerySchema = z.object({
   placement: z.enum(PLACEMENTS).optional(),
+  // "none" = only the built-in sections' tiles; an id = that custom section's.
+  section: z.union([z.literal('none'), objectId]).optional(),
 });
-
-const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
 
 // A tile's link is followed by every customer who taps it. It must be an in-app
 // path or a plain web address — never "javascript:", "data:" or a protocol-
 // relative "//host" — and empty is allowed (a tile that goes nowhere).
-const link = z
+export const linkField = z
   .string()
   .trim()
   .max(500)
@@ -31,7 +33,7 @@ const tileFields = z.object({
   target: z.object({ productType: objectId.nullable().optional(), service: objectId }).optional(),
   imageUrl: mediaUrl().nullable().optional(),
   icon: mediaUrl().optional(),
-  link: link.optional(),
+  link: linkField.optional(),
   service: z.string().optional(),
   brandName: z.string().trim().max(40).optional(),
   subtitle: z.string().trim().max(120).optional(),
@@ -41,6 +43,7 @@ const tileFields = z.object({
   textColor: hexColour.optional(),
   sortOrder: z.number().optional(),
   isActive: z.boolean().optional(),
+  section: objectId.nullable().optional(),
 });
 
 // A service tile must say which bookable service it is; other tiles need a title.
@@ -53,7 +56,7 @@ export const createTileSchema = tileFields
 export const updateTileSchema = tileFields.partial().refine((t) => t.brandName === undefined || t.brandName !== '', { message: 'Brand name is required', path: ['brandName'] });
 
 // Saves a whole row's order in one call (ids top to bottom).
-export const reorderTilesSchema = z.object({ placement: z.enum(PLACEMENTS), ids: z.array(objectId).min(1).max(100) });
+export const reorderTilesSchema = z.object({ placement: z.enum(PLACEMENTS), section: objectId.nullable().optional(), ids: z.array(objectId).min(1).max(100) });
 
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
