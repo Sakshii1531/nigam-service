@@ -7,6 +7,7 @@ import {
   Star,
   X,
   ShoppingCart,
+  ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/layout/Footer";
@@ -25,10 +26,8 @@ import electricianBanner from "../assets/electrician_banner.png";
 import plumbingBanner from "../assets/plumbing_banner.png";
 import warrantyBanner1 from "../assets/warranty_banner_1.png";
 import warrantyBanner2 from "../assets/warranty_banner_2.png";
-import mostBookedWm from "../assets/most_booked_wm.png";
 import applianceFridge from "../assets/appliance_fridge.png";
 import acImg from "../assets/categories/ac.png";
-import splitAcImg from "../assets/categories/split_ac.png";
 import wasingImg from "../assets/categories/wasing.png";
 import electricianImg from "../assets/categories/electrician_fixed.png";
 import plumberImg from "../assets/categories/plumber_fixed.png";
@@ -53,6 +52,7 @@ import roCarbonImg from "../assets/ro_carbon_filter.png";
 import roPostCarbonImg from "../assets/ro_post_carbon.png";
 import Stories from "../components/home/Stories";
 import { LoadingSection, Skeleton, SkeletonCardRow, SkeletonHeading } from "../components/common/Skeleton";
+import BrandOfferCard, { isExternalLink, openCardLink } from "../components/home/BrandOfferCard";
 import PlatformReviewCarousel from "../components/home/PlatformReviewCarousel";
 import CustomerAdvertisements from "../components/home/CustomerAdvertisements";
 
@@ -960,71 +960,24 @@ const Dashboard = ({ defaultType }) => {
           { id: "Carpenter", key: "Carpenter", name: "Carpenter", img: iconWrench, fallbackImage: iconWrench },
         ];
 
-  const brandCards = tilesFor(
-    "brand-card",
-    [
-      {
-        id: 1,
-        brandName: "LLOYD",
-        title: "New Launch Glacier Series AC",
-        subtitle: "Experience Superior Cooling & Comfort",
-        image: splitAcImg,
-        buttonText: "Explore on NCC",
-        actionUrl: "/book/AC",
-        badgeText: "",
-        gradient: "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
-        textColor: "#014694",
-      },
-      {
-        id: 2,
-        brandName: "SAMSUNG",
-        title: "Bespoke AI Laundry Range",
-        subtitle: "Smart. Gentle. Intelligent.",
-        image: mostBookedWm,
-        buttonText: "Visit Official Site",
-        actionUrl: "https://www.samsung.com",
-        badgeText: "Official Partner",
-        gradient: "from-[#E8F5E9] via-[#F6FAF6] to-[#D2E8D4]",
-        textColor: "#1B5E20",
-      },
-      {
-        id: 3,
-        brandName: "DAIKIN",
-        title: "Air Specialist Inverter Series",
-        subtitle: "Perfect Comfort. Every Season.",
-        image: splitAcImg,
-        buttonText: "Explore on NCC",
-        actionUrl: "/book/AC",
-        badgeText: "Air Specialist",
-        gradient: "from-[#F0F4FF] via-[#F7F9FF] to-[#E1E8FF]",
-        textColor: "#00529C",
-      },
-      {
-        id: 4,
-        brandName: "LG",
-        title: "Double Door Frost Free Refrigerator",
-        subtitle: "Premium cooling. Maximum savings.",
-        image: applianceFridge,
-        buttonText: "Explore on NCC",
-        actionUrl: "/refrigerator-details",
-        badgeText: "",
-        gradient: "from-[#FCE4EC] via-[#FFF1F3] to-[#F8BBD0]",
-        textColor: "#C30F42",
-      },
-    ],
-    (t) => ({
+  // Brands & Offers: exactly the cards an admin has published (Super Admin →
+  // Customer App → Brands & Offers). There is no bundled fallback set any more —
+  // with nothing published the section is hidden instead of showing stale cards
+  // an admin could never remove.
+  const brandCards = (cmsTiles || [])
+    .filter((t) => t.placement === "brand-card")
+    .map((t) => ({
       id: t.id,
-      brandName: t.brandName,
+      brandName: t.brandName || t.title,
       title: t.title,
       subtitle: t.subtitle,
       image: t.imageUrl,
       buttonText: t.buttonText,
       actionUrl: t.link,
       badgeText: t.badgeText,
-      gradient: t.gradient,
+      gradient: t.gradient || "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
       textColor: t.textColor,
-    }),
-  );
+    }));
 
 
   return (
@@ -1432,123 +1385,55 @@ const Dashboard = ({ defaultType }) => {
           </div>
         </div>
 
-        {/* Brands & Offers */}
-        <div className="md:mt-10 lg:mt-14 xl:mt-16">
-          <div className="flex items-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 md:justify-center">
-            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
-              Brands & Offers
-            </h2>
-          </div>
-
-          {/* Master Card Container for Desktop */}
-          <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-325 md:mx-auto">
-            {/* Brand Cards — scroll on mobile, 2x2 grid inside single card on desktop */}
-            <div className="flex overflow-x-auto gap-3 sm:gap-4 pt-1 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
-              {tilesLoading ? Array.from({ length: 2 }, (_, i) => (
-                <Skeleton key={`brand-skeleton-${i}`} className="shrink-0 w-[80vw] sm:w-96 md:w-auto h-40 md:h-48" rounded="rounded-3xl" />
-              )) : brandCards.map((bc) => (
-                <div
-                  key={bc.id}
-                  onClick={() => {
-                    if (bc.actionUrl.startsWith("http")) {
-                      window.open(bc.actionUrl, "_blank");
-                    } else {
-                      navigate(bc.actionUrl);
-                    }
-                  }}
-                  className={`w-[85vw] sm:w-80 md:w-auto md:max-w-none md:flex-shrink shrink-0 h-50 md:h-55 rounded-[24px] bg-linear-to-br ${bc.gradient} p-4 md:p-6 flex flex-col justify-between relative overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.03)] border border-slate-100/50 cursor-pointer snap-start`}>
-                  <div className="flex flex-col items-start z-10 max-w-[65%]">
-                    {bc.badgeText && (
-                      <span
-                        className="text-[9px] font-bold px-2 py-0.5 rounded-md tracking-wide mb-1"
-                        style={{
-                          backgroundColor:
-                            bc.textColor === "#014694"
-                              ? "#E3F2FD"
-                              : bc.textColor === "#1B5E20"
-                                ? "#E8F5E9"
-                                : "#FCE4EC",
-                          color: bc.textColor,
-                        }}>
-                        {bc.badgeText}
-                      </span>
-                    )}
-                    <span
-                      className="font-sans font-black text-xl tracking-tight"
-                      style={{ color: bc.textColor }}>
-                      {bc.brandName}
-                    </span>
-                    <h3 className="text-xs font-black text-slate-800 mt-1.5 leading-tight">
-                      {bc.title}
-                    </h3>
-                    <p className="text-[10px] font-semibold text-slate-600 mt-0.5 leading-tight">
-                      {bc.subtitle}
-                    </p>
-                  </div>
-
-                  {/* Absolute Appliance Image */}
-                  {bc.image && (
-                    <img
-                      src={bc.image}
-                      alt={bc.brandName}
-                      className="absolute -right-3 top-8 w-35 md:w-40 h-25 md:h-28.75 object-contain z-0 mix-blend-multiply"
-                    />
-                  )}
-
-                  {/* CTA Button */}
-                  <div className="z-10 mt-auto flex items-center">
-                    <div className="bg-white text-brand-blue text-[11px] font-black py-2 px-4 rounded-full flex items-center gap-2 shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:bg-slate-50 transition-colors">
-                      <span>{bc.buttonText || "Explore on NCC"}</span>
-                      {bc.buttonText?.toLowerCase().includes("site") ? (
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-3.5 h-3.5 text-brand-blue">
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                          <polyline points="15 3 21 3 21 9" />
-                          <line x1="10" y1="14" x2="21" y2="3" />
-                        </svg>
-                      ) : (
-                        <ShoppingCart className="w-3.5 h-3.5 text-brand-blue" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+        {/* Brands & Offers — hidden when no card is published */}
+        {(tilesLoading || brandCards.length > 0) && (
+          <div className="md:mt-10 lg:mt-14 xl:mt-16">
+            <div className="flex items-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 md:justify-center">
+              <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
+                Brands & Offers
+              </h2>
             </div>
 
-            {/* Description Legend */}
-            <div className="mt-4 md:mt-6 pt-3 text-[9.5px] md:text-xs font-bold text-slate-500 border-t border-transparent md:border-slate-100/80">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-8 w-max mx-auto px-4">
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-3.5 h-3.5 text-brand-blue shrink-0" />
-                  <span>Click on 'Explore on NCC' to buy from our store</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-3.5 h-3.5 text-brand-blue shrink-0">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    <polyline points="15 3 21 3 21 9" />
-                    <line x1="10" y1="14" x2="21" y2="3" />
-                  </svg>
-                  <span>
-                    Click on 'Visit Official Site' to go to brand website
-                  </span>
-                </div>
+            {/* Master Card Container for Desktop */}
+            <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-325 md:mx-auto">
+              {/* Brand Cards — scroll on mobile, 2-column grid inside single card on desktop */}
+              <div className="flex overflow-x-auto gap-3 sm:gap-4 pt-1 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
+                {tilesLoading
+                  ? Array.from({ length: 2 }, (_, i) => (
+                      <Skeleton key={`brand-skeleton-${i}`} className="shrink-0 w-[80vw] sm:w-96 md:w-auto h-40 md:h-48" rounded="rounded-3xl" />
+                    ))
+                  : brandCards.map((bc) => (
+                      <BrandOfferCard
+                        key={bc.id}
+                        card={bc}
+                        onOpen={(c) => openCardLink(c.actionUrl, navigate)}
+                        className="w-[85vw] sm:w-80 md:w-auto md:max-w-none md:flex-shrink shrink-0 snap-start"
+                      />
+                    ))}
               </div>
+
+              {/* Legend: only the icons that appear on the cards being shown */}
+              {!tilesLoading && (
+                <div className="mt-4 md:mt-6 pt-3 text-[9.5px] md:text-xs font-bold text-slate-500">
+                  <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-8 w-max mx-auto px-4">
+                    {brandCards.some((c) => c.actionUrl && !isExternalLink(c.actionUrl)) && (
+                      <div className="flex items-center gap-2">
+                        <ShoppingCart className="w-3.5 h-3.5 text-brand-blue shrink-0" />
+                        <span>Cart icon: continue in the NCC app</span>
+                      </div>
+                    )}
+                    {brandCards.some((c) => isExternalLink(c.actionUrl)) && (
+                      <div className="flex items-center gap-2">
+                        <ExternalLink className="w-3.5 h-3.5 text-brand-blue shrink-0" />
+                        <span>Arrow icon: opens the brand's website</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
 
         <ServiceRow
           title="Most Booked Services"
