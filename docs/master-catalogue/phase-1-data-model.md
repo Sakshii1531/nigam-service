@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | ✅ Done (2026-09-24) |
+| **Status** | Done (2026-09-24) |
 | **Estimate** | 4–5 developer-days |
 | **Depends on** | — |
 | **Unblocks** | Phase 2, Phase 3 |
@@ -96,7 +96,7 @@ where changing `customerPrice` touches `spPayout`.
 
 ## Seed catalogue
 
-✅ = rate given by the client. **DEMO** = placeholder, `needsRateReview: true`, shown
+Done = rate given by the client. **DEMO** = placeholder, `needsRateReview: true`, shown
 with a badge in the Phase 3 admin so the client knows what to fill in.
 
 ### Product-linked
@@ -104,18 +104,18 @@ with a badge in the Phase 3 admin so the client knows what to fill in.
 | Code | Category → Product → Variant → Service | Unit | Qty | Price | Payout | |
 |---|---|---|---|---|---|---|
 | `AC-SPLIT-1T-INSTALL` | AC → Split AC → 1 Ton → Installation | per AC | 1–5 | 1,399 | 850 | DEMO |
-| `AC-SPLIT-15T-INSTALL` | AC → Split AC → 1.5 Ton → Installation | per AC | 1–5 | **1,499** | **900** | ✅ |
+| `AC-SPLIT-15T-INSTALL` | AC → Split AC → 1.5 Ton → Installation | per AC | 1–5 | **1,499** | **900** | Done |
 | `AC-SPLIT-2T-INSTALL` | AC → Split AC → 2 Ton → Installation | per AC | 1–5 | 1,699 | 1,000 | DEMO |
-| `AC-SPLIT-UNINSTALL` | AC → Split AC → *(any)* → Uninstallation | per AC | 1–5 | **999** | 550 | ✅ price / DEMO payout |
+| `AC-SPLIT-UNINSTALL` | AC → Split AC → *(any)* → Uninstallation | per AC | 1–5 | **999** | 550 | price / DEMO payout |
 | `AC-SPLIT-REPAIR` | AC → Split AC → *(any)* → Repair (visit) | per visit | 1 | 399 | 250 | DEMO |
 | `AC-SPLIT-DEEPCLEAN` | AC → Split AC → *(any)* → Deep Cleaning | per AC | 1–5 | 649 | 380 | DEMO |
 | `AC-SPLIT-GAS` | AC → Split AC → *(any)* → Gas Refilling | per AC | 1–5 | 2,499 | 1,200 | DEMO |
-| `AC-WINDOW-INSTALL` | AC → Window AC → Installation | per AC | 1–5 | **599** | **350** | ✅ |
+| `AC-WINDOW-INSTALL` | AC → Window AC → Installation | per AC | 1–5 | **599** | **350** | Done |
 | `AC-WINDOW-UNINSTALL` | AC → Window AC → Uninstallation | per AC | 1–5 | 399 | 220 | DEMO |
 | `AC-WINDOW-REPAIR` | AC → Window AC → Repair (visit) | per visit | 1 | 349 | 220 | DEMO |
-| `TV-LED-32-INSTALL` | TV → LED TV → 32 inch → Installation | per TV | 1–3 | **349** | **200** | ✅ |
+| `TV-LED-32-INSTALL` | TV → LED TV → 32 inch → Installation | per TV | 1–3 | **349** | **200** | Done |
 | `TV-LED-40-43-INSTALL` | TV → LED TV → 40–43 inch → Installation | per TV | 1–3 | 499 | 300 | DEMO |
-| `TV-LED-55-65-INSTALL` | TV → LED TV → 55–65 inch → Installation | per TV | 1–3 | **799** | **450** | ✅ |
+| `TV-LED-55-65-INSTALL` | TV → LED TV → 55–65 inch → Installation | per TV | 1–3 | **799** | **450** | Done |
 | `TV-LED-75-INSTALL` | TV → LED TV → 75 inch+ → Installation | per TV | 1–3 | 1,299 | 700 | DEMO |
 | `TV-LED-UNINSTALL` | TV → LED TV → *(any)* → Uninstallation | per TV | 1–3 | 299 | 150 | DEMO |
 | `WM-FRONT-INSTALL` | Washing Machine → Front Load → Installation | per machine | 1 | 499 | 280 | DEMO |
@@ -129,7 +129,7 @@ Window AC → Deep Cleaning. The flow must not offer them.
 
 | Code | Category → Service → Option | Unit | Qty | Price | Payout | |
 |---|---|---|---|---|---|---|
-| `ELEC-FAN-INSTALL` | Electrician → Fan Installation | per fan | 1–10 | **299** | **180** | ✅ |
+| `ELEC-FAN-INSTALL` | Electrician → Fan Installation | per fan | 1–10 | **299** | **180** | Done |
 | `ELEC-SWITCH-INSTALL` | Electrician → Switch Installation | per piece | 1–20 | 99 | 60 | DEMO |
 | `ELEC-SOCKET-INSTALL` | Electrician → Socket Installation | per piece | 1–20 | 129 | 75 | DEMO |
 | `ELEC-MCB-INSTALL` | Electrician → MCB Installation | per piece | 1–10 | 249 | 150 | DEMO |

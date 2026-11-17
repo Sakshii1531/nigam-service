@@ -1,6 +1,6 @@
 # Phase 8 — Super Admin control APIs
 
-**Status:** ✅ Done (2026-09-30) · **Layer:** Backend · **Delivers:** #3, #14, #17
+**Status:** Done (2026-09-30) · **Layer:** Backend · **Delivers:** #3, #14, #17
 
 ## Goal
 Full visibility across all brands plus every manual override the client listed.

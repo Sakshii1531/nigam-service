@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import React from 'react';
 
 const getDynamicHomeUrl = () => {
@@ -53,7 +54,7 @@ export class ErrorBoundary extends React.Component {
           <div className="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl space-y-6">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 text-2xl font-black">
-                ⚠️
+                <AlertTriangle className="w-7 h-7" aria-hidden="true" />
               </div>
               <div>
                 <h1 className="text-xl font-black text-white">Application Error</h1>

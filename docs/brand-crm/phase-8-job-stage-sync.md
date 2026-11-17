@@ -1,6 +1,6 @@
 # Phase 8: Live NCC job-stage sync, allocation visibility, closure
 
-**Status:** ✅ Complete · **Layer:** Full stack (+ Partner app check) · **Delivers:** client §7, §8, §9, §20 (NCC Job + Closure) · **Depends on:** Phases 6, 7
+**Status:** Complete · **Layer:** Full stack (+ Partner app check) · **Delivers:** client §7, §8, §9, §20 (NCC Job + Closure) · **Depends on:** Phases 6, 7
 
 ## Goal
 The Brand Panel always shows the **live, detailed** NCC job stage:

@@ -1,6 +1,6 @@
 # Phase 12: Call rates v2 (Brand → Service → State → City) + charge capture
 
-**Status:** ✅ Complete (2026-10-10) · **Layer:** Full stack · **Delivers:** client §15 · **Depends on:** Phases 1, 2, 8
+**Status:** Complete (2026-10-10) · **Layer:** Full stack · **Delivers:** client §15 · **Depends on:** Phases 1, 2, 8
 
 ## Goal
 Rates are configured per **Brand → Service (category + service type) → State

@@ -1,6 +1,6 @@
 # Phase 16: Audit log coverage + brand audit page
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §19 · **Depends on:** Phases 1–13
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §19 · **Depends on:** Phases 1–13
 
 ## Goal
 Every important action is recorded (who, employee ID, what, when, old → new,
@@ -16,7 +16,7 @@ important changes without a record.
 ## Tasks
 
 ### Coverage
-- [x] Build an **audit coverage matrix**: list every mutating brand route (from the Phase 2 route→permission table) and every Super Admin action on brand data. Mark each as audited ✅ / added in this phase / intentionally not audited (with a reason, e.g. a chat message body). Put the matrix in the Implementation Log.
+- [x] Build an **audit coverage matrix**: list every mutating brand route (from the Phase 2 route→permission table) and every Super Admin action on brand data. Mark each as audited Done / added in this phase / intentionally not audited (with a reason, e.g. a chat message body). Put the matrix in the Implementation Log.
 - [x] Add `recordAction` to every unaudited mutating brand route. Entity types:
   - ticket, customer, policy, serial_import, rate, billing_line, invoice, payment
   - escalation, user, role, team, settings, webhook, api_key
@@ -67,89 +67,89 @@ Generated from the Phase 2 `BRAND_ROUTE_RULES` table and checked for unexplained
 
 | Method | Route under `/api/v1/brand` | Coverage | Writer / reason |
 |---|---|---|---|
-| POST | `/api-keys` | ✅ Native (Phase 17) | api_key.created; safe field diff, no secret |
-| PATCH | `/api-keys/:id` | ✅ Native (Phase 17) | api_key.updated |
-| POST | `/api-keys/:id/revoke` | ✅ Native (Phase 17) | api_key.revoked |
-| POST | `/tickets/:id/contacts` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/call` | ✅ Added | ticket.call_started |
-| POST | `/tickets/:id/reschedule` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/documents` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/warranty-policies` | ✅ Existing | Policy service recordAction; serial import counts only |
-| PUT | `/warranty-policies/:id` | ✅ Existing | Policy service recordAction; serial import counts only |
-| DELETE | `/warranty-policies/:id` | ✅ Existing | Policy service recordAction; serial import counts only |
+| POST | `/api-keys` | Native (Phase 17) | api_key.created; safe field diff, no secret |
+| PATCH | `/api-keys/:id` | Native (Phase 17) | api_key.updated |
+| POST | `/api-keys/:id/revoke` | Native (Phase 17) | api_key.revoked |
+| POST | `/tickets/:id/contacts` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/call` | Added | ticket.call_started |
+| POST | `/tickets/:id/reschedule` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/documents` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/warranty-policies` | Existing | Policy service recordAction; serial import counts only |
+| PUT | `/warranty-policies/:id` | Existing | Policy service recordAction; serial import counts only |
+| DELETE | `/warranty-policies/:id` | Existing | Policy service recordAction; serial import counts only |
 | POST | `/warranty-policies/test` | Read-only | Input evaluation; no persisted mutation |
-| POST | `/warranty-policies/serials/import` | ✅ Existing | Policy service recordAction; serial import counts only |
-| POST | `/tickets/:id/warranty/override` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| PATCH | `/tickets/:id/product` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/approve` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/reject` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/hold` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/resume` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/request-info` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/request-contact` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/priority` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/notes` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/confirm-on-behalf` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/warranty-policies/serials/import` | Existing | Policy service recordAction; serial import counts only |
+| POST | `/tickets/:id/warranty/override` | Existing | Ticket single writer (timeline → normalized audit) |
+| PATCH | `/tickets/:id/product` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/approve` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/reject` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/hold` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/resume` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/request-info` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/request-contact` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/priority` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/notes` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/confirm-on-behalf` | Existing | Ticket single writer (timeline → normalized audit) |
 | POST | `/tickets/preview-warranty` | Read-only | Input evaluation; no persisted mutation |
-| POST | `/tickets` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/tickets/:id/assign-cce` | ✅ Existing | Ticket single writer (timeline → normalized audit) |
-| POST | `/warranty-claims/:id/approve` | ✅ Existing | Legacy ticket aliases use the same single writer |
-| POST | `/warranty-claims/:id/reject` | ✅ Existing | Legacy ticket aliases use the same single writer |
-| POST | `/warranty-claims/:id/request-info` | ✅ Existing | Legacy ticket aliases use the same single writer |
-| POST | `/warranty-claims/:id/notes` | ✅ Existing | Legacy ticket aliases use the same single writer |
-| POST | `/customers` | ✅ Existing | Customer service recordAction |
-| PATCH | `/customers/:id` | ✅ Existing | Customer service recordAction |
-| POST | `/customers/:id/addresses` | ✅ Existing | Customer service recordAction |
-| POST | `/actions/notify-customer` | ✅ Added | customer.notified |
-| PUT | `/warranty-coverage` | ✅ Added | settings.coverage_changed |
-| POST | `/parts/:id/approve` | ✅ Existing | Part decisions mirror into the ticket audit |
-| POST | `/parts/:id/reject` | ✅ Existing | Part decisions mirror into the ticket audit |
-| PATCH | `/part-orders/:id` | ✅ Added | part.updated |
-| POST | `/escalations` | ✅ Added | escalation.created |
-| PATCH | `/escalations/:id` | ✅ Added | escalation.updated |
-| POST | `/escalations/:id/resolve` | ✅ Added | escalation.resolved |
-| PATCH | `/escalations/:id/status` | ✅ Added | escalation.status_changed |
-| POST | `/rates` | ✅ Existing | Rate transaction audit |
-| POST | `/rates/import` | ✅ Existing | Rate transaction audit |
-| POST | `/rates/:id/deactivate` | ✅ Existing | Rate transaction audit |
-| PATCH | `/rates/:id` | ✅ Existing | Rate transaction audit |
-| PUT | `/billing/billing-profile` | ✅ Existing | Billing profile recordAction |
-| POST | `/actions/amc/:id/renewal-reminder` | ✅ Added | subscription.renewal_reminded |
-| POST | `/actions/amc/:id/visits` | ✅ Added | subscription.visit_scheduled |
-| POST | `/replacement-approvals` | ✅ Added | replacement.created |
-| PATCH | `/replacement-approvals/:id/status` | ✅ Added | replacement.status_changed |
-| POST | `/returns` | ✅ Added | return.created |
-| PATCH | `/returns/:id` | ✅ Added | return.updated |
-| POST | `/documents` | ✅ Added | document.generated |
-| POST | `/catalog/master-services` | ✅ Added | catalog_item.created |
-| PUT | `/catalog/master-services/:id` | ✅ Added | catalog_item.updated |
-| DELETE | `/catalog/master-services/:id` | ✅ Added | catalog_item.deleted |
-| POST | `/catalog/sub-brands` | ✅ Added | catalog_item.created |
-| PUT | `/catalog/sub-brands/:id` | ✅ Added | catalog_item.updated |
-| DELETE | `/catalog/sub-brands/:id` | ✅ Added | catalog_item.deleted |
-| POST | `/catalog/sub-brands/:id/products` | ✅ Added | catalog_item.created |
-| PUT | `/catalog/products/:id` | ✅ Added | catalog_item.updated |
-| DELETE | `/catalog/products/:id` | ✅ Added | catalog_item.deleted |
-| POST | `/academy/guides` | ✅ Added | academy_item.created |
-| DELETE | `/academy/guides/:id` | ✅ Added | academy_item.deleted |
-| POST | `/academy/courses` | ✅ Added | academy_item.created |
-| PUT | `/academy/courses/:id` | ✅ Added | academy_item.updated |
-| DELETE | `/academy/courses/:id` | ✅ Added | academy_item.deleted |
-| POST | `/roles` | ✅ Existing | Role service recordAction |
-| PUT | `/roles/:id` | ✅ Existing | Role service recordAction |
-| DELETE | `/roles/:id` | ✅ Existing | Role service recordAction |
-| POST | `/users` | ✅ Existing | User service recordAction + auth events |
-| PUT | `/users/:id` | ✅ Existing | User service recordAction + auth events |
-| POST | `/teams` | ✅ Existing | Team service recordAction |
-| PUT | `/teams/:id` | ✅ Existing | Team service recordAction |
-| DELETE | `/teams/:id` | ✅ Existing | Team service recordAction |
-| POST | `/teams/:id/members` | ✅ Existing | Team service recordAction |
-| DELETE | `/teams/:id/members/:userId` | ✅ Existing | Team service recordAction |
-| PUT | `/settings/sla` | ✅ Existing | SLA settings recordAction |
-| PUT | `/settings/escalation-matrix` | ✅ Existing | Matrix recordAction |
-| PUT | `/settings` | ✅ Added | settings.updated |
-| PUT | `/warranty-webhook` | ✅ Added | webhook.updated |
-| POST | `/warranty-webhook/test` | ✅ Added | webhook.tested |
+| POST | `/tickets` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/tickets/:id/assign-cce` | Existing | Ticket single writer (timeline → normalized audit) |
+| POST | `/warranty-claims/:id/approve` | Existing | Legacy ticket aliases use the same single writer |
+| POST | `/warranty-claims/:id/reject` | Existing | Legacy ticket aliases use the same single writer |
+| POST | `/warranty-claims/:id/request-info` | Existing | Legacy ticket aliases use the same single writer |
+| POST | `/warranty-claims/:id/notes` | Existing | Legacy ticket aliases use the same single writer |
+| POST | `/customers` | Existing | Customer service recordAction |
+| PATCH | `/customers/:id` | Existing | Customer service recordAction |
+| POST | `/customers/:id/addresses` | Existing | Customer service recordAction |
+| POST | `/actions/notify-customer` | Added | customer.notified |
+| PUT | `/warranty-coverage` | Added | settings.coverage_changed |
+| POST | `/parts/:id/approve` | Existing | Part decisions mirror into the ticket audit |
+| POST | `/parts/:id/reject` | Existing | Part decisions mirror into the ticket audit |
+| PATCH | `/part-orders/:id` | Added | part.updated |
+| POST | `/escalations` | Added | escalation.created |
+| PATCH | `/escalations/:id` | Added | escalation.updated |
+| POST | `/escalations/:id/resolve` | Added | escalation.resolved |
+| PATCH | `/escalations/:id/status` | Added | escalation.status_changed |
+| POST | `/rates` | Existing | Rate transaction audit |
+| POST | `/rates/import` | Existing | Rate transaction audit |
+| POST | `/rates/:id/deactivate` | Existing | Rate transaction audit |
+| PATCH | `/rates/:id` | Existing | Rate transaction audit |
+| PUT | `/billing/billing-profile` | Existing | Billing profile recordAction |
+| POST | `/actions/amc/:id/renewal-reminder` | Added | subscription.renewal_reminded |
+| POST | `/actions/amc/:id/visits` | Added | subscription.visit_scheduled |
+| POST | `/replacement-approvals` | Added | replacement.created |
+| PATCH | `/replacement-approvals/:id/status` | Added | replacement.status_changed |
+| POST | `/returns` | Added | return.created |
+| PATCH | `/returns/:id` | Added | return.updated |
+| POST | `/documents` | Added | document.generated |
+| POST | `/catalog/master-services` | Added | catalog_item.created |
+| PUT | `/catalog/master-services/:id` | Added | catalog_item.updated |
+| DELETE | `/catalog/master-services/:id` | Added | catalog_item.deleted |
+| POST | `/catalog/sub-brands` | Added | catalog_item.created |
+| PUT | `/catalog/sub-brands/:id` | Added | catalog_item.updated |
+| DELETE | `/catalog/sub-brands/:id` | Added | catalog_item.deleted |
+| POST | `/catalog/sub-brands/:id/products` | Added | catalog_item.created |
+| PUT | `/catalog/products/:id` | Added | catalog_item.updated |
+| DELETE | `/catalog/products/:id` | Added | catalog_item.deleted |
+| POST | `/academy/guides` | Added | academy_item.created |
+| DELETE | `/academy/guides/:id` | Added | academy_item.deleted |
+| POST | `/academy/courses` | Added | academy_item.created |
+| PUT | `/academy/courses/:id` | Added | academy_item.updated |
+| DELETE | `/academy/courses/:id` | Added | academy_item.deleted |
+| POST | `/roles` | Existing | Role service recordAction |
+| PUT | `/roles/:id` | Existing | Role service recordAction |
+| DELETE | `/roles/:id` | Existing | Role service recordAction |
+| POST | `/users` | Existing | User service recordAction + auth events |
+| PUT | `/users/:id` | Existing | User service recordAction + auth events |
+| POST | `/teams` | Existing | Team service recordAction |
+| PUT | `/teams/:id` | Existing | Team service recordAction |
+| DELETE | `/teams/:id` | Existing | Team service recordAction |
+| POST | `/teams/:id/members` | Existing | Team service recordAction |
+| DELETE | `/teams/:id/members/:userId` | Existing | Team service recordAction |
+| PUT | `/settings/sla` | Existing | SLA settings recordAction |
+| PUT | `/settings/escalation-matrix` | Existing | Matrix recordAction |
+| PUT | `/settings` | Added | settings.updated |
+| PUT | `/warranty-webhook` | Added | webhook.updated |
+| POST | `/warranty-webhook/test` | Added | webhook.tested |
 
 ### Super Admin actions on brand data
 

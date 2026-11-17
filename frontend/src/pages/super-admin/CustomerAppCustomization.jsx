@@ -1,9 +1,11 @@
 import ServiceTilesEditor from "../../components/super-admin/home/ServiceTilesEditor";
+import BrandCardsEditor from "../../components/super-admin/home/BrandCardsEditor";
+import HomeLayoutEditor from "../../components/super-admin/home/HomeLayoutEditor";
 import ServiceGroupSelect from "../../components/super-admin/home/ServiceGroupSelect";
 import { groupIdToTarget, targetToGroupId } from "../../components/super-admin/home/serviceGroupTarget";
 import { apiRequest } from "../../lib/apiClient";
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/super-admin/Sidebar";
 import Topbar from "../../components/super-admin/Topbar";
 import {
@@ -19,9 +21,6 @@ import {
 // Default static banners imported in Dashboard.jsx
 
 // Brand images
-import splitAcImg from "../../assets/categories/split_ac.png";
-import mostBookedWm from "../../assets/most_booked_wm.png";
-import applianceFridge from "../../assets/appliance_fridge.png";
 import { uploadImage, isImageUrl } from "../../lib/uploadImage";
 
 // Stories assets
@@ -527,7 +526,6 @@ const CategoryVectorIcon = ({
 // `placement` of /cms/home-tiles, which the customer app reads directly.
 const TILE_PLACEMENTS = {
   categories: "category",
-  brandCards: "brand-card",
 };
 
 const tileCache = {};
@@ -542,32 +540,6 @@ const TILE_ADAPTERS = {
       name: t.title,
       icon: t.icon,
       service: t.service,
-    }),
-  },
-
-  brandCards: {
-    toApi: (t) => ({
-      title: t.title,
-      imageUrl: t.image,
-      brandName: t.brandName,
-      subtitle: t.subtitle,
-      buttonText: t.buttonText,
-      link: t.actionUrl,
-      badgeText: t.badgeText,
-      gradient: t.gradient,
-      textColor: t.textColor,
-    }),
-    fromApi: (t) => ({
-      id: t.id,
-      title: t.title,
-      image: t.imageUrl,
-      brandName: t.brandName,
-      subtitle: t.subtitle,
-      buttonText: t.buttonText,
-      actionUrl: t.link,
-      badgeText: t.badgeText,
-      gradient: t.gradient,
-      textColor: t.textColor,
     }),
   },
 };
@@ -728,61 +700,12 @@ function shapeBanner(b) {
   };
 }
 
-const DEFAULT_BRAND_CARDS = [
-  {
-    id: 1,
-    brandName: "LLOYD",
-    title: "New Launch Glacier Series AC",
-    subtitle: "Experience Superior Cooling & Comfort",
-    image: splitAcImg,
-    buttonText: "Explore on NCC",
-    actionUrl: "/book/AC",
-    badgeText: "",
-    gradient: "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
-    textColor: "#014694",
-  },
-  {
-    id: 2,
-    brandName: "SAMSUNG",
-    title: "Bespoke AI Laundry Range",
-    subtitle: "Smart. Gentle. Intelligent.",
-    image: mostBookedWm,
-    buttonText: "Visit Official Site",
-    actionUrl: "https://www.samsung.com",
-    badgeText: "Official Partner",
-    gradient: "from-[#E8F5E9] via-[#F6FAF6] to-[#D2E8D4]",
-    textColor: "#1B5E20",
-  },
-  {
-    id: 3,
-    brandName: "DAIKIN",
-    title: "Air Specialist Inverter Series",
-    subtitle: "Perfect Comfort. Every Season.",
-    image: splitAcImg,
-    buttonText: "Explore on NCC",
-    actionUrl: "/book/AC",
-    badgeText: "Air Specialist",
-    gradient: "from-[#F0F4FF] via-[#F7F9FF] to-[#E1E8FF]",
-    textColor: "#00529C",
-  },
-  {
-    id: 4,
-    brandName: "LG",
-    title: "Double Door Frost Free Refrigerator",
-    subtitle: "Premium cooling. Maximum savings.",
-    image: applianceFridge,
-    buttonText: "Explore on NCC",
-    actionUrl: "/refrigerator-details",
-    badgeText: "",
-    gradient: "from-[#FCE4EC] via-[#FFF1F3] to-[#F8BBD0]",
-    textColor: "#C30F42",
-  },
-];
 
 const CustomerAppCustomization = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const requestedTab = new URLSearchParams(location.search).get("tab");
-  const activeSubSection = ["categories", "banners", "brands", "mostbooked", "applianceservices", "stories"].includes(requestedTab)
+  const activeSubSection = ["layout", "categories", "banners", "brands", "mostbooked", "applianceservices", "stories"].includes(requestedTab)
     ? requestedTab
     : "categories";
   const [successMessage, setSuccessMessage] = useState("");
@@ -823,24 +746,6 @@ const CustomerAppCustomization = () => {
   const [newBannerTitle, setNewBannerTitle] = useState("");
   const [newBannerFile, setNewBannerFile] = useState("");
 
-  // Brands & Offers State
-  const [brandCards, setBrandCards] = useState([]);
-  const [showBrandModal, setShowBrandModal] = useState(false);
-  const [isEditingBrand, setIsEditingBrand] = useState(false);
-  const [editBrandIndex, setEditBrandIndex] = useState(-1);
-  const [brandForm, setBrandForm] = useState({
-    brandName: "",
-    title: "",
-    subtitle: "",
-    image: "",
-    buttonText: "Explore on NCC",
-    actionUrl: "",
-    badgeText: "",
-    gradient: "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
-    textColor: "#014694",
-  });
-
-
   useEffect(() => {
     (async () => {
       await hydrateTiles();
@@ -865,15 +770,6 @@ const CustomerAppCustomization = () => {
       } else {
         setCategories(DEFAULT_CATEGORIES);
         writeTiles("categories", DEFAULT_CATEGORIES);
-      }
-
-      // Load Brands & Offers
-      const savedBrands = readTiles("brandCards");
-      if (savedBrands) {
-        setBrandCards(JSON.parse(savedBrands));
-      } else {
-        setBrandCards(DEFAULT_BRAND_CARDS);
-        writeTiles("brandCards", DEFAULT_BRAND_CARDS);
       }
 
     })();
@@ -1207,98 +1103,6 @@ const CustomerAppCustomization = () => {
     bannerType === "non-warranty" ? nonWarrantyBanners : warrantyBanners;
 
   // --- Brands Handlers ---
-  const handleBrandFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      uploadImage(file)
-        .then((url) => {
-        setBrandForm((prev) => ({ ...prev, image: url }));
-        })
-        .catch((err) => showToast(err.message || "Image upload failed."));
-    }
-  };
-
-  const handleOpenAddBrand = () => {
-    setIsEditingBrand(false);
-    setBrandForm({
-      brandName: "",
-      title: "",
-      subtitle: "",
-      image: "",
-      buttonText: "Explore on NCC",
-      actionUrl: "",
-      badgeText: "",
-      gradient: "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
-      textColor: "#014694",
-    });
-    setShowBrandModal(true);
-  };
-
-  const handleOpenEditBrand = (index) => {
-    setIsEditingBrand(true);
-    setEditBrandIndex(index);
-    const card = brandCards[index];
-    setBrandForm({
-      brandName: card.brandName || "",
-      title: card.title || "",
-      subtitle: card.subtitle || "",
-      image: card.image || "",
-      buttonText: card.buttonText || "Explore on NCC",
-      actionUrl: card.actionUrl || "",
-      badgeText: card.badgeText || "",
-      gradient: card.gradient || "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
-      textColor: card.textColor || "#014694",
-    });
-    setShowBrandModal(true);
-  };
-
-  const handleDeleteBrand = (index) => {
-    if (window.confirm(`Are you sure you want to delete this brand card?`)) {
-      const updated = brandCards.filter((_, i) => i !== index);
-      setBrandCards(updated);
-      writeTiles("brandCards", updated);
-      showToast("Brand offer card deleted successfully.");
-    }
-  };
-
-  const handleSaveBrand = (e) => {
-    e.preventDefault();
-    if (!brandForm.brandName.trim()) return;
-
-    let updated = [...brandCards];
-    const newCard = {
-      id: isEditingBrand ? brandCards[editBrandIndex].id : Date.now(),
-      brandName: brandForm.brandName,
-      title: brandForm.title,
-      subtitle: brandForm.subtitle,
-      image: brandForm.image,
-      buttonText: brandForm.buttonText,
-      actionUrl: brandForm.actionUrl,
-      badgeText: brandForm.badgeText,
-      gradient: brandForm.gradient,
-      textColor: brandForm.textColor,
-    };
-
-    if (isEditingBrand) {
-      updated[editBrandIndex] = newCard;
-    } else {
-      updated.push(newCard);
-    }
-
-    setBrandCards(updated);
-    writeTiles("brandCards", updated);
-    setShowBrandModal(false);
-    showToast("Brand offer card saved successfully!");
-  };
-
-  const handleResetBrands = () => {
-    if (window.confirm("Reset Brands & Offers to original defaults?")) {
-      setBrandCards(DEFAULT_BRAND_CARDS);
-      writeTiles("brandCards", DEFAULT_BRAND_CARDS);
-      showToast("Restored brand offers defaults.");
-    }
-  };
-
   // --- Stories Handlers ---
   const handleStoryFileChange = (e) => {
     const file = e.target.files[0];
@@ -1566,14 +1370,14 @@ const CustomerAppCustomization = () => {
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
                               {cat.isForYou
-                                ? "⚡ For You Feed"
+                                ? "For You Feed"
                                 : cat.isMore
-                                  ? "📂 More Category Page"
+                                  ? "More Category Page"
                                   : cat.isFridge
-                                    ? "🧊 Refrigerator Booking"
+                                    ? "Refrigerator Booking"
                                     : cat.service
-                                      ? `🛠️ Service: ${cat.service}`
-                                      : `📅 Booking: /book/${cat.name}`}
+                                      ? `Service: ${cat.service}`
+                                      : `Booking: /book/${cat.name}`}
                             </span>
                           </td>
 
@@ -1602,88 +1406,16 @@ const CustomerAppCustomization = () => {
             </div>
           )}
 
-          {/* ---------------- SUBSECTION 4: BRANDS & OFFERS CUSTOMIZATION ---------------- */}
-          {activeSubSection === "brands" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1E293B]">
-                    Brands & Offers Customization
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Manage the brand promotion cards and offers shown in the
-                    carousel on the user dashboard.
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleResetBrands}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                    <RotateCcw size={14} /> Reset Defaults
-                  </button>
-                  <button
-                    onClick={handleOpenAddBrand}
-                    className="bg-[#0D47A1] hover:bg-blue-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs">
-                    <Plus size={14} /> Add Brand/Offer Card
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-xs overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 text-[#64748B] font-semibold border-b border-[#E2E8F0]">
-                      <th className="px-6 py-4">Position</th>
-                      <th className="px-6 py-4">Brand name</th>
-                      <th className="px-6 py-4">Offer Title</th>
-                      <th className="px-6 py-4">Image Preview</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E2E8F0]">
-                    {brandCards.map((bc, idx) => (
-                      <tr
-                        key={bc.id || idx}
-                        className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-500">
-                          {idx + 1}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-[#1E293B]">
-                          {bc.brandName}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-slate-600">
-                          {bc.title}
-                        </td>
-                        <td className="px-6 py-4">
-                          {bc.image && (
-                            <img
-                              src={bc.image}
-                              alt={bc.brandName}
-                              className="w-10 h-10 object-contain border border-slate-200 rounded-lg p-0.5 bg-slate-50"
-                            />
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={() => handleOpenEditBrand(idx)}
-                              className="p-1.5 text-slate-500 hover:text-[#0D47A1] hover:bg-slate-100 rounded-lg transition-colors">
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteBrand(idx)}
-                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          {/* Home layout: order, hide, rename and add the sections of the customer home screen */}
+          {activeSubSection === "layout" && (
+            <HomeLayoutEditor
+              onToast={showToast}
+              onOpenTab={(tab) => navigate(`/super-admin/customer-app-customization?tab=${tab}`)}
+            />
           )}
+
+          {/* Brands & Offers: its own editor, straight against /cms/home-tiles */}
+          {activeSubSection === "brands" && <BrandCardsEditor onToast={showToast} />}
 
           {/* Most Booked / Appliance repair & service — tiles are real
               catalogue services (docs/master-catalogue Phase 22). */}
@@ -1745,7 +1477,7 @@ const CustomerAppCustomization = () => {
                           {story.title}
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-600">
-                          🎥 {story.slides?.length || 0} Slides
+                          {story.slides?.length || 0} Slides
                         </td>
                         <td className="px-6 py-4">
                           {story.image && (
@@ -2131,7 +1863,7 @@ const CustomerAppCustomization = () => {
                   {/* Advanced Mode Section - Open automatically */}
                   <details open className="mt-2 text-xs">
                     <summary className="cursor-pointer text-[10px] font-extrabold text-[#0D47A1] hover:underline">
-                      ⚙️ Advanced Options & Technical Flags
+                      Advanced Options & Technical Flags
                     </summary>
                     <div className="mt-3 space-y-3 p-3 bg-white rounded-xl border border-slate-200">
                       <div className="flex flex-wrap gap-4 pt-1">
@@ -2199,210 +1931,6 @@ const CustomerAppCustomization = () => {
       )}
 
       {/* Edit/Add Brand Offer Modal Overlay */}
-      {showBrandModal && (
-        <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-slate-100 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
-            <div className="flex justify-between items-center shrink-0">
-              <h3 className="text-base font-bold text-[#1E293B]">
-                {isEditingBrand
-                  ? "Edit Brand Offer Card"
-                  : "Add New Brand Offer Card"}
-              </h3>
-              <button
-                onClick={() => setShowBrandModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold">
-                ✕
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleSaveBrand}
-              className="flex flex-col flex-1 min-h-0 gap-4">
-              <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0 max-h-[75vh] no-scrollbar">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Brand Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={brandForm.brandName}
-                      onChange={(e) =>
-                        setBrandForm({
-                          ...brandForm,
-                          brandName: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. LLOYD, SAMSUNG"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Badge Text (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={brandForm.badgeText}
-                      onChange={(e) =>
-                        setBrandForm({
-                          ...brandForm,
-                          badgeText: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. Official Partner, New Launch"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                    Tagline / Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={brandForm.title}
-                    onChange={(e) =>
-                      setBrandForm({ ...brandForm, title: e.target.value })
-                    }
-                    placeholder="e.g. New Launch Glacier Series AC"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                    Subtitle *
-                  </label>
-                  <input
-                    type="text"
-                    value={brandForm.subtitle}
-                    onChange={(e) =>
-                      setBrandForm({ ...brandForm, subtitle: e.target.value })
-                    }
-                    placeholder="e.g. Experience Superior Cooling & Comfort"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Button Text *
-                    </label>
-                    <input
-                      type="text"
-                      value={brandForm.buttonText}
-                      onChange={(e) =>
-                        setBrandForm({
-                          ...brandForm,
-                          buttonText: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. Explore on NCC, Visit Official Site"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Action URL / Path *
-                    </label>
-                    <input
-                      type="text"
-                      value={brandForm.actionUrl}
-                      onChange={(e) =>
-                        setBrandForm({
-                          ...brandForm,
-                          actionUrl: e.target.value,
-                        })
-                      }
-                      placeholder="e.g. /book/AC"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Background Gradient Theme
-                    </label>
-                    <select
-                      value={brandForm.gradient}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        let txt = "#0D47A1";
-                        if (val.includes("E8F5E9")) txt = "#1B5E20";
-                        if (val.includes("FCE4EC")) txt = "#C30F42";
-                        setBrandForm({
-                          ...brandForm,
-                          gradient: val,
-                          textColor: txt,
-                        });
-                      }}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] bg-white transition-all">
-                      <option value="from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]">
-                        Blue (Lloyd Style)
-                      </option>
-                      <option value="from-[#E8F5E9] via-[#F6FAF6] to-[#D2E8D4]">
-                        Green (Samsung Style)
-                      </option>
-                      <option value="from-[#F0F4FF] via-[#F7F9FF] to-[#E1E8FF]">
-                        Indigo (Daikin Style)
-                      </option>
-                      <option value="from-[#FCE4EC] via-[#FFF1F3] to-[#F8BBD0]">
-                        Pink/Red (LG Style)
-                      </option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                      Upload Appliance Image *
-                    </label>
-                    <div className="flex items-center gap-3 bg-white border border-dashed border-slate-200 rounded-lg p-1.5">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleBrandFileChange}
-                        className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9.5px] file:font-semibold file:bg-blue-50 file:text-[#0D47A1] hover:file:bg-blue-100 cursor-pointer"
-                      />
-                      {brandForm.image && (
-                        <img
-                          src={brandForm.image}
-                          alt="Preview"
-                          className="w-10 h-8 object-contain border border-slate-200 rounded-md bg-white shrink-0"
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-3 border-t border-slate-100 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowBrandModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-xs transition-all">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm">
-                  Save Brand Card
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Edit/Add Story Modal Overlay */}
       {showStoryModal && (
         <div className="fixed inset-0 bg-[#052355]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">

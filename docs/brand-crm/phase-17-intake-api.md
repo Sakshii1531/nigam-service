@@ -1,6 +1,6 @@
 # Phase 17: Intake API + WhatsApp-ready backend
 
-**Status:** ✅ Complete · **Layer:** Backend + docs (+ small Brand Panel UI) · **Delivers:** client §12 · **Depends on:** Phases 1, 3, 4, 5
+**Status:** Complete · **Layer:** Backend + docs (+ small Brand Panel UI) · **Delivers:** client §12 · **Depends on:** Phases 1, 3, 4, 5
 
 ## Goal
 A WhatsApp chatbot, built separately, or a brand's own CRM can create the

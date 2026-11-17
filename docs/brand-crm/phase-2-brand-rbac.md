@@ -1,6 +1,6 @@
 # Phase 2: Brand RBAC: roles, departments, permission enforcement
 
-**Status:** ✅ Done (2026-10-06) · **Layer:** Full stack · **Delivers:** client §5, §18 · **Depends on:** Phase 1
+**Status:** Done (2026-10-06) · **Layer:** Full stack · **Delivers:** client §5, §18 · **Depends on:** Phase 1
 
 ## Goal
 Brand users work with individual IDs under **module × action** permissions

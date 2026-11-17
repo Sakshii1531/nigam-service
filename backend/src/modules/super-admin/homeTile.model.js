@@ -49,6 +49,9 @@ const homeTileSchema = new mongoose.Schema(
     badgeText: String,
     gradient: String,
     textColor: String,
+    // The custom home section this tile belongs to (null = a built-in section,
+    // which finds its tiles by placement as it always has).
+    section: { type: mongoose.Schema.Types.ObjectId, ref: 'HomeSection', default: null, index: true },
     sortOrder: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true, index: true },
   },

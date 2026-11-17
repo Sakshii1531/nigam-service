@@ -163,7 +163,7 @@ const Requests = () => {
           advancePaid: Boolean(bk?.advancePaid),
           paymentMode: bk?.paymentMode || 'after',
           scheduledDate: bk?.scheduledDate || null,
-          timeSlot: bk?.timeSlot?.time || (item.isInstant ? '⚡ Instant (ASAP)' : '—'),
+          timeSlot: bk?.timeSlot?.time || (item.isInstant ? 'Instant (ASAP)' : '—'),
           timeSlotDate: bk?.timeSlot?.date || 'Today',
 
           // Job & Diagnosis Details
@@ -222,7 +222,7 @@ const Requests = () => {
       const matchesBrand = selectedBrand === 'All Brands' || r?.brand === selectedBrand;
       const matchesMode = selectedMode === 'All Modes' || r?.mode === selectedMode;
       const matchesInstant = selectedInstantFilter === 'All'
-        || (selectedInstantFilter === '⚡ Instant Only' ? r?.isInstant : !r?.isInstant);
+        || (selectedInstantFilter === 'Instant Only' ? r?.isInstant : !r?.isInstant);
       return matchesSearch && matchesStatus && matchesBrand && matchesMode && matchesInstant;
     })
     .sort((a, b) => {
@@ -339,7 +339,7 @@ const Requests = () => {
                   </span>
                   {selectedRequest.isInstant && (
                     <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500 text-white shadow-2xs">
-                      ⚡ Instant ASAP
+                      Instant ASAP
                     </span>
                   )}
                 </div>
@@ -547,7 +547,7 @@ const Requests = () => {
                           )}
                           {selectedRequest.serviceProviderRating && (
                             <p className="text-xs text-amber-600 font-bold mt-0.5">
-                              ⭐ {selectedRequest.serviceProviderRating} rating
+                              {selectedRequest.serviceProviderRating} rating
                             </p>
                           )}
                         </div>
@@ -868,7 +868,7 @@ const Requests = () => {
                 className="text-sm font-semibold text-amber-700 border border-amber-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50"
               >
                 <option value="All">All Service Types</option>
-                <option value="⚡ Instant Only">⚡ Instant / ASAP Only</option>
+                <option value="Instant Only">Instant / ASAP Only</option>
                 <option value="Scheduled Only">Scheduled Only</option>
               </select>
 
@@ -938,7 +938,7 @@ const Requests = () => {
                           <span>{req.ref}</span>
                           {req.isInstant && (
                             <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500 text-white animate-pulse tracking-wider">
-                              ⚡ INSTANT
+                              INSTANT
                             </span>
                           )}
                         </div>

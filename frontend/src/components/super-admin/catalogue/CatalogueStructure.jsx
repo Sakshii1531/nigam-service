@@ -3,6 +3,9 @@ import { Plus, Pencil, Layers, Wrench, Filter, Eye, EyeOff } from 'lucide-react'
 import { catalogueAdmin } from '../../../lib/catalogueAdminApi';
 import { Modal, Field, inputClass, Toggle, ErrorNote, PrimaryButton, SecondaryButton } from './ui';
 import { listToText, textToList } from './listText';
+import PictureField from '../common/PictureField';
+import { isImageIcon } from '../../common/ItemIcon';
+import { resolveMediaUrl } from '../../../lib/apiClient';
 
 // Left half of a category: what can be booked FOR (product types → sizes) and
 // what can be booked AS a standalone service (services → options). Prices
@@ -21,7 +24,7 @@ function StructureModal({ modal, categoryId, onClose, onSaved }) {
   const [form, setForm] = useState(() => ({
     ...EMPTY,
     name: item?.name || '',
-    icon: item?.icon || '',
+    icon: isImageIcon(item?.icon) ? item.icon : '',
     desc: item?.desc || '',
     label: item?.label || '',
     keywords: listToText(item?.keywords, ', '),
@@ -49,7 +52,7 @@ function StructureModal({ modal, categoryId, onClose, onSaved }) {
           await catalogueAdmin.updateVariant(item.id, { label: form.label.trim() });
         }
       } else {
-        const body = { name: form.name.trim(), icon: form.icon.trim(), desc: form.desc.trim() };
+        const body = { name: form.name.trim(), icon: isImageIcon(form.icon) ? form.icon.trim() : '', desc: form.desc.trim() };
         if (kind === 'productType') {
           body.variantDimension = dimensionFromLabel(form.dimensionLabel);
           if (mode === 'add') await catalogueAdmin.createProductType({ ...body, category: categoryId });
@@ -77,14 +80,14 @@ function StructureModal({ modal, categoryId, onClose, onSaved }) {
           </Field>
         ) : (
           <>
-            <div className="grid grid-cols-[1fr_5rem] gap-3">
-              <Field label="Name">
-                <input required autoFocus value={form.name} onChange={set('name')} className={inputClass} placeholder={kind === 'productType' ? 'Split AC' : 'Fan Installation'} />
-              </Field>
-              <Field label="Icon">
-                <input value={form.icon} onChange={set('icon')} className={`${inputClass} text-center`} placeholder="❄️" />
-              </Field>
-            </div>
+            <Field label="Name">
+              <input required autoFocus value={form.name} onChange={set('name')} className={inputClass} placeholder={kind === 'productType' ? 'Split AC' : 'Fan Installation'} />
+            </Field>
+            <PictureField
+              label={kind === 'productType' ? 'Product picture' : 'Service picture'}
+              value={form.icon}
+              onChange={(url) => setForm((f) => ({ ...f, icon: url }))}
+            />
             <Field label="Short description">
               <input value={form.desc} onChange={set('desc')} className={inputClass} />
             </Field>
@@ -158,7 +161,7 @@ function NodeRow({ node, kind, focus, onFocus, onEdit, onToggle, children }) {
       <div className="flex items-start justify-between gap-2">
         <div className={`min-w-0 ${node.isActive ? '' : 'opacity-50'}`}>
           <p className="text-sm font-bold text-slate-800 truncate">
-            {node.icon && <span className="mr-1">{node.icon}</span>}
+            {isImageIcon(node.icon) && <img src={resolveMediaUrl(node.icon)} alt="" className="inline-block w-6 h-6 object-contain mr-1.5 align-middle" />}
             {node.name}
           </p>
           {node.desc && <p className="text-[11px] text-slate-400 truncate">{node.desc}</p>}

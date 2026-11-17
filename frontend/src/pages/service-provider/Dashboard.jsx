@@ -811,7 +811,7 @@ const Dashboard = () => {
           <div className="mt-4">
             <p className="text-sm text-blue-200">{greeting},</p>
             <h2 className="text-2xl font-bold leading-tight text-white">
-              {firstName} 👋
+              {firstName}
             </h2>
           </div>
 
@@ -1070,7 +1070,7 @@ const Dashboard = () => {
                         <div className="flex flex-col gap-1 min-w-0">
                           <h4 className="text-sm font-bold text-[#052355] truncate group-hover:text-[#0D47A1] transition-colors">
                             {job.serviceLine || job.product || job.category}
-                            {job.isExpress ? " · ⚡ Express" : ""}
+                            {job.isExpress ? " · Express" : ""}
                           </h4>
                           <div className="flex flex-col gap-1 text-xs text-slate-600 mt-1">
                             <div className="flex items-center gap-1.5 font-medium">
@@ -1274,7 +1274,7 @@ const Dashboard = () => {
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-[#052355] line-clamp-2 leading-snug">
                               {job.serviceLine || job.product}
-                              {job.isExpress ? " · ⚡ Express" : ""}
+                              {job.isExpress ? " · Express" : ""}
                             </p>
                             <p className="text-xs text-slate-500 mt-1 truncate">
                               {job.customerName}
@@ -1454,7 +1454,7 @@ const Dashboard = () => {
 
                           <p className="text-sm font-bold text-[#052355] mt-2 line-clamp-2 leading-snug">
                             {job.serviceLine || job.product}
-                            {job.isExpress ? " · ⚡ Express" : ""}
+                            {job.isExpress ? " · Express" : ""}
                           </p>
 
                           <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-1.5">
@@ -1705,7 +1705,7 @@ const Dashboard = () => {
                         {w
                           ? `${w.brand || ""} ${w.productName || ""}`.trim()
                           : job.serviceLine || job.product}
-                        {job.isExpress ? " · ⚡ Express" : ""}
+                        {job.isExpress ? " · Express" : ""}
                       </h3>
                       <div className="flex flex-wrap gap-1.5 mt-2.5">
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/15">
@@ -1855,7 +1855,7 @@ const Dashboard = () => {
           );
         })()}
 
-      {/* 🔄 Customer Reschedule Request Modal */}
+      {/* Customer Reschedule Request Modal */}
       {rescheduleAlertJob && (
         <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 z-[125] animate-fade-in">
           <div className="bg-white border border-purple-100 rounded-[32px] max-w-md w-full flex flex-col shadow-2xl relative overflow-hidden">

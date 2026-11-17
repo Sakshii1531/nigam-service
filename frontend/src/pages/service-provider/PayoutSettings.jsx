@@ -344,7 +344,7 @@ const PayoutSettings = () => {
             </div>
 
             <p className="text-[10px] text-slate-400">
-              ⚠️ Please ensure the account details are correct. Incorrect details may cause payout delays.
+              Please ensure the account details are correct. Incorrect details may cause payout delays.
             </p>
 
             <button
@@ -401,7 +401,7 @@ const PayoutSettings = () => {
             </div>
 
             <p className="text-[10px] text-slate-400">
-              ⚠️ Make sure your UPI ID is linked to a valid bank account. Payouts will be transferred directly.
+              Make sure your UPI ID is linked to a valid bank account. Payouts will be transferred directly.
             </p>
 
             <button

@@ -198,9 +198,9 @@ const ASMDetail = () => {
                   </div>
                 </div>
                 <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center gap-6 text-xs text-slate-600 font-medium">
-                  <span>📍 Zone: <strong className="text-slate-900">{asm.city?.name || 'Unassigned'}</strong></span>
-                  <span>⭐ Rating: <strong className="text-slate-900">{asm.rating ?? 0} / 5.0</strong></span>
-                  <span>🛠️ Service Providers: <strong className="text-slate-900">{asm.serviceProviderCount ?? 0}</strong></span>
+                  <span>Zone: <strong className="text-slate-900">{asm.city?.name || 'Unassigned'}</strong></span>
+                  <span>Rating: <strong className="text-slate-900">{asm.rating ?? 0} / 5.0</strong></span>
+                  <span>Service Providers: <strong className="text-slate-900">{asm.serviceProviderCount ?? 0}</strong></span>
                 </div>
               </div>
 

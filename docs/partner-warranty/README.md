@@ -93,24 +93,24 @@ then the four frontends, then end-to-end verification.
 
 | # | Phase | Layer | Status |
 |---|---|---|---|
-| 1 | [Groundwork: data model, IDs, status machine, bug fixes](phase-1-data-model.md) | Backend | ✅ Done |
-| 2 | [Warranty catalogue: groups, brand coverage, issues](phase-2-warranty-catalogue.md) | Backend | ✅ Done |
-| 3 | [Claim submission + customer APIs](phase-3-claim-submission.md) | Backend | ✅ Done |
-| 4 | [Brand review: approve / reject / request info](phase-4-brand-review.md) | Backend | ✅ Done |
-| 5 | [Approval → automatic Service Job](phase-5-job-creation.md) | Backend | ✅ Done |
-| 6 | [Warranty-aware partner allocation](phase-6-allocation.md) | Backend | ✅ Done |
-| 7 | [Status sync + tracking + realtime](phase-7-status-sync.md) | Backend | ✅ Done |
-| 8 | [Super Admin control APIs](phase-8-admin-control.md) | Backend | ✅ Done |
-| 9 | [SLA engine](phase-9-sla.md) | Backend | ✅ Done |
-| 10 | [Notifications matrix + domain events + webhooks](phase-10-events-webhooks.md) | Backend | ✅ Done |
-| 11 | [B2B2C payout (manual, product-wise)](phase-11-payout.md) | Backend | ✅ Done |
-| 12 | [Customer app wiring](phase-12-customer-app.md) | Frontend | ✅ Done |
-| 13 | [Brand panel: Warranty Claims](phase-13-brand-panel.md) | Frontend | ✅ Done |
-| 14 | [Super Admin: Partner Warranty module](phase-14-super-admin.md) | Frontend | ✅ Done |
-| 15 | [Partner app: warranty jobs + B2B2C payout](phase-15-partner-app.md) | Frontend | ✅ Done |
-| 16 | [End-to-end verification + acceptance](phase-16-e2e-acceptance.md) | All | ✅ Done (commit pending go-ahead) |
+| 1 | [Groundwork: data model, IDs, status machine, bug fixes](phase-1-data-model.md) | Backend | Done |
+| 2 | [Warranty catalogue: groups, brand coverage, issues](phase-2-warranty-catalogue.md) | Backend | Done |
+| 3 | [Claim submission + customer APIs](phase-3-claim-submission.md) | Backend | Done |
+| 4 | [Brand review: approve / reject / request info](phase-4-brand-review.md) | Backend | Done |
+| 5 | [Approval → automatic Service Job](phase-5-job-creation.md) | Backend | Done |
+| 6 | [Warranty-aware partner allocation](phase-6-allocation.md) | Backend | Done |
+| 7 | [Status sync + tracking + realtime](phase-7-status-sync.md) | Backend | Done |
+| 8 | [Super Admin control APIs](phase-8-admin-control.md) | Backend | Done |
+| 9 | [SLA engine](phase-9-sla.md) | Backend | Done |
+| 10 | [Notifications matrix + domain events + webhooks](phase-10-events-webhooks.md) | Backend | Done |
+| 11 | [B2B2C payout (manual, product-wise)](phase-11-payout.md) | Backend | Done |
+| 12 | [Customer app wiring](phase-12-customer-app.md) | Frontend | Done |
+| 13 | [Brand panel: Warranty Claims](phase-13-brand-panel.md) | Frontend | Done |
+| 14 | [Super Admin: Partner Warranty module](phase-14-super-admin.md) | Frontend | Done |
+| 15 | [Partner app: warranty jobs + B2B2C payout](phase-15-partner-app.md) | Frontend | Done |
+| 16 | [End-to-end verification + acceptance](phase-16-e2e-acceptance.md) | All | Done (commit pending go-ahead) |
 
-Status legend: ⬜ Not started · 🟨 In progress · ✅ Done
+Status legend: Not started · In progress · Done
 
 ## 5. Working rules for every phase
 

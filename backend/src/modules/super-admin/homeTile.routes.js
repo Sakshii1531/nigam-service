@@ -8,6 +8,7 @@ import {
   listTilesQuerySchema,
   createTileSchema,
   updateTileSchema,
+  reorderTilesSchema,
   idParamSchema,
 } from './homeTile.validation.js';
 
@@ -35,6 +36,15 @@ homeTileRouter.get('/admin', ...requireAdmin, validate(listTilesQuerySchema, 'qu
 homeTileRouter.post('/', ...requireAdmin, validate(createTileSchema), async (req, res, next) => {
   try {
     created(res, await tileService.createTile(req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Must be registered before '/:id' or "reorder" would be read as an id.
+homeTileRouter.put('/reorder', ...requireAdmin, validate(reorderTilesSchema), async (req, res, next) => {
+  try {
+    ok(res, await tileService.reorderTiles(req.body.placement, req.body.ids, req.body.section));
   } catch (err) {
     next(err);
   }

@@ -1,6 +1,6 @@
 # Phase 13: Brand billing, invoices, dues and payments
 
-**Status:** ✅ Complete · **Layer:** Full stack (Brand Panel + Super Admin finance) · **Delivers:** client §16, §20 (Billing section) · **Depends on:** Phase 12
+**Status:** Complete · **Layer:** Full stack (Brand Panel + Super Admin finance) · **Delivers:** client §16, §20 (Billing section) · **Depends on:** Phase 12
 
 ## Goal
 Completed jobs automatically build the brand's bill:
