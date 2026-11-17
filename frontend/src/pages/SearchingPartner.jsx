@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Phone, Star, ShieldCheck, CheckCircle2, Wrench, AlertCircle, ArrowRight, Radio, ChevronRight, ChevronLeft, RotateCcw,
-  Lightbulb, AlertTriangle, Users, MapPinOff, Clock, PlusCircle, Loader2
-} from 'lucide-react';
+  Lightbulb, AlertTriangle, Users, MapPinOff, Clock, PlusCircle, Loader2, Zap, Droplets, Snowflake, Shirt, UserCheck, Wallet } from 'lucide-react';
 import { apiRequest, getStoredTokens } from '../lib/apiClient';
 import { goBack } from '../lib/navigation';
 import { io } from 'socket.io-client';
@@ -66,7 +65,7 @@ const APPLIANCE_TIPS = [
   {
     id: 1,
     tag: 'Energy Saving Tip',
-    icon: '⚡',
+    icon: Zap,
     title: 'Optimal AC Temperature Setting',
     desc: 'Setting your AC to 24°C instead of 18°C can reduce monthly power consumption by up to 24% while extending compressor lifespan.',
     benefit: 'Lower power bills',
@@ -74,7 +73,7 @@ const APPLIANCE_TIPS = [
   {
     id: 2,
     tag: 'Water Purifier Care',
-    icon: '💧',
+    icon: Droplets,
     title: 'Sediment & Carbon Filter Life',
     desc: 'Replace pre-filters every 6 months. Clogged filters force the RO pump to work harder and degrade the expensive RO membrane prematurely.',
     benefit: 'Doubles RO membrane life',
@@ -82,7 +81,7 @@ const APPLIANCE_TIPS = [
   {
     id: 3,
     tag: 'Refrigerator Maintenance',
-    icon: '❄️',
+    icon: Snowflake,
     title: 'Clean Back Condenser Coils',
     desc: 'Keep at least 2 inches clearance behind your fridge. Dusty coils force the motor to run continuously, increasing electricity bills by 15%.',
     benefit: 'Prevents overheating',
@@ -90,7 +89,7 @@ const APPLIANCE_TIPS = [
   {
     id: 4,
     tag: 'Washing Machine Tip',
-    icon: '🧺',
+    icon: Shirt,
     title: 'Monthly Tub Clean Routine',
     desc: 'Run an empty hot water cycle with descaler once a month to remove detergent scum, calcium deposits, and prevent musty odors.',
     benefit: 'Cleaner clothes & odor-free drum',
@@ -98,7 +97,7 @@ const APPLIANCE_TIPS = [
   {
     id: 5,
     tag: 'Electrical Safety',
-    icon: '🛡️',
+    icon: ShieldCheck,
     title: 'Proper 16A Sockets for Heavy Loads',
     desc: 'Geysers, microwaves, and room heaters must always run on dedicated 16A sockets with proper earthing to prevent switch melting.',
     benefit: '100% fire-safe homes',
@@ -106,7 +105,7 @@ const APPLIANCE_TIPS = [
   {
     id: 6,
     tag: 'Nigam Service Promise',
-    icon: '⭐',
+    icon: Star,
     title: '7-Day Post-Service Warranty',
     desc: 'Every repair conducted by our background-verified service partner is backed by genuine spare parts and a hassle-free service warranty.',
     benefit: 'Zero risk guarantee',
@@ -544,7 +543,7 @@ const SearchingPartner = () => {
   };
 
   const timeSlotDisplay = isInstant
-    ? '⚡ Right Now (Instant ASAP)'
+    ? 'Right Now (Instant ASAP)'
     : {
         Morning: '8 AM – 11 AM',
         Afternoon: '12 PM – 3 PM',
@@ -808,7 +807,7 @@ const SearchingPartner = () => {
                 Partner has accepted and is preparing for your scheduled appointment.
               </span>
               <span className="text-brand-blue font-black shrink-0">
-                {instantStatus === 'EN_ROUTE' ? '🚗 On The Way' : '⚡ Confirmed'}
+                {instantStatus === 'EN_ROUTE' ? 'On The Way' : 'Confirmed'}
               </span>
             </div>
           </div>
@@ -819,7 +818,7 @@ const SearchingPartner = () => {
           <div className="bg-linear-to-r from-blue-900 to-indigo-950 text-white rounded-3xl p-5 md:p-6 shadow-sm relative overflow-hidden text-left">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-lg">{APPLIANCE_TIPS[tipIndex].icon}</span>
+                {(() => { const TipIcon = APPLIANCE_TIPS[tipIndex].icon; return <TipIcon className="w-5 h-5" aria-hidden="true" />; })()}
                 <span className="text-[10px] uppercase font-black tracking-widest text-blue-300 bg-white/10 px-2.5 py-0.5 rounded-full">
                   {APPLIANCE_TIPS[tipIndex].tag}
                 </span>
@@ -954,22 +953,22 @@ const SearchingPartner = () => {
         <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-xs">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
             <div className="flex flex-col items-center gap-1 p-2">
-              <span className="text-xl">👨‍🔧</span>
+              <UserCheck className="w-6 h-6 text-brand-blue" aria-hidden="true" />
               <span className="text-xs font-black text-slate-800">Verified Pros</span>
               <span className="text-[10px] text-slate-400">100% Background Checked</span>
             </div>
             <div className="flex flex-col items-center gap-1 p-2">
-              <span className="text-xl">🛡️</span>
+              <ShieldCheck className="w-6 h-6 text-brand-blue" aria-hidden="true" />
               <span className="text-xs font-black text-slate-800">7-Day Warranty</span>
               <span className="text-[10px] text-slate-400">Post service assurance</span>
             </div>
             <div className="flex flex-col items-center gap-1 p-2">
-              <span className="text-xl">💵</span>
+              <Wallet className="w-6 h-6 text-brand-blue" aria-hidden="true" />
               <span className="text-xs font-black text-slate-800">Fixed Pricing</span>
               <span className="text-[10px] text-slate-400">No hidden charges</span>
             </div>
             <div className="flex flex-col items-center gap-1 p-2">
-              <span className="text-xl">⏱️</span>
+              <Clock className="w-6 h-6 text-brand-blue" aria-hidden="true" />
               <span className="text-xs font-black text-slate-800">On-Time Arrival</span>
               <span className="text-[10px] text-slate-400">Fast doorstep dispatch</span>
             </div>

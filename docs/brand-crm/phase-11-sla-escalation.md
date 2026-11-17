@@ -1,6 +1,6 @@
 # Phase 11: SLA v2 and automatic escalation
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §11, §14 (escalation events) · **Depends on:** Phases 6, 8, 9
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §11, §14 (escalation events) · **Depends on:** Phases 6, 8, 9
 
 ## Goal
 SLA is configured per brand: Response, Approval, Allocation, First Visit and

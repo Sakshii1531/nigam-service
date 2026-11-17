@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, ShoppingCart, Star, Check, 
-  Trash2, CreditCard, ShoppingBag, ChevronRight, X
-} from 'lucide-react';
+  Trash2, CreditCard, ShoppingBag, ChevronRight, X, Snowflake, Refrigerator, Tv, WashingMachine, Droplets, Package, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../lib/apiClient';
+import ItemIcon from '../components/common/ItemIcon';
 import { useCart } from '../lib/cartStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -54,11 +54,11 @@ const ProductDetails = () => {
   // Icon and card tint are presentation, not catalogue data — derived from the
   // product's category rather than stored per product.
   const CATEGORY_STYLE = {
-    ac: { icon: '❄️', colorTheme: 'from-blue-50 to-indigo-50 border-blue-200' },
-    refrigerator: { icon: '🧊', colorTheme: 'from-cyan-50 to-blue-50 border-cyan-200' },
-    television: { icon: '📺', colorTheme: 'from-slate-50 to-gray-50 border-slate-200' },
-    'washing machine': { icon: '🧺', colorTheme: 'from-teal-50 to-emerald-50 border-teal-200' },
-    'water purifier': { icon: '💧', colorTheme: 'from-sky-50 to-cyan-50 border-sky-200' },
+    ac: { Icon: Snowflake, colorTheme: 'from-blue-50 to-indigo-50 border-blue-200' },
+    refrigerator: { Icon: Refrigerator, colorTheme: 'from-cyan-50 to-blue-50 border-cyan-200' },
+    television: { Icon: Tv, colorTheme: 'from-slate-50 to-gray-50 border-slate-200' },
+    'washing machine': { Icon: WashingMachine, colorTheme: 'from-teal-50 to-emerald-50 border-teal-200' },
+    'water purifier': { Icon: Droplets, colorTheme: 'from-sky-50 to-cyan-50 border-sky-200' },
   };
 
   useEffect(() => {
@@ -70,7 +70,7 @@ const ProductDetails = () => {
 
   // Add to Cart handler
   const handleAddToCart = () => {
-    addItem(product, { icon: style.icon, condition: product.condition });
+    addItem(product, { icon: product.imageUrl || product.images?.[0] || '', condition: product.condition });
     setShowAddedToast(true);
     setTimeout(() => {
       setShowAddedToast(false);
@@ -127,7 +127,7 @@ const ProductDetails = () => {
   }
 
   const style = CATEGORY_STYLE[(product.category || '').toLowerCase()]
-    || { icon: '📦', colorTheme: 'from-slate-50 to-gray-50 border-slate-200' };
+    || { Icon: Package, colorTheme: 'from-slate-50 to-gray-50 border-slate-200' };
 
   // Only a real, higher original price is a discount worth rendering.
   const hasDiscount = Number(product.originalPrice) > Number(product.price);
@@ -190,8 +190,8 @@ const ProductDetails = () => {
         {/* PRODUCT HERO IMAGE BOX */}
         <div className={`bg-linear-to-br ${style.colorTheme} border rounded-3xl p-8 flex flex-col items-center justify-center shadow-sm relative overflow-hidden h-52 group`}>
           <div className="absolute -top-10 -left-10 w-28 h-28 bg-white/30 rounded-full blur-2xl group-hover:bg-white/45 transition-all"></div>
-          <span className="text-7xl drop-shadow-md select-none transform group-hover:scale-110 transition-transform duration-300">
-            {style.icon}
+          <span className="drop-shadow-md select-none transform group-hover:scale-110 transition-transform duration-300">
+            <ItemIcon src={product.imageUrl || product.images?.[0]} fallback={style.Icon} className="w-28 h-28" />
           </span>
           <span className="absolute bottom-3 right-4 bg-white/80 backdrop-blur-sm text-[9px] font-bold text-text-primary border px-2 py-0.5 rounded-full uppercase">
             Certified Inspected
@@ -263,7 +263,7 @@ const ProductDetails = () => {
             <h4 className="text-sm font-extrabold mt-1.5">{product.warranty}</h4>
             <p className="text-[10px] text-white/85 leading-relaxed mt-0.5">100% replacement & service warranty by Nigam Shield.</p>
           </div>
-          <span className="text-3xl font-black">🛡️</span>
+          <ShieldCheck className="w-8 h-8 shrink-0" aria-hidden="true" />
         </div>
 
         {/* DETAILED DESCRIPTION */}
@@ -366,7 +366,7 @@ const ProductDetails = () => {
               <div className="flex-1 p-5 overflow-y-auto flex flex-col gap-4">
                 {cartItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-                    <span className="text-5xl">🛒</span>
+                    <ShoppingCart className="w-12 h-12 text-slate-300" aria-hidden="true" />
                     <h4 className="font-extrabold text-xs text-text-primary mt-2">Your cart is empty!</h4>
                     <p className="text-[10px] text-text-secondary leading-relaxed max-w-50">Add Nigam certified appliances to secure your home comfort.</p>
                   </div>
@@ -376,8 +376,8 @@ const ProductDetails = () => {
                       key={item.id}
                       className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center gap-3 relative"
                     >
-                      <span className="text-3xl bg-white p-2 rounded-lg border shadow-inner shrink-0">
-                        {item.icon}
+                      <span className="bg-white p-2 rounded-lg border shadow-inner shrink-0">
+                        <ItemIcon src={item.icon} fallback={Package} className="w-8 h-8" />
                       </span>
                       
                       <div className="flex-1 min-w-0 pr-6">
@@ -474,7 +474,7 @@ const ProductDetails = () => {
                   )}
                   {/* Summary */}
                   <div className="bg-[#F8F9FA] p-4.5 rounded-2xl flex items-center gap-3 border border-slate-150 shadow-inner">
-                    <span className="text-3xl">{style.icon}</span>
+                    <ItemIcon src={product.imageUrl || product.images?.[0]} fallback={style.Icon} className="w-9 h-9 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-extrabold text-xs text-text-primary truncate">{product.name}</h4>
                       <div className="flex items-baseline gap-1.5 mt-0.5">
@@ -562,7 +562,7 @@ const ProductDetails = () => {
                         </span>
                         <h4 className="font-bold text-sm mt-1.5">{product.name}</h4>
                       </div>
-                      <span className="text-2xl">{style.icon}</span>
+                      <ItemIcon src={product.imageUrl || product.images?.[0]} fallback={style.Icon} className="w-7 h-7 shrink-0" />
                     </div>
 
                     <div className="flex flex-col gap-2.5 text-xs">

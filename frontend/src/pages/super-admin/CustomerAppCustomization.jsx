@@ -1370,14 +1370,14 @@ const CustomerAppCustomization = () => {
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200/60">
                               {cat.isForYou
-                                ? "⚡ For You Feed"
+                                ? "For You Feed"
                                 : cat.isMore
-                                  ? "📂 More Category Page"
+                                  ? "More Category Page"
                                   : cat.isFridge
-                                    ? "🧊 Refrigerator Booking"
+                                    ? "Refrigerator Booking"
                                     : cat.service
-                                      ? `🛠️ Service: ${cat.service}`
-                                      : `📅 Booking: /book/${cat.name}`}
+                                      ? `Service: ${cat.service}`
+                                      : `Booking: /book/${cat.name}`}
                             </span>
                           </td>
 
@@ -1477,7 +1477,7 @@ const CustomerAppCustomization = () => {
                           {story.title}
                         </td>
                         <td className="px-6 py-4 font-bold text-slate-600">
-                          🎥 {story.slides?.length || 0} Slides
+                          {story.slides?.length || 0} Slides
                         </td>
                         <td className="px-6 py-4">
                           {story.image && (
@@ -1863,7 +1863,7 @@ const CustomerAppCustomization = () => {
                   {/* Advanced Mode Section - Open automatically */}
                   <details open className="mt-2 text-xs">
                     <summary className="cursor-pointer text-[10px] font-extrabold text-[#0D47A1] hover:underline">
-                      ⚙️ Advanced Options & Technical Flags
+                      Advanced Options & Technical Flags
                     </summary>
                     <div className="mt-3 space-y-3 p-3 bg-white rounded-xl border border-slate-200">
                       <div className="flex flex-wrap gap-4 pt-1">

@@ -117,7 +117,7 @@ const CMS = () => {
         body: payload
       });
 
-      showToast(`✨ ${activeTab === 'faqs' ? 'FAQs' : activeTab === 'policy' ? 'Privacy Policy' : activeTab === 'about' ? 'About Us' : 'Terms & Conditions'} published successfully!`);
+      showToast(`${activeTab === 'faqs' ? 'FAQs' : activeTab === 'policy' ? 'Privacy Policy' : activeTab === 'about' ? 'About Us' : 'Terms & Conditions'} published successfully!`);
     } catch (err) {
       console.warn('Error saving CMS page:', err);
       showToast(err.message || 'Failed to publish page content');

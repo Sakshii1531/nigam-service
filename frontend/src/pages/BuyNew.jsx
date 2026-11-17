@@ -38,7 +38,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CustomerBottomNav from "../components/CustomerBottomNav";
-import { apiRequest } from "../lib/apiClient";
+import { apiRequest, resolveMediaUrl } from "../lib/apiClient";
+import { isImageIcon } from "../components/common/ItemIcon";
 import { useCart } from "../lib/cartStore";
 import { payWithRazorpay } from "../lib/razorpayCheckout";
 import { useAuth } from "../context/AuthContext";
@@ -138,8 +139,7 @@ const BuyNew = () => {
       ? dynamicCategories.map((c) => ({
           name: c.name,
           slug: c.slug,
-          img: getApplianceImg(c.name),
-          icon: c.icon || "📦",
+          img: isImageIcon(c.icon) ? resolveMediaUrl(c.icon) : getApplianceImg(c.name),
         }))
       : [
           { name: "Television", img: tvImg },
@@ -1511,7 +1511,7 @@ const BuyNew = () => {
                                     </span>
                                     {product.warrantyMonths && (
                                       <span className="inline-flex items-center text-[8px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                                        🛡️ {product.warrantyMonths}M Warranty
+                                        {product.warrantyMonths}M Warranty
                                       </span>
                                     )}
                                   </div>
@@ -1842,7 +1842,7 @@ const BuyNew = () => {
 
                             {savingsAmount && (
                               <p className="text-xs font-bold text-emerald-700">
-                                🎉 You Save ₹{savingsAmount.toLocaleString()} on
+                                You Save ₹{savingsAmount.toLocaleString()} on
                                 this order! (Inclusive of all taxes)
                               </p>
                             )}
@@ -2624,7 +2624,7 @@ const BuyNew = () => {
                                   </span>
                                 </div>
                                 <span className="text-[9px] text-emerald-600 font-bold">
-                                  🔄 Exchange Applied (-₹
+                                  Exchange Applied (-₹
                                   {item.exchange.totalSavings.toLocaleString()})
                                 </span>
                               </div>
@@ -3197,7 +3197,7 @@ const BuyNew = () => {
 
               {!selectedAddress && (
                 <p className="text-[11px] text-amber-600 font-bold text-center">
-                  ⚠️ Please select or add a delivery address above to continue.
+                  Please select or add a delivery address above to continue.
                 </p>
               )}
             </div>

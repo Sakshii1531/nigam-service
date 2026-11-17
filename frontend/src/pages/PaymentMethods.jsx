@@ -140,7 +140,7 @@ const PaymentMethods = () => {
       setShowAddCardModal(false);
       setCardNumber('');
       setCardExpiry('');
-      showToast(`🔒 ${detectedNetwork?.name || 'Card'} tokenized & saved securely!`);
+      showToast(`${detectedNetwork?.name || 'Card'} tokenized & saved securely!`);
     } catch (err) {
       console.warn('Error tokenizing card:', err);
       showToast(err.message || 'Failed to tokenize card');
@@ -173,7 +173,7 @@ const PaymentMethods = () => {
 
       setShowAddUpiModal(false);
       setUpiAddress('');
-      showToast('🔒 UPI tokenized & linked!');
+      showToast('UPI tokenized & linked!');
     } catch (err) {
       console.warn('Error tokenizing UPI:', err);
       showToast(err.message || 'Failed to tokenize UPI');

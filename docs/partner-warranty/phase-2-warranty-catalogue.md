@@ -1,6 +1,6 @@
 # Phase 2 — Warranty catalogue: groups, brand coverage, issues
 
-**Status:** ✅ Done (2026-09-29) · **Layer:** Backend · **Delivers:** #1 (data source)
+**Status:** Done (2026-09-29) · **Layer:** Backend · **Delivers:** #1 (data source)
 
 ## Goal
 Everything the customer picks (group → brand → product → issue) comes from the

@@ -1,6 +1,6 @@
 # Phase 4: Multi-channel ticket registration (CCE / Toll-Free / Manual) + intake fields
 
-**Status:** ✅ Complete · **Layer:** Full stack · **Delivers:** client §1, §2, §5 (registration), §13 · **Depends on:** Phases 1–3
+**Status:** Complete · **Layer:** Full stack · **Delivers:** client §1, §2, §5 (registration), §13 · **Depends on:** Phases 1–3
 
 ## Goal
 A Customer Care Executive takes a Toll-Free call and works through these steps:
