@@ -70,6 +70,24 @@ export async function updateTile(id, updates) {
   return tile;
 }
 
+/**
+ * Puts a placement's tiles in the given order. Every id must be a tile of that
+ * placement (so one row cannot be used to renumber another), and tiles not
+ * listed keep their place after the listed ones.
+ */
+export async function reorderTiles(placement, ids) {
+  const existing = await HomeTile.find({ placement }).select('_id sortOrder').sort({ sortOrder: 1 }).lean();
+  const known = new Set(existing.map((t) => String(t._id)));
+  if (new Set(ids).size !== ids.length) throw new ApiError(400, 'Each tile can appear only once');
+  const unknown = ids.filter((id) => !known.has(String(id)));
+  if (unknown.length) throw new ApiError(400, 'One or more tiles do not belong to this row');
+  const rest = existing.map((t) => String(t._id)).filter((id) => !ids.includes(id));
+  const order = [...ids, ...rest];
+  // updateOne (not bulkWrite) so the catalogue-cache write hook fires.
+  await Promise.all(order.map((id, index) => HomeTile.updateOne({ _id: id }, { $set: { sortOrder: index } })));
+  return listAllTiles({ placement });
+}
+
 export async function deleteTile(id) {
   const tile = await findOr404(id);
   await tile.deleteOne();

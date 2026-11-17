@@ -9,9 +9,9 @@
   "scripts": {
     "security:scan": "node ../scripts/scan-malware.mjs",
     "predev": "npm run security:scan",
-    "dev": "vite",
+    "dev": "node init && vite",
     "prebuild": "npm run security:scan",
-    "build": "vite build",
+    "build": "node init && vite build",
     "lint": "eslint .",
     "prepreview": "npm run security:scan",
     "preview": "vite preview"
