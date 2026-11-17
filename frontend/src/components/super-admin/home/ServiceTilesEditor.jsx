@@ -42,7 +42,7 @@ function LiveFigures({ group }) {
   );
 }
 
-function TileDialog({ placement, tile, groups, usedIds, onClose, onSaved }) {
+function TileDialog({ placement, tile, groups, usedIds, sectionId, copy, onClose, onSaved }) {
   const [groupId, setGroupId] = useState(tile ? groupIdOf(tile) : '');
   const [title, setTitle] = useState(tile?.title || '');
   const [imageUrl, setImageUrl] = useState(tile?.imageUrl || '');
@@ -82,6 +82,7 @@ function TileDialog({ placement, tile, groups, usedIds, onClose, onSaved }) {
       title: title.trim() || chosen.title,
       target: { productType: chosen.productTypeId, service: chosen.serviceId },
       imageUrl: imageUrl || null,
+      ...(sectionId && !tile ? { section: sectionId } : {}),
     };
     try {
       await (tile
@@ -96,7 +97,7 @@ function TileDialog({ placement, tile, groups, usedIds, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={tile ? 'Edit tile' : 'Add a service'} subtitle={COPY[placement].title} onClose={onClose} width="max-w-2xl">
+    <Modal title={tile ? 'Edit tile' : 'Add a service'} subtitle={copy.title} onClose={onClose} width="max-w-2xl">
       <form onSubmit={save} className="space-y-4">
         <Field label="Service *" group>
           <div className="relative mb-2">
@@ -160,7 +161,12 @@ function TileDialog({ placement, tile, groups, usedIds, onClose, onSaved }) {
   );
 }
 
-export default function ServiceTilesEditor({ placement, onToast }) {
+/**
+ * sectionId: null manages a built-in row ("most-booked" / "appliance-service");
+ * an id manages the services of a custom service row an admin created (then
+ * `heading` is that row's name).
+ */
+export default function ServiceTilesEditor({ placement, onToast, sectionId = null, heading = null }) {
   const [tiles, setTiles] = useState([]);
   const [groups, setGroups] = useState([]);
   const [auto, setAuto] = useState([]);
@@ -171,7 +177,7 @@ export default function ServiceTilesEditor({ placement, onToast }) {
   const load = useCallback(async () => {
     try {
       const [rows, groupList, live] = await Promise.all([
-        apiRequest(`/cms/home-tiles/admin?placement=${placement}`, { auth: true }),
+        apiRequest(`/cms/home-tiles/admin?placement=${placement}&section=${sectionId || 'none'}`, { auth: true }),
         apiRequest('/super-admin/catalogue/service-groups', { auth: true }),
         placement === 'most-booked' ? apiRequest('/catalog/home-sections', { silentError: true }) : Promise.resolve(null),
       ]);
@@ -184,7 +190,7 @@ export default function ServiceTilesEditor({ placement, onToast }) {
     } finally {
       setLoading(false);
     }
-  }, [placement]);
+  }, [placement, sectionId]);
   useEffect(() => {
     load();
   }, [load]);
@@ -214,7 +220,7 @@ export default function ServiceTilesEditor({ placement, onToast }) {
     window.confirm(`Remove "${tile.title}" from this row?`) &&
     run(() => apiRequest(`/cms/home-tiles/${tile.id}`, { method: 'DELETE', auth: true }), 'Tile removed.');
 
-  const copy = COPY[placement];
+  const copy = heading ? { ...COPY[placement], title: heading, hint: 'The services shown in this row, in this order. Hidden when the list is empty.', empty: 'No services in this row yet — the customer app hides it.' } : COPY[placement];
 
   return (
     <div className="space-y-5">
@@ -287,6 +293,8 @@ export default function ServiceTilesEditor({ placement, onToast }) {
           tile={dialog.tile}
           groups={groups}
           usedIds={usedIds}
+          sectionId={sectionId}
+          copy={copy}
           onClose={() => setDialog(null)}
           onSaved={() => {
             setDialog(null);

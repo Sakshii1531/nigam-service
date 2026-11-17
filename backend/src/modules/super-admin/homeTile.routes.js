@@ -44,7 +44,7 @@ homeTileRouter.post('/', ...requireAdmin, validate(createTileSchema), async (req
 // Must be registered before '/:id' or "reorder" would be read as an id.
 homeTileRouter.put('/reorder', ...requireAdmin, validate(reorderTilesSchema), async (req, res, next) => {
   try {
-    ok(res, await tileService.reorderTiles(req.body.placement, req.body.ids));
+    ok(res, await tileService.reorderTiles(req.body.placement, req.body.ids, req.body.section));
   } catch (err) {
     next(err);
   }
