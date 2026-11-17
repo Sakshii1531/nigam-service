@@ -1,10 +1,11 @@
 import ServiceTilesEditor from "../../components/super-admin/home/ServiceTilesEditor";
 import BrandCardsEditor from "../../components/super-admin/home/BrandCardsEditor";
+import HomeLayoutEditor from "../../components/super-admin/home/HomeLayoutEditor";
 import ServiceGroupSelect from "../../components/super-admin/home/ServiceGroupSelect";
 import { groupIdToTarget, targetToGroupId } from "../../components/super-admin/home/serviceGroupTarget";
 import { apiRequest } from "../../lib/apiClient";
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/super-admin/Sidebar";
 import Topbar from "../../components/super-admin/Topbar";
 import {
@@ -702,8 +703,9 @@ function shapeBanner(b) {
 
 const CustomerAppCustomization = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const requestedTab = new URLSearchParams(location.search).get("tab");
-  const activeSubSection = ["categories", "banners", "brands", "mostbooked", "applianceservices", "stories"].includes(requestedTab)
+  const activeSubSection = ["layout", "categories", "banners", "brands", "mostbooked", "applianceservices", "stories"].includes(requestedTab)
     ? requestedTab
     : "categories";
   const [successMessage, setSuccessMessage] = useState("");
@@ -1402,6 +1404,14 @@ const CustomerAppCustomization = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Home layout: order, hide, rename and add the sections of the customer home screen */}
+          {activeSubSection === "layout" && (
+            <HomeLayoutEditor
+              onToast={showToast}
+              onOpenTab={(tab) => navigate(`/super-admin/customer-app-customization?tab=${tab}`)}
+            />
           )}
 
           {/* Brands & Offers: its own editor, straight against /cms/home-tiles */}

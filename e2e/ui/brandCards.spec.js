@@ -71,7 +71,7 @@ test('an admin runs the Brands & Offers section and the customer home screen fol
     await expect(dialog.getByText('Choose which service customers should book.')).toBeVisible();
     await dialog.getByLabel('Service category').selectOption({ index: 1 });
     await dialog.getByRole('button', { name: 'Save card' }).click();
-    const list = adminPage.getByRole('list', { name: 'Brand and offer cards' });
+    const list = adminPage.getByRole('list', { name: 'Brands & Offers cards' });
     await expect(list.getByText(`LLOYD ${tag}`)).toBeVisible();
 
     await home();

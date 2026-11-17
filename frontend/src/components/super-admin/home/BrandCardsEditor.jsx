@@ -49,7 +49,7 @@ const customLinkProblem = (value) => {
   return 'Use an in-app path like /book/AC, or a full address starting with https://';
 };
 
-function CardDialog({ card, categories, onClose, onSaved }) {
+function CardDialog({ card, categories, sectionId, heading, onClose, onSaved }) {
   const initialMode = modeOf(card?.link || '');
   const [brandName, setBrandName] = useState(card?.brandName || '');
   const [badgeText, setBadgeText] = useState(card?.badgeText || '');
@@ -105,6 +105,7 @@ function CardDialog({ card, categories, onClose, onSaved }) {
       textColor: theme.textColor,
       imageUrl: imageUrl || null,
       isActive,
+      ...(sectionId ? { section: sectionId } : {}),
     };
     try {
       await (card
@@ -119,7 +120,7 @@ function CardDialog({ card, categories, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={card ? 'Edit card' : 'Add a brand or offer card'} subtitle="Brands & Offers on the customer home screen" onClose={onClose} width="max-w-2xl">
+    <Modal title={card ? 'Edit card' : 'Add a brand or offer card'} subtitle={`${heading} on the customer home screen`} onClose={onClose} width="max-w-2xl">
       <form onSubmit={save} className="space-y-4">
         <div className="rounded-2xl bg-slate-100 p-4 flex justify-center" aria-label="Card preview">
           <BrandOfferCard card={preview} className="w-80 max-w-full" />
@@ -219,7 +220,11 @@ function CardDialog({ card, categories, onClose, onSaved }) {
   );
 }
 
-export default function BrandCardsEditor({ onToast }) {
+/**
+ * sectionId: null manages the built-in "Brands & Offers" section; an id manages
+ * the cards of a brand-card section an admin created.
+ */
+export default function BrandCardsEditor({ onToast, sectionId = null, heading = 'Brands & Offers' }) {
   const [cards, setCards] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -230,7 +235,7 @@ export default function BrandCardsEditor({ onToast }) {
   const load = useCallback(async () => {
     try {
       const [rows, cats] = await Promise.all([
-        apiRequest(`/cms/home-tiles/admin?placement=${PLACEMENT}`, { auth: true }),
+        apiRequest(`/cms/home-tiles/admin?placement=${PLACEMENT}&section=${sectionId || 'none'}`, { auth: true }),
         apiRequest('/catalog/categories', { silentError: true }).catch(() => []),
       ]);
       setCards(Array.isArray(rows) ? rows : []);
@@ -241,7 +246,7 @@ export default function BrandCardsEditor({ onToast }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sectionId]);
   useEffect(() => {
     load();
   }, [load]);
@@ -264,7 +269,7 @@ export default function BrandCardsEditor({ onToast }) {
       const order = cards.map((c) => c.id);
       const [id] = order.splice(index, 1);
       order.splice(index + delta, 0, id);
-      await apiRequest('/cms/home-tiles/reorder', { method: 'PUT', auth: true, body: { placement: PLACEMENT, ids: order } });
+      await apiRequest('/cms/home-tiles/reorder', { method: 'PUT', auth: true, body: { placement: PLACEMENT, ids: order, ...(sectionId ? { section: sectionId } : {}) } });
     }, 'Order saved.');
   const toggle = (card) =>
     run(() => apiRequest(`/cms/home-tiles/${card.id}`, { method: 'PUT', auth: true, body: { isActive: !card.isActive } }), card.isActive ? 'Card hidden from customers.' : 'Card is now visible to customers.');
@@ -279,8 +284,8 @@ export default function BrandCardsEditor({ onToast }) {
     <div className="space-y-5">
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-2xl">
-          <h2 className="text-base font-extrabold text-slate-800">Brands & Offers</h2>
-          <p className="text-xs text-slate-500 mt-1">The promo cards under “Brands & Offers” on the customer home screen, shown in this order. Only cards marked visible reach customers; with none visible the whole section is hidden.</p>
+          <h2 className="text-base font-extrabold text-slate-800">{heading}</h2>
+          <p className="text-xs text-slate-500 mt-1">The promo cards under “{heading}” on the customer home screen, shown in this order. Only cards marked visible reach customers; with none visible the whole section is hidden.</p>
         </div>
         <PrimaryButton type="button" onClick={() => setDialog({ card: null })}>
           <Plus size={14} /> Add brand / offer card
@@ -291,7 +296,7 @@ export default function BrandCardsEditor({ onToast }) {
       {loading ? (
         <Loader2 className="animate-spin mx-auto text-slate-400" />
       ) : (
-        <ol className="space-y-2" aria-label="Brand and offer cards">
+        <ol className="space-y-2" aria-label={`${heading} cards`}>
           {cards.map((card, i) => (
             <li key={card.id} className={`bg-white rounded-2xl border border-slate-200/80 p-3 flex items-center gap-3 ${card.isActive ? '' : 'opacity-60'}`}>
               <span className="w-8 text-center text-xs font-black text-slate-400">{i + 1}</span>
@@ -320,7 +325,7 @@ export default function BrandCardsEditor({ onToast }) {
             </li>
           ))}
           {!cards.length && (
-            <li className="bg-white rounded-2xl border border-dashed border-slate-300 p-6 text-center text-xs text-slate-400">No cards yet — the “Brands & Offers” section is hidden on the customer home screen.</li>
+            <li className="bg-white rounded-2xl border border-dashed border-slate-300 p-6 text-center text-xs text-slate-400">No cards yet — the “{heading}” section is hidden on the customer home screen.</li>
           )}
         </ol>
       )}
@@ -341,6 +346,8 @@ export default function BrandCardsEditor({ onToast }) {
         <CardDialog
           card={dialog.card}
           categories={categories}
+          sectionId={sectionId}
+          heading={heading}
           onClose={() => setDialog(null)}
           onSaved={(message) => {
             setDialog(null);

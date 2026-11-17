@@ -29,6 +29,7 @@ import {
   TrendingUp,
   FileText,
   LayoutGrid,
+  ListOrdered,
   Wrench,
   DollarSign,
   Image,
@@ -327,6 +328,12 @@ const Sidebar = () => {
       label: "Customers",
       path: "/super-admin/users",
       icon: <Users size={18} />,
+    },
+    {
+      type: "link",
+      label: "Home Layout",
+      path: "/super-admin/customer-app-customization?tab=layout",
+      icon: <ListOrdered size={18} />,
     },
     {
       type: "link",

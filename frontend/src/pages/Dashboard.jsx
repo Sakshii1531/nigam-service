@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   Search,
   Bell,
@@ -6,8 +6,6 @@ import {
   ChevronDown,
   Star,
   X,
-  ShoppingCart,
-  ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Footer from "../components/layout/Footer";
@@ -52,7 +50,8 @@ import roCarbonImg from "../assets/ro_carbon_filter.png";
 import roPostCarbonImg from "../assets/ro_post_carbon.png";
 import Stories from "../components/home/Stories";
 import { LoadingSection, Skeleton, SkeletonCardRow, SkeletonHeading } from "../components/common/Skeleton";
-import BrandOfferCard, { isExternalLink, openCardLink } from "../components/home/BrandOfferCard";
+import { openCardLink } from "../components/home/BrandOfferCard";
+import BrandCardsSection from "../components/home/BrandCardsSection";
 import PlatformReviewCarousel from "../components/home/PlatformReviewCarousel";
 import CustomerAdvertisements from "../components/home/CustomerAdvertisements";
 
@@ -615,6 +614,19 @@ const getCategoryIcon = (categoryName = "") => {
 };
 
 /** One horizontal row of bookable service cards (Phase 22). Hidden when empty. */
+// Used only if the layout cannot be loaded: the sections the app has always had.
+const DEFAULT_HOME_LAYOUT = [
+  { id: "banners", kind: "banners", title: "Service banners", builtIn: true },
+  { id: "categories", kind: "categories", title: "Our Services", builtIn: true },
+  { id: "warranty-offers", kind: "warranty-offers", title: "Warranty offers", builtIn: true },
+  { id: "brand-cards", kind: "brand-cards", title: "Brands & Offers", builtIn: true },
+  { id: "most-booked", kind: "most-booked", title: "Most Booked Services", builtIn: true },
+  { id: "appliance-services", kind: "appliance-services", title: "Appliance repair & service", builtIn: true },
+  { id: "spare-parts", kind: "spare-parts", title: "Spare Parts & Accessories", builtIn: true },
+  { id: "reviews", kind: "reviews", title: "Customer reviews", builtIn: true },
+  { id: "stories", kind: "stories", title: "Stories", builtIn: true },
+];
+
 function ServiceRow({ title, cards, seeAll, inWarranty, onOpen }) {
   // undefined = still loading → heading + card skeletons; [] = nothing to show → hidden.
   if (cards === undefined) {
@@ -627,11 +639,13 @@ function ServiceRow({ title, cards, seeAll, inWarranty, onOpen }) {
     <section className="mt-6 md:mt-12 lg:mt-16 xl:mt-20" aria-label={title}>
       <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
         <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">{title}</h2>
-        <button
-          onClick={seeAll}
-          className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
-          See All
-        </button>
+        {seeAll && (
+          <button
+            onClick={seeAll}
+            className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
+            See All
+          </button>
+        )}
       </div>
       <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-4 xl:grid-cols-4 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
         {cards.map((card) => {
@@ -822,13 +836,25 @@ const Dashboard = ({ defaultType }) => {
   // Phase 22): every card is a bookable catalogue service with its live price,
   // a real "Instant" and a real review rating — nothing here is typed in by hand.
   // A row with nothing to show is hidden.
+  // The home layout: null = still loading. If the layout cannot be loaded the
+  // screen falls back to the built-in order so the app is never blank.
+  const [layout, setLayout] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    apiRequest("/cms/home-layout")
+      .then((data) => alive && setLayout(Array.isArray(data) && data.length ? data : DEFAULT_HOME_LAYOUT))
+      .catch(() => alive && setLayout(DEFAULT_HOME_LAYOUT));
+    return () => {
+      alive = false;
+    };
+  }, []);
   const homeCity = currentLocation?.city || "";
   const [homeSections, setHomeSections] = useState(null); // null = still loading
   useEffect(() => {
     let alive = true;
     getHomeSections({ city: homeCity || undefined })
-      .then((data) => alive && setHomeSections({ mostBooked: data?.mostBooked || [], applianceServices: data?.applianceServices || [] }))
-      .catch(() => alive && setHomeSections({ mostBooked: [], applianceServices: [] }));
+      .then((data) => alive && setHomeSections({ mostBooked: data?.mostBooked || [], applianceServices: data?.applianceServices || [], custom: data?.custom || {} }))
+      .catch(() => alive && setHomeSections({ mostBooked: [], applianceServices: [], custom: {} }));
     return () => {
       alive = false;
     };
@@ -960,24 +986,266 @@ const Dashboard = ({ defaultType }) => {
           { id: "Carpenter", key: "Carpenter", name: "Carpenter", img: iconWrench, fallbackImage: iconWrench },
         ];
 
-  // Brands & Offers: exactly the cards an admin has published (Super Admin →
-  // Customer App → Brands & Offers). There is no bundled fallback set any more —
-  // with nothing published the section is hidden instead of showing stale cards
-  // an admin could never remove.
-  const brandCards = (cmsTiles || [])
-    .filter((t) => t.placement === "brand-card")
-    .map((t) => ({
-      id: t.id,
-      brandName: t.brandName || t.title,
-      title: t.title,
-      subtitle: t.subtitle,
-      image: t.imageUrl,
-      buttonText: t.buttonText,
-      actionUrl: t.link,
-      badgeText: t.badgeText,
-      gradient: t.gradient || "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
-      textColor: t.textColor,
-    }));
+  // The home screen is an ordered list of sections an admin controls (Super
+  // Admin → Customer App → Home layout). Each built-in kind keeps the markup it
+  // always had; "brand-cards" and "service-row" can also be created by the admin
+  // any number of times, each with its own content.
+  const brandCardsFor = (sectionId) =>
+    (cmsTiles || [])
+      .filter((t) => t.placement === "brand-card" && (sectionId ? String(t.section) === String(sectionId) : !t.section))
+      .map((t) => ({
+        id: t.id,
+        brandName: t.brandName || t.title,
+        title: t.title,
+        subtitle: t.subtitle,
+        image: t.imageUrl,
+        buttonText: t.buttonText,
+        actionUrl: t.link,
+        badgeText: t.badgeText,
+        gradient: t.gradient || "from-[#E3F2FD] via-[#F4F9FF] to-[#D5E6FF]",
+        textColor: t.textColor,
+      }));
+
+  const renderSection = (section) => {
+    switch (section.kind) {
+      case "banners":
+        return (
+          <>
+        {/* Service Banners — horizontal auto-slide carousel */}
+        <div
+          ref={bannerRef}
+          className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative">
+          {bannersLoading ? (
+            <Skeleton className="min-w-[85vw] sm:min-w-85 md:min-w-full h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] shrink-0" rounded="rounded-2xl" />
+          ) : (activeType === "non-warranty"
+            ? regularBanners
+            : warrantyBannersList
+          ).map((banner) => (
+            <div
+              key={banner.id}
+              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow">
+              <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] w-full">
+                <img
+                  src={banner.image}
+                  alt="Service Banner"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+          </>
+        );
+      case "categories":
+        return (
+          <>
+        {/* Categories */}
+        <div className="mt-4 sm:mt-6 md:mt-10">
+          <div className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-text-primary md:text-center">
+              {section.title}
+            </h2>
+            <button
+              onClick={() => navigate("/services")}
+              className="px-3.5 sm:px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
+              See All
+            </button>
+          </div>
+          <div
+            ref={serviceRef}
+            className="flex overflow-x-auto gap-3 sm:gap-4 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative">
+            <div className="flex gap-3 sm:gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
+              {categoriesLoading ? Array.from({ length: 6 }, (_, i) => (
+                <div key={`cat-skeleton-${i}`} aria-hidden="true" className="flex flex-col items-center gap-2 shrink-0 w-24 sm:w-28">
+                  <Skeleton className="w-20 h-20 sm:w-24 sm:h-24" rounded="rounded-2xl" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              )) : displayServiceCategories.map((cat, index) => (
+                <div
+                  key={`${cat.id || cat.key || cat.name}-${index}`}
+                  onClick={() => {
+                    if (activeType === "in-warranty") {
+                      setSelectedServiceForWarranty({
+                        title: cat.name,
+                        destination: `/book/${encodeURIComponent(cat.key || cat.name)}`,
+                      });
+                      setShowWarrantyModal(true);
+                      return;
+                    }
+                    navigate(
+                      `/book/${encodeURIComponent(cat.key || cat.name)}`,
+                    );
+                  }}
+                  className="flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
+                    <img
+                      src={cat.img || cat.fallbackImage || acImg}
+                      alt={cat.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = cat.fallbackImage || acImg;
+                      }}
+                      className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
+                    />
+                  </div>
+                  <span className="text-[11px] sm:text-xs font-semibold text-text-primary text-center line-clamp-2 md:whitespace-normal md:leading-tight w-full">
+                    {cat.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+          </>
+        );
+      case "warranty-offers":
+        return (
+          <>
+        {/* Warranty Offers / Smart Detection — mobile only */}
+        <div className="md:hidden">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-base sm:text-lg font-bold text-text-primary">
+              {activeType === "in-warranty" ? "Covered Benefits" : ""}
+            </h2>
+          </div>
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative">
+            {[
+              { id: 1, image: warrantyBanner1 },
+              { id: 2, image: warrantyBanner2 },
+            ].map((banner) => (
+              <div
+                key={banner.id}
+                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow">
+                <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.8/1] w-full">
+                  <img
+                    src={banner.image}
+                    alt="Warranty Banner"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+          </>
+        );
+      case "brand-cards":
+        return <BrandCardsSection title={section.title} loading={tilesLoading} cards={brandCardsFor(section.builtIn ? null : section.id)} navigate={navigate} />;
+      case "most-booked":
+        return (
+          <ServiceRow
+            title={section.title}
+            cards={homeSections?.mostBooked}
+            seeAll={() => navigate("/services")}
+            inWarranty={activeType === "in-warranty"}
+            onOpen={openServiceCard}
+          />
+        );
+      case "appliance-services":
+        return (
+          <ServiceRow
+            title={section.title}
+            cards={homeSections?.applianceServices}
+            seeAll={() => navigate("/appliance-services")}
+            inWarranty={activeType === "in-warranty"}
+            onOpen={openServiceCard}
+          />
+        );
+      case "service-row":
+        return (
+          <ServiceRow
+            title={section.title}
+            cards={homeSections ? homeSections.custom?.[section.id] || [] : undefined}
+            seeAll={section.seeAllLink ? () => openCardLink(section.seeAllLink, navigate) : undefined}
+            inWarranty={activeType === "in-warranty"}
+            onOpen={openServiceCard}
+          />
+        );
+      case "spare-parts":
+        return (
+          <>
+        {/* Spare Parts & Accessories — store products in the "Spare Parts"
+            store category (Super Admin → NCC Products). Hidden when there are none. */}
+        <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
+          {spareParts === null && (
+            <LoadingSection loading label="spare parts" skeleton={<><SkeletonHeading /><SkeletonCardRow count={5} columns="md:grid-cols-5" /></>} />
+          )}
+          {spareParts?.length > 0 && (
+          <>
+          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
+            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
+              {section.title}
+            </h2>
+            <button
+              onClick={() => navigate("/buy/accessories")}
+              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
+              See All
+            </button>
+          </div>
+          <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-5 xl:grid-cols-5 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
+            {spareParts.map((p) => ({
+              id: p.id,
+              title: p.name,
+              desc: (p.specs || [])[0] || "",
+              price: p.price,
+              mrp: p.originalPrice > p.price ? p.originalPrice : null,
+              image: p.imageUrl || p.images?.[0] || partArt(p.name),
+              // Only true statements: the real discount, or real low stock.
+              badge: p.discountPercent > 0 ? `${p.discountPercent}% off` : p.stockStatus === "Low Stock" ? `Only ${p.stock} left` : null,
+            })).map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => navigate(`/product-details?id=${item.id}`)}
+                className="text-left flex flex-col gap-2 cursor-pointer shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
+                <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-contain p-2 mix-blend-multiply"
+                  />
+                  {item.badge && (
+                    <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1 mt-1">
+                  <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
+                    {item.title}
+                  </span>
+                  <span className="text-[10px] md:text-xs text-text-secondary line-clamp-2 leading-snug">
+                    {item.desc}
+                  </span>
+                  <span className="text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold text-[#0B4EA2]">
+                    {formatRupees(item.price)}
+                    {item.mrp && <s className="ml-1.5 text-[10px] md:text-xs font-semibold text-slate-400">{formatRupees(item.mrp)}</s>}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          </>
+          )}
+          </div>
+          </>
+        );
+      case "reviews":
+        return (
+          <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
+            {/* Featured reviews are customer content on every screen size. */}
+            <PlatformReviewCarousel />
+          </div>
+        );
+      case "stories":
+        return <Stories />;
+      default:
+        return null;
+    }
+  };
 
 
   return (
@@ -1276,250 +1544,15 @@ const Dashboard = ({ defaultType }) => {
       {/* Main Content */}
       <div className="flex-1 px-3 sm:px-4 py-4 md:px-10 md:py-6 lg:px-16 lg:py-8 xl:px-20 flex flex-col gap-5 md:gap-8 max-w-screen-2xl mx-auto w-full">
         <CustomerAdvertisements placement="App Header Banner" className="mt-4 sm:mt-6 md:mt-10" />
-        {/* Service Banners — horizontal auto-slide carousel */}
-        <div
-          ref={bannerRef}
-          className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative">
-          {bannersLoading ? (
-            <Skeleton className="min-w-[85vw] sm:min-w-85 md:min-w-full h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] shrink-0" rounded="rounded-2xl" />
-          ) : (activeType === "non-warranty"
-            ? regularBanners
-            : warrantyBannersList
-          ).map((banner) => (
-            <div
-              key={banner.id}
-              className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow">
-              <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.35/1] w-full">
-                <img
-                  src={banner.image}
-                  alt="Service Banner"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Categories */}
-        <div className="mt-4 sm:mt-6 md:mt-10">
-          <div className="flex justify-between items-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
-            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-text-primary md:text-center">
-              Our Services
-            </h2>
-            <button
-              onClick={() => navigate("/services")}
-              className="px-3.5 sm:px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
-              See All
-            </button>
+        {layout === null ? (
+          <div className="flex flex-col gap-6 mt-4" aria-busy="true">
+            <Skeleton className="h-32 sm:h-36 md:aspect-[3.35/1] md:h-auto w-full" rounded="rounded-2xl" />
+            <SkeletonHeading />
+            <SkeletonCardRow />
           </div>
-          <div
-            ref={serviceRef}
-            className="flex overflow-x-auto gap-3 sm:gap-4 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x md:snap-none no-scrollbar md:w-full md:mx-0 md:px-0 md:pb-0 relative">
-            <div className="flex gap-3 sm:gap-4 min-w-full md:gap-8 lg:gap-10 md:w-max">
-              {categoriesLoading ? Array.from({ length: 6 }, (_, i) => (
-                <div key={`cat-skeleton-${i}`} aria-hidden="true" className="flex flex-col items-center gap-2 shrink-0 w-24 sm:w-28">
-                  <Skeleton className="w-20 h-20 sm:w-24 sm:h-24" rounded="rounded-2xl" />
-                  <Skeleton className="h-3 w-16" />
-                </div>
-              )) : displayServiceCategories.map((cat, index) => (
-                <div
-                  key={`${cat.id || cat.key || cat.name}-${index}`}
-                  onClick={() => {
-                    if (activeType === "in-warranty") {
-                      setSelectedServiceForWarranty({
-                        title: cat.name,
-                        destination: `/book/${encodeURIComponent(cat.key || cat.name)}`,
-                      });
-                      setShowWarrantyModal(true);
-                      return;
-                    }
-                    navigate(
-                      `/book/${encodeURIComponent(cat.key || cat.name)}`,
-                    );
-                  }}
-                  className="flex flex-col items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 w-20 sm:w-24 snap-start md:snap-none md:w-44 md:bg-white md:rounded-2xl md:p-4 md:hover:shadow-md md:transition-all">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-full md:h-20 lg:h-24 bg-transparent rounded-2xl flex items-center justify-center transition-all overflow-hidden">
-                    <img
-                      src={cat.img || cat.fallbackImage || acImg}
-                      alt={cat.name}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = cat.fallbackImage || acImg;
-                      }}
-                      className="w-full h-full object-contain mix-blend-multiply p-1.5 sm:p-2"
-                    />
-                  </div>
-                  <span className="text-[11px] sm:text-xs font-semibold text-text-primary text-center line-clamp-2 md:whitespace-normal md:leading-tight w-full">
-                    {cat.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Warranty Offers / Smart Detection — mobile only */}
-        <div className="md:hidden">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-base sm:text-lg font-bold text-text-primary">
-              {activeType === "in-warranty" ? "Covered Benefits" : ""}
-            </h2>
-          </div>
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative">
-            {[
-              { id: 1, image: warrantyBanner1 },
-              { id: 2, image: warrantyBanner2 },
-            ].map((banner) => (
-              <div
-                key={banner.id}
-                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow">
-                <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.8/1] w-full">
-                  <img
-                    src={banner.image}
-                    alt="Warranty Banner"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Brands & Offers — hidden when no card is published */}
-        {(tilesLoading || brandCards.length > 0) && (
-          <div className="md:mt-10 lg:mt-14 xl:mt-16">
-            <div className="flex items-center mb-4 sm:mb-6 md:mb-8 lg:mb-10 md:justify-center">
-              <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
-                Brands & Offers
-              </h2>
-            </div>
-
-            {/* Master Card Container for Desktop */}
-            <div className="md:bg-slate-100 md:rounded-[32px] md:p-6 lg:p-8 md:border md:border-slate-200/80 md:shadow-[0_10px_30px_rgba(0,0,0,0.03)] md:max-w-325 md:mx-auto">
-              {/* Brand Cards — scroll on mobile, 2-column grid inside single card on desktop */}
-              <div className="flex overflow-x-auto gap-3 sm:gap-4 pt-1 pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-2 md:gap-6 lg:gap-8 md:overflow-visible md:mx-0 md:px-0 md:pb-0 md:pt-0">
-                {tilesLoading
-                  ? Array.from({ length: 2 }, (_, i) => (
-                      <Skeleton key={`brand-skeleton-${i}`} className="shrink-0 w-[80vw] sm:w-96 md:w-auto h-40 md:h-48" rounded="rounded-3xl" />
-                    ))
-                  : brandCards.map((bc) => (
-                      <BrandOfferCard
-                        key={bc.id}
-                        card={bc}
-                        onOpen={(c) => openCardLink(c.actionUrl, navigate)}
-                        className="w-[85vw] sm:w-80 md:w-auto md:max-w-none md:flex-shrink shrink-0 snap-start"
-                      />
-                    ))}
-              </div>
-
-              {/* Legend: only the icons that appear on the cards being shown */}
-              {!tilesLoading && (
-                <div className="mt-4 md:mt-6 pt-3 text-[9.5px] md:text-xs font-bold text-slate-500">
-                  <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-8 w-max mx-auto px-4">
-                    {brandCards.some((c) => c.actionUrl && !isExternalLink(c.actionUrl)) && (
-                      <div className="flex items-center gap-2">
-                        <ShoppingCart className="w-3.5 h-3.5 text-brand-blue shrink-0" />
-                        <span>Cart icon: continue in the NCC app</span>
-                      </div>
-                    )}
-                    {brandCards.some((c) => isExternalLink(c.actionUrl)) && (
-                      <div className="flex items-center gap-2">
-                        <ExternalLink className="w-3.5 h-3.5 text-brand-blue shrink-0" />
-                        <span>Arrow icon: opens the brand's website</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        ) : (
+          layout.map((section) => <Fragment key={section.id}>{renderSection(section)}</Fragment>)
         )}
-
-        <ServiceRow
-          title="Most Booked Services"
-          cards={homeSections?.mostBooked}
-          seeAll={() => navigate("/services")}
-          inWarranty={activeType === "in-warranty"}
-          onOpen={openServiceCard}
-        />
-        <ServiceRow
-          title="Appliance repair & service"
-          cards={homeSections?.applianceServices}
-          seeAll={() => navigate("/appliance-services")}
-          inWarranty={activeType === "in-warranty"}
-          onOpen={openServiceCard}
-        />
-
-        {/* Spare Parts & Accessories — store products in the "Spare Parts"
-            store category (Super Admin → NCC Products). Hidden when there are none. */}
-        <div className="mt-6 md:mt-12 lg:mt-16 xl:mt-20">
-          {spareParts === null && (
-            <LoadingSection loading label="spare parts" skeleton={<><SkeletonHeading /><SkeletonCardRow count={5} columns="md:grid-cols-5" /></>} />
-          )}
-          {spareParts?.length > 0 && (
-          <>
-          <div className="flex justify-between items-center mb-6 md:mb-8 lg:mb-10 md:relative md:justify-center">
-            <h2 className="text-lg font-bold md:text-2xl lg:text-3xl xl:text-4xl md:font-black text-text-primary md:text-center">
-              Spare Parts & Accessories
-            </h2>
-            <button
-              onClick={() => navigate("/buy/accessories")}
-              className="px-4 py-1.5 bg-[#0B4EA2] text-white hover:bg-[#072C63] text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer md:absolute md:right-0">
-              See All
-            </button>
-          </div>
-          <div className="flex gap-2.5 sm:gap-4 overflow-x-auto pb-3 sm:pb-4 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x no-scrollbar md:grid md:grid-cols-5 xl:grid-cols-5 md:gap-5 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
-            {spareParts.map((p) => ({
-              id: p.id,
-              title: p.name,
-              desc: (p.specs || [])[0] || "",
-              price: p.price,
-              mrp: p.originalPrice > p.price ? p.originalPrice : null,
-              image: p.imageUrl || p.images?.[0] || partArt(p.name),
-              // Only true statements: the real discount, or real low stock.
-              badge: p.discountPercent > 0 ? `${p.discountPercent}% off` : p.stockStatus === "Low Stock" ? `Only ${p.stock} left` : null,
-            })).map((item) => (
-              <button
-                type="button"
-                key={item.id}
-                onClick={() => navigate(`/product-details?id=${item.id}`)}
-                className="text-left flex flex-col gap-2 cursor-pointer shrink-0 w-34.5 min-[360px]:w-37 sm:w-44 snap-start md:w-auto md:flex-shrink border border-border-color rounded-2xl p-2 md:p-4 bg-white hover:border-brand-blue hover:shadow-md transition-all">
-                <div className="w-full h-28 min-[360px]:h-32 md:h-44 lg:h-48 bg-slate-50/50 rounded-xl flex items-center justify-center overflow-hidden relative">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="w-full h-full object-contain p-2 mix-blend-multiply"
-                  />
-                  {item.badge && (
-                    <span className="absolute top-2 right-2 text-[10px] md:text-xs font-bold px-2 md:px-2.5 py-0.5 md:py-1 rounded-full bg-[#E3F2FD] text-brand-blue">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1 mt-1">
-                  <span className="text-xs min-[360px]:text-sm md:text-base font-semibold md:font-bold text-text-primary line-clamp-2 leading-snug">
-                    {item.title}
-                  </span>
-                  <span className="text-[10px] md:text-xs text-text-secondary line-clamp-2 leading-snug">
-                    {item.desc}
-                  </span>
-                  <span className="text-xs min-[360px]:text-sm md:text-base font-bold md:font-extrabold text-[#0B4EA2]">
-                    {formatRupees(item.price)}
-                    {item.mrp && <s className="ml-1.5 text-[10px] md:text-xs font-semibold text-slate-400">{formatRupees(item.mrp)}</s>}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-          </>
-          )}
-
-          {/* Featured reviews are customer content on every screen size. */}
-          <div>
-            <PlatformReviewCarousel />
-          </div>
-        </div>
-        <Stories />
       </div>
 
       {/* Bottom Navigation — hidden on desktop */}
