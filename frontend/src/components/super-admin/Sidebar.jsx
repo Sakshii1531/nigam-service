@@ -184,7 +184,7 @@ const Sidebar = () => {
 
     { type: "header", label: "SERVICE PARTNERS" },
     { type: "link", label: "Provider Onboarding", path: "/super-admin/provider-onboarding", icon: <UserPlus size={18} /> },
-    { type: "link", label: "Service Provider Accounts", path: "/super-admin/service-providers", icon: <UserCheck size={18} />, badgeKey: "pendingServiceProviders" },
+    { type: "link", label: "Service Partner Accounts", path: "/super-admin/service-providers", icon: <UserCheck size={18} />, badgeKey: "pendingServiceProviders" },
     { type: "link", label: "Pending Service Providers", path: "/super-admin/pending-service-providers", icon: <Clock size={18} />, badgeKey: "pendingServiceProviders" },
     { type: "link", label: "City Change Requests", path: "/super-admin/city-change-requests", icon: <RefreshCw size={18} />, badgeKey: "pendingCityChanges" },
     { type: "link", label: "ASM Management", path: "/super-admin/asm", icon: <Users size={18} /> },
