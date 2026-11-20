@@ -205,6 +205,58 @@ describe('variant rules', () => {
   });
 });
 
+describe('coupon rules', () => {
+  const fan = () => idOf('ELEC-FAN-INSTALL');
+  const fanCategory = async () => (await ServiceOffering.findOne({ code: 'ELEC-FAN-INSTALL' }).populate('category')).category.key;
+
+  it('a percentage coupon is worked out on the order value before GST, capped at its maximum', async () => {
+    await Coupon.create({ code: 'TENPC', discountType: 'percent', discount: 10, maxDiscount: 50, applicableOn: ['service'] });
+    const res = await quote([{ offeringId: await fan(), quantity: 2 }], { couponCode: 'tenpc' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.totals.base).toBe(598);
+    expect(res.body.data.totals.discount).toBe(50);
+  });
+
+  it('a coupon refuses an order below its minimum, a wrong category or a date before it starts, with the reason', async () => {
+    await Coupon.create({ code: 'BIG1000', discount: 100, minOrderValue: 1000, applicableOn: ['service'] });
+    await Coupon.create({ code: 'ACONLY', discount: 100, categories: ['AC'], applicableOn: ['service'] });
+    await Coupon.create({ code: 'LATER', discount: 100, startsAt: new Date(Date.now() + 5 * 86400000), applicableOn: ['service'] });
+    await Coupon.create({ code: 'STOREONLY', discount: 100, applicableOn: ['product'] });
+    const offeringId = await fan();
+    const big = await quote([{ offeringId, quantity: 2 }], { couponCode: 'BIG1000' });
+    expect([big.status, big.body.error.code]).toEqual([400, 'COUPON_INVALID']);
+    expect(big.body.error.message).toMatch(/Add ₹402 more/);
+    expect((await quote([{ offeringId, quantity: 1 }], { couponCode: 'ACONLY' })).body.error.message).toMatch(/Valid only on AC/);
+    expect((await quote([{ offeringId, quantity: 1 }], { couponCode: 'LATER' })).body.error.message).toMatch(/Starts on/);
+    expect((await quote([{ offeringId, quantity: 1 }], { couponCode: 'STOREONLY' })).body.error.message).toMatch(/Not valid on service bookings/);
+  });
+
+  it('the checkout list shows usable coupons first (best saving first) and the others with why', async () => {
+    const token = await customerToken();
+    await Coupon.create({ code: 'FLAT40', discount: 40, applicableOn: ['service'] });
+    await Coupon.create({ code: 'FLAT80', title: 'Flat ₹80 off', discount: 80, applicableOn: ['service'] });
+    await Coupon.create({ code: 'NEWBIE', discount: 30, firstOrderOnly: true, applicableOn: ['service'] });
+    await Coupon.create({ code: 'BIG1000', discount: 100, minOrderValue: 1000, applicableOn: ['service'] });
+    await Coupon.create({ code: 'OFF', discount: 500, status: 'Inactive', applicableOn: ['service'] });
+    await Coupon.create({ code: 'STOREONLY', discount: 100, applicableOn: ['product'] });
+    const res = await request(app)
+      .post('/api/v1/coupons/checkout')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ scope: 'service', orderValue: 598, categoryKey: await fanCategory() })
+      .expect(200);
+    const rows = res.body.data;
+    expect(rows.map((r) => r.code)).toEqual(['FLAT80', 'FLAT40', 'NEWBIE', 'BIG1000']);
+    expect(rows[0]).toMatchObject({ eligible: true, savings: 80, title: 'Flat ₹80 off' });
+    expect(rows[1].title).toBe('Flat ₹40 off');
+    expect(rows[3]).toMatchObject({ eligible: false, savings: 0 });
+    expect(rows[3].reason).toMatch(/Add ₹402 more/);
+  });
+
+  it('the checkout list needs a signed-in customer', async () => {
+    await request(app).post('/api/v1/coupons/checkout').send({ orderValue: 100 }).expect(401);
+  });
+});
+
 describe('express, coupon, coins, advance', () => {
   it('Fan ×2, express, flat ₹60 coupon → ₹751.66', async () => {
     await Coupon.create({ code: 'NCC60', discount: 60, applicableOn: ['service'] });

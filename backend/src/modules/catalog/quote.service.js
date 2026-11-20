@@ -95,11 +95,14 @@ async function resolveSelectedVariant(offering, variantId, loc) {
   return selected;
 }
 
-async function couponPaise(couponCode) {
+// The coupon's rules (minimum order, category, first booking, uses per
+// customer) are checked against this checkout; the discount is worked out on
+// the order value before GST.
+async function couponPaise(couponCode, context) {
   if (!couponCode) return 0;
   try {
-    const coupon = await resolveCoupon(couponCode, 'service');
-    return toPaise(coupon.discount);
+    const coupon = await resolveCoupon(couponCode, 'service', context);
+    return toPaise(coupon.appliedDiscount);
   } catch (err) {
     if (err instanceof ApiError && err.statusCode < 500) throw catalogError(COUPON_INVALID, err.message);
     throw err;
@@ -146,7 +149,12 @@ export async function buildQuote(input, { userId = null, coverageType: knownCove
   const settings = await platformPricingSettings();
   const paymentMode = input.paymentMode || 'after';
   const [coupon, coinsAvailablePaise] = await Promise.all([
-    couponPaise(input.couponCode),
+    couponPaise(input.couponCode, {
+      userId,
+      orderValue: selections.reduce((sum, s) => sum + s.rate.customerPrice * s.quantity, 0) / 100,
+      categoryKey: selections[0].offering.category.key,
+      at,
+    }),
     input.useCoins && userId ? walletPaise(userId, settings.coinsPerRupee) : 0,
   ]);
 

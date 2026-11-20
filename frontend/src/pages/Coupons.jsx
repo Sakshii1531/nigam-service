@@ -17,7 +17,7 @@ const Coupons = () => {
         const listToMap = Array.isArray(res) ? res : [];
         if (listToMap && listToMap.length >= 0) {
           const formatted = listToMap.map(c => {
-            const hasPct = c.description?.toLowerCase().includes('%');
+            const hasPct = c.discountType === 'percent';
             const discountLabel = hasPct ? `${c.discount}% OFF` : `₹${c.discount.toLocaleString('en-IN')} OFF`;
             
             // Map color dynamically
@@ -54,7 +54,7 @@ const Coupons = () => {
             return {
               code: c.code,
               discount: discountLabel,
-              desc: c.description ? `${c.description} (${scopeText})` : scopeText,
+              desc: [c.title, c.description, c.minOrderValue ? `Min. order ₹${Number(c.minOrderValue).toLocaleString('en-IN')}` : '', c.firstOrderOnly ? 'First booking only' : '', `(${scopeText})`].filter(Boolean).join(' · '),
               expiry: expiryStr,
               color,
               textColor
