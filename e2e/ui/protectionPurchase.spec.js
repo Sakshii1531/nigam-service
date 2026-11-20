@@ -120,7 +120,6 @@ for (const kind of ['amc', 'extended-warranty']) {
       await page.getByRole('button', {name:/Continue — Select Service/i}).click();
       await page.getByRole('button', {name:/Installation/i}).first().click();
       await page.getByRole('button', {name:/Continue — Schedule Visit/i}).click();
-      await expect(page.getByLabel('Select saved appliance')).toHaveValue(appliance.id);
       await page.getByText(/Service Needed Now/i).click();
       await page.getByRole('button', {name:/Continue — Address & Payment/i}).click();
       await page.getByLabel('Wall type *', {exact:true}).selectOption('Brick');

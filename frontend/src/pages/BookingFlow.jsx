@@ -1153,7 +1153,7 @@ const BookingFlow = () => {
   const step2Valid = Boolean(primaryOffering && quote && !quoteError);
   const hasBrands = Boolean(data.brands && data.brands.length > 0);
   const timeSlotValid = Boolean(timeGroup) && (timeGroup !== "ASAP" || expressAvailable);
-  const step3Valid = (!bookingApplianceId || (quantity === 1 && extraLines.length === 0)) && (!hasBrands || !!brand) && !!selectedDate && timeSlotValid && Boolean(quote);
+  const step3Valid = (!bookingApplianceId || (quantity === 1 && extraLines.length === 0)) && !!selectedDate && timeSlotValid && Boolean(quote);
 
   const isMobileValid = !!mobile?.trim() && /^\d{10}$/.test(mobile.trim());
   const isPincodeValid =
@@ -1216,9 +1216,7 @@ const BookingFlow = () => {
     }
     if (step === 3)
       return !step3Valid
-        ? hasBrands && !brand
-          ? "Select Brand, Date & Slot"
-          : "Select Date & Time Slot"
+        ? "Select Date & Time Slot"
         : "Continue — Address & Payment";
     if (submitting) return "Processing Booking...";
     if (!answersValid) return "Answer the service questions";
@@ -1630,7 +1628,7 @@ const BookingFlow = () => {
                 {hasBrands && (
                   <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
                     <p className="text-[12px] font-black text-slate-900 mb-2.5 flex items-center justify-between">
-                      <span>Select Brand *</span>
+                      <span>Select Brand <span className="font-semibold text-slate-400">(optional)</span></span>
                       {brand && (
                         <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
                           <CheckCircle2 size={12} /> Selected
@@ -1645,10 +1643,10 @@ const BookingFlow = () => {
                         className={`w-full appearance-none px-3.5 sm:px-4 py-2.5 sm:py-3 pr-10 bg-slate-50 border rounded-xl text-[12px] sm:text-[13px] font-bold outline-none transition-all cursor-pointer ${
                           brand
                             ? "text-slate-900 border-brand-blue bg-blue-50/20"
-                            : "text-slate-400 border-amber-300 bg-amber-50/30"
+                            : "text-slate-400 border-slate-200"
                         }`}>
-                        <option value="" disabled>
-                          Choose Appliance Brand
+                        <option value="">
+                          Choose appliance brand (optional)
                         </option>
                         {data.brands.map((b) => (
                           <option key={b} value={b}>
@@ -1660,30 +1658,9 @@ const BookingFlow = () => {
                       </select>
                       <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
-                    {!brand && (
-                      <p className="text-[10px] sm:text-[11px] text-amber-600 font-bold mt-2 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" /> Please select an appliance brand to
-                        proceed
-                      </p>
-                    )}
                   </div>
                 )}
 
-                {user && !isStandalone && <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-slate-900">Which appliance needs service?</h3><button type="button" onClick={() => setAddAppliance(true)} className="text-xs font-bold text-blue-800">+ Add appliance</button></div>
-                  {appliancesError && <p role="alert" className="mt-2 text-xs text-red-600">{appliancesError}</p>}
-                  <select aria-label="Select saved appliance" value={bookingApplianceId || ""} onChange={e => {
-                    const saved = ownedAppliances.find(a => a.id === e.target.value);
-                    setSelectedApplianceId(saved?.id || "");
-                    if (saved) { setBrand(saved.brand || ""); setQuantity(1); setExtraLines([]); }
-                    setAppliancesError("");
-                  }} className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
-                    <option value="">New / unsaved appliance — don't add to My Appliances</option>
-                    {ownedAppliances.map(a => <option key={a.id} value={a.id}>{[a.nickname, a.brand, a.modelNumber || a.model, a.serialNumber].filter(Boolean).join(' · ') || a.category}</option>)}
-                  </select>
-                  <p className="mt-2 text-xs leading-5 text-slate-500">Saved appliances keep their own service history. You can also book a new appliance without saving it.</p>
-                  {bookingApplianceId && (quantity !== 1 || extraLines.length > 0) && <p role="alert" className="mt-2 text-xs text-amber-700">A saved appliance represents one product. <button type="button" onClick={() => { setQuantity(1); setExtraLines([]); }} className="font-bold underline">Book just this appliance</button></p>}
-                </section>}
 
                 {/* Date picker */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
@@ -2670,9 +2647,7 @@ const BookingFlow = () => {
                   {brand ? ` • ${brand}` : ""}
                 </p>
                 <p className="text-[10px] text-slate-400 font-bold mt-0.5 truncate block">
-                  {hasBrands && !brand
-                    ? "Select Brand, Date & Time Slot"
-                    : !selectedDate
+                  {!selectedDate
                       ? "Select Visit Date"
                       : timeGroup
                         ? TIME_GROUPS.find((t) => t.id === timeGroup)?.timeRange
@@ -2699,9 +2674,7 @@ const BookingFlow = () => {
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-brand-blue text-white hover:bg-[#1565C0] shadow-md shadow-brand-blue/25"
             }`}>
-            {hasBrands && !brand
-              ? "Choose Brand to Continue"
-              : !selectedDate || !timeGroup
+            {!selectedDate || !timeGroup
                 ? "Select Date & Time Slot"
                 : "Continue — Address & Payment"}
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />
