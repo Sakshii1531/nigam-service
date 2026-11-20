@@ -43,8 +43,8 @@ if (firebaseConfig.projectId && firebaseConfig.messagingSenderId) {
 
     self.registration.showNotification(title, {
       body: body || '',
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
+      icon: '/favicon-192.png',
+      badge: '/favicon-192.png',
       // Collapses repeats of the same notification instead of stacking them.
       tag: notificationId || undefined,
       data: { notificationId, broadcastRole, url: '/notifications' },
