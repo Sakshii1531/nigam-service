@@ -1,3 +1,4 @@
+import BannerManager from "../../components/super-admin/home/BannerManager";
 import ServiceTilesEditor from "../../components/super-admin/home/ServiceTilesEditor";
 import BrandCardsEditor from "../../components/super-admin/home/BrandCardsEditor";
 import HomeLayoutEditor from "../../components/super-admin/home/HomeLayoutEditor";
@@ -13,7 +14,6 @@ import {
   Trash2,
   Edit2,
   RotateCcw,
-  Image,
   Sparkles,
   LayoutGrid,
 } from "lucide-react";
@@ -691,15 +691,14 @@ function shapeStory(s) {
   };
 }
 
-function shapeBanner(b) {
-  return {
-    id: b.id,
-    image: b.imageUrl,
-    title: b.title || "",
-    sortOrder: b.sortOrder ?? 0,
-  };
-}
 
+
+// The three banner strips of the customer home screen that live in the Banners tab.
+const BANNER_SETS = [
+  { id: "non-warranty", label: "Regular banners", blurb: "The main sliding banners under the category bar, shown when the customer is not in warranty mode." },
+  { id: "warranty", label: "Warranty banners", blurb: "The main sliding banners shown instead when the customer switches to In-Warranty mode." },
+  { id: "warranty-offers", label: "Warranty offer strip (mobile)", blurb: "The warranty strip under the categories on phones (for example the Warranty Tracker banner). Leave it empty to show the built-in pictures." },
+];
 
 const CustomerAppCustomization = () => {
   const location = useLocation();
@@ -739,12 +738,8 @@ const CustomerAppCustomization = () => {
     isFridge: false,
   });
 
-  // Banner State
-  const [bannerType, setBannerType] = useState("non-warranty"); // 'non-warranty' or 'warranty'
-  const [nonWarrantyBanners, setNonWarrantyBanners] = useState([]);
-  const [warrantyBanners, setWarrantyBanners] = useState([]);
-  const [newBannerTitle, setNewBannerTitle] = useState("");
-  const [newBannerFile, setNewBannerFile] = useState("");
+  // Which banner set the Banners tab is showing.
+  const [bannerSet, setBannerSet] = useState("non-warranty");
 
   useEffect(() => {
     (async () => {
@@ -772,27 +767,6 @@ const CustomerAppCustomization = () => {
         writeTiles("categories", DEFAULT_CATEGORIES);
       }
 
-    })();
-
-    // Load Banners
-    // Banners are real server-side content (/cms/banners), not local state —
-    // the customer app reads the same endpoint, so what an admin publishes here
-    // actually reaches users.
-    (async () => {
-      try {
-        const all = await apiRequest("/cms/banners/admin?app=customer", {
-          auth: true,
-        });
-        const list = Array.isArray(all) ? all : [];
-        setNonWarrantyBanners(
-          list.filter((b) => b.segment !== "warranty").map(shapeBanner),
-        );
-        setWarrantyBanners(
-          list.filter((b) => b.segment === "warranty").map(shapeBanner),
-        );
-      } catch (err) {
-        console.warn("Could not load banners:", err.message);
-      }
     })();
 
     // Stories are server-side content the customer app reads from the same
@@ -1029,78 +1003,6 @@ const CustomerAppCustomization = () => {
       showToast("Restored default categories.");
     }
   };
-
-  // --- Banner Handlers ---
-  const handleBannerFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      uploadImage(file)
-        .then((url) => {
-        setNewBannerFile(url);
-        })
-        .catch((err) => showToast(err.message || "Image upload failed."));
-    }
-  };
-
-  const handleAddBanner = async (e) => {
-    e.preventDefault();
-    if (!newBannerFile) return;
-
-    try {
-      const created = await apiRequest("/cms/banners", {
-        method: "POST",
-        auth: true,
-        body: {
-          imageUrl: newBannerFile,
-          app: "customer",
-          segment: bannerType === "warranty" ? "warranty" : "non-warranty",
-        },
-      });
-      const banner = shapeBanner(created);
-      if (bannerType === "non-warranty")
-        setNonWarrantyBanners((prev) => [...prev, banner]);
-      else setWarrantyBanners((prev) => [...prev, banner]);
-
-      setNewBannerTitle("");
-      setNewBannerFile("");
-      const fileInput = document.getElementById("banner-file-input-sub");
-      if (fileInput) fileInput.value = "";
-      showToast("Banner published — it is now live in the customer app.");
-    } catch (err) {
-      showToast(`Could not publish the banner: ${err.message}`);
-    }
-  };
-
-  const handleDeleteBanner = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this banner?")) return;
-
-    const prevNon = nonWarrantyBanners;
-    const prevWar = warrantyBanners;
-    if (bannerType === "non-warranty")
-      setNonWarrantyBanners((p) => p.filter((b) => b.id !== id));
-    else setWarrantyBanners((p) => p.filter((b) => b.id !== id));
-
-    try {
-      await apiRequest(`/cms/banners/${id}`, { method: "DELETE", auth: true });
-      showToast("Banner removed from the customer app.");
-    } catch (err) {
-      setNonWarrantyBanners(prevNon);
-      setWarrantyBanners(prevWar);
-      showToast(`Could not delete the banner: ${err.message}`);
-    }
-  };
-
-  // Banners now live on the server and are shared by every customer, so there is
-  // no local default to restore to — resetting would mean deleting real content
-  // for everyone. Removed deliberately rather than left as a no-op button.
-  const handleResetBanners = () => {
-    showToast(
-      "Banners are live content — delete individual banners instead of resetting.",
-    );
-  };
-
-  const currentBanners =
-    bannerType === "non-warranty" ? nonWarrantyBanners : warrantyBanners;
 
   // --- Brands Handlers ---
   // --- Stories Handlers ---
@@ -1521,147 +1423,37 @@ const CustomerAppCustomization = () => {
           {/* ---------------- SUBSECTION 2: BANNER CUSTOMIZATION ---------------- */}
           {activeSubSection === "banners" && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1E293B]">
-                    Dashboard sliding Banners
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Manage the sliding offer banners displayed right under the
-                    category bar on the user dashboard.
-                  </p>
-                </div>
-                <button
-                  onClick={handleResetBanners}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                  <RotateCcw size={14} /> Reset Current Defaults
-                </button>
+              <div className="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-xs">
+                <h2 className="text-sm font-bold text-[#1E293B]">
+                  Home page banners
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  The sliding banners on the customer home screen. Pick which
+                  strip to edit. To add a banner strip of your own anywhere on
+                  the home screen, use Home Layout → Add a section → Banner
+                  carousel.
+                </p>
               </div>
-              {/* Banner type label — only regular banners are shown */}
-              <div className="flex gap-2 bg-slate-100 p-1 rounded-xl self-start w-fit">
-                <button
-                  onClick={() => setBannerType("non-warranty")}
-                  className="px-4 py-1.5 text-[10.5px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-2xs">
-                  Regular Banners
-                </button>
+              <div className="flex flex-wrap gap-2 bg-slate-100 p-1 rounded-xl self-start w-fit" role="tablist" aria-label="Banner strips">
+                {BANNER_SETS.map((set) => (
+                  <button
+                    key={set.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={bannerSet === set.id}
+                    onClick={() => setBannerSet(set.id)}
+                    className={`px-4 py-1.5 text-[10.5px] font-bold rounded-lg transition-all cursor-pointer ${bannerSet === set.id ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500 hover:text-slate-800"}`}>
+                    {set.label}
+                  </button>
+                ))}
               </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                {/* Upload form */}
-                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-xs flex flex-col gap-4">
-                  <h3 className="text-xs font-bold text-[#1E293B] uppercase tracking-wider flex items-center gap-1.5">
-                    <Image size={15} className="text-[#0D47A1]" />
-                    <span>Upload New Banner</span>
-                  </h3>
-
-                  <form onSubmit={handleAddBanner} className="space-y-4">
-                    <div>
-                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                        Banner Title
-                      </label>
-                      <input
-                        type="text"
-                        value={newBannerTitle}
-                        onChange={(e) => setNewBannerTitle(e.target.value)}
-                        placeholder="e.g. Festive discount offer"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#0D47A1] transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-[#64748B] mb-1 block">
-                        Choose Image *
-                      </label>
-                      <div className="border-2 border-dashed border-slate-200 rounded-lg p-3 bg-slate-50 flex flex-col items-center text-center gap-2">
-                        <input
-                          id="banner-file-input-sub"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleBannerFileChange}
-                          className="hidden"
-                          required
-                        />
-                        <label
-                          htmlFor="banner-file-input-sub"
-                          className="bg-white border border-slate-200 px-3.5 py-1.5 rounded-lg text-[10px] font-bold text-[#0D47A1] cursor-pointer hover:bg-slate-50 transition-colors shadow-2xs">
-                          Browse Image
-                        </label>
-                        <span className="text-[9px] text-slate-400 font-medium">
-                          Supports PNG, JPG, JPEG
-                        </span>
-                      </div>
-                    </div>
-
-                    {newBannerFile && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-[#64748B] mb-1 block">
-                          Selected Preview:
-                        </span>
-                        <img
-                          src={newBannerFile}
-                          alt="Preview"
-                          className="w-full h-24 object-cover border border-slate-200 rounded-xl"
-                        />
-                      </div>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={!newBannerFile}
-                      className="w-full bg-[#0D47A1] hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50">
-                      Publish Banner
-                    </button>
-                  </form>
-                </div>
-
-                {/* Banners List */}
-                <div className="lg:col-span-2 space-y-4">
-                  <h3 className="text-xs font-bold text-[#1E293B] uppercase tracking-wider">
-                    Current Active Banners ({currentBanners.length})
-                  </h3>
-
-                  {currentBanners.length === 0 ? (
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 text-center text-slate-400 font-medium text-xs">
-                      No banners uploaded for this category tab yet. Upload one
-                      on the left panel!
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {currentBanners.map((banner, index) => (
-                        <div
-                          key={banner.id}
-                          className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-2xs flex flex-col group">
-                          <div className="h-32 w-full relative">
-                            <img
-                              src={banner.image}
-                              alt={banner.title}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute top-2 left-2 bg-slate-900/60 text-white px-2 py-0.5 rounded-full text-[9px] font-bold">
-                              Position {index + 1}
-                            </div>
-                          </div>
-                          <div className="p-3.5 flex justify-between items-center bg-slate-50/50">
-                            <div className="min-w-0 flex-1">
-                              <span className="text-[10px] text-slate-400 font-bold block">
-                                Title
-                              </span>
-                              <span className="text-xs font-bold text-slate-800 truncate block mt-0.5">
-                                {banner.title || "Untitled Banner"}
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => handleDeleteBanner(banner.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-2">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <BannerManager
+                key={bannerSet}
+                segment={bannerSet}
+                heading={BANNER_SETS.find((set) => set.id === bannerSet)?.label}
+                description={BANNER_SETS.find((set) => set.id === bannerSet)?.blurb}
+                onToast={showToast}
+              />
             </div>
           )}
 

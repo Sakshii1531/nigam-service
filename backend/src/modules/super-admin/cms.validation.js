@@ -1,16 +1,25 @@
 import { z } from 'zod';
 import { mediaUrl } from '../shared/mediaUrl.js';
+import { linkField } from './homeTile.validation.js';
 
 export const createBannerSchema = z.object({
   imageUrl: mediaUrl().pipe(z.string().min(1)),
   title: z.string().optional(),
   description: z.string().optional(),
-  segment: z.enum(['warranty', 'non-warranty']).optional(),
+  segment: z.enum(['warranty', 'non-warranty', 'warranty-offers']).optional(),
+  section: z.string().regex(/^[a-f0-9]{24}$/i).nullable().optional(),
+  link: linkField.optional(),
   app: z.enum(['customer', 'service_provider']).optional(),
   sortOrder: z.number().optional(),
 });
 export const updateBannerSchema = createBannerSchema.partial().extend({ isActive: z.boolean().optional() });
-export const listBannersQuerySchema = z.object({ app: z.enum(['customer', 'service_provider']).optional() });
+export const listBannersQuerySchema = z.object({
+  app: z.enum(['customer', 'service_provider']).optional(),
+  // section=<id>: that custom section's banners; sections=only: every custom
+  // section's banners; neither: the main carousels only.
+  section: z.string().regex(/^[a-f0-9]{24}$/i).optional(),
+  sections: z.enum(['only']).optional(),
+});
 
 const storySlideSchema = z.object({
   image: mediaUrl().optional(),

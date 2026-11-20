@@ -8,7 +8,14 @@ const bannerSchema = new mongoose.Schema(
     // the customer app uses artwork only, so both are optional.
     title: String,
     description: String,
-    segment: { type: String, enum: ['warranty', 'non-warranty'], default: 'non-warranty' },
+    // 'non-warranty' / 'warranty' are the two sets of the main banner carousel;
+    // 'warranty-offers' is the mobile strip under the categories.
+    segment: { type: String, enum: ['warranty', 'non-warranty', 'warranty-offers'], default: 'non-warranty' },
+    // A banner an admin added to a custom "banner carousel" home section belongs
+    // to that section (and to no segment's carousel).
+    section: { type: mongoose.Schema.Types.ObjectId, ref: 'HomeSection', default: null, index: true },
+    // Optional: where tapping the banner goes (in-app path or https:// address).
+    link: { type: String, default: '' },
     app: { type: String, enum: ['customer', 'service_provider'], default: 'customer', index: true },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },

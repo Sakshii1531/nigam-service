@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ArrowLeft, ArrowUp, Eye, EyeOff, LayoutPanelTop, Loader2, Plus, Rows3, Trash2, Wrench } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Eye, EyeOff, GalleryHorizontal, LayoutPanelTop, Loader2, Plus, Rows3, Trash2, Wrench } from 'lucide-react';
 import { apiRequest } from '../../../lib/apiClient';
 import { Modal, Field, inputClass, ErrorNote, PrimaryButton, SecondaryButton } from '../catalogue/ui';
 import BrandCardsEditor from './BrandCardsEditor';
+import BannerManager from './BannerManager';
 import ServiceTilesEditor from './ServiceTilesEditor';
 
 // Super Admin → Customer App → Home layout. The customer's home screen is this
@@ -23,11 +24,13 @@ const KIND_LABEL = {
   reviews: 'Customer reviews',
   stories: 'Stories',
   'service-row': 'Service row',
+  'banner-carousel': 'Banner carousel',
 };
 
 // Where a built-in section's own content is edited.
 const MANAGE_BUILT_IN = {
   banners: { tab: 'banners', label: 'Edit banners' },
+  'warranty-offers': { tab: 'banners', label: 'Edit banners' },
   categories: { tab: 'categories', label: 'Edit categories' },
   'brand-cards': { tab: 'brands', label: 'Edit cards' },
   'most-booked': { tab: 'mostbooked', label: 'Edit services' },
@@ -38,6 +41,7 @@ const MANAGE_BUILT_IN = {
 };
 
 const KIND_CHOICES = [
+  { kind: 'banner-carousel', icon: GalleryHorizontal, name: 'Banner carousel', blurb: 'A sliding strip of banner pictures you upload, each optionally linking somewhere — like the main banners at the top.' },
   { kind: 'brand-cards', icon: LayoutPanelTop, name: 'Brand / offer cards', blurb: 'A row of promo cards with a picture, a headline and a button — like “Brands & Offers”.' },
   { kind: 'service-row', icon: Rows3, name: 'Service row', blurb: 'A row of bookable services you pick. Price, “Instant” and rating are read live — like “Appliance repair & service”.' },
 ];
@@ -45,8 +49,8 @@ const KIND_CHOICES = [
 function contentSummary(section) {
   if (!section.tiles) return null;
   const { total, active } = section.tiles;
-  const noun = section.kind === 'brand-cards' ? (total === 1 ? 'card' : 'cards') : total === 1 ? 'service' : 'services';
-  if (!total) return section.kind === 'most-booked' ? 'Filled automatically from bookings' : `No ${noun} yet`;
+  const noun = section.kind === 'brand-cards' ? (total === 1 ? 'card' : 'cards') : section.kind === 'banner-carousel' || section.kind === 'warranty-offers' ? (total === 1 ? 'banner' : 'banners') : total === 1 ? 'service' : 'services';
+  if (!total) return section.kind === 'most-booked' ? 'Filled automatically from bookings' : section.kind === 'warranty-offers' ? 'Showing the built-in pictures' : `No ${noun} yet`;
   return active === total ? `${total} ${noun}` : `${active} of ${total} ${noun} visible`;
 }
 
@@ -58,7 +62,7 @@ function SectionDialog({ section, onClose, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const effectiveKind = adding ? kind : section.kind;
-  const headingShown = adding || section.headingShown;
+  const headingShown = adding ? kind !== 'banner-carousel' : section.headingShown;
 
   const save = async (e) => {
     e.preventDefault();
@@ -100,8 +104,8 @@ function SectionDialog({ section, onClose, onSaved }) {
             </div>
           </Field>
         )}
-        <Field label={headingShown ? 'Heading shown to customers *' : 'Name (for the console only)'} hint={headingShown ? undefined : 'This section shows no heading to customers; the name only labels it here.'}>
-          <input className={inputClass} value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder={effectiveKind === 'service-row' ? 'e.g. Festive deep cleaning' : 'e.g. Summer deals'} aria-label="Section heading" />
+        <Field label={headingShown ? 'Heading shown to customers *' : 'Name (for the console only) *'} hint={headingShown ? undefined : 'This section shows no heading to customers; the name only labels it here.'}>
+          <input className={inputClass} value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} placeholder={effectiveKind === 'service-row' ? 'e.g. Festive deep cleaning' : effectiveKind === 'banner-carousel' ? 'e.g. Festive banners' : 'e.g. Summer deals'} aria-label="Section heading" />
         </Field>
         {effectiveKind === 'service-row' && (
           <Field label="“See all” link (optional)" hint="Where the button on the right of the heading goes — an in-app path like /services, or a full https:// address. Leave empty for no button.">
@@ -186,7 +190,9 @@ export default function HomeLayoutEditor({ onToast, onOpenTab }) {
         <button type="button" onClick={() => { setManaging(null); load(); }} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0D47A1] cursor-pointer">
           <ArrowLeft size={14} /> Back to home layout
         </button>
-        {current.kind === 'brand-cards' ? (
+        {current.kind === 'banner-carousel' ? (
+          <BannerManager key={current.id} sectionId={current.id} heading={current.title} description="A sliding strip of banners on the customer home screen. They slide by themselves every few seconds; customers can also swipe." onToast={onToast} />
+        ) : current.kind === 'brand-cards' ? (
           <BrandCardsEditor key={current.id} sectionId={current.id} heading={current.title} onToast={onToast} />
         ) : (
           <ServiceTilesEditor key={current.id} placement="appliance-service" sectionId={current.id} heading={current.title} onToast={onToast} />
@@ -217,7 +223,7 @@ export default function HomeLayoutEditor({ onToast, onOpenTab }) {
           <ol className="space-y-2" aria-label="Home sections">
             {sections.map((s, i) => {
               const summary = contentSummary(s);
-              const target = s.builtIn ? MANAGE_BUILT_IN[s.kind] : { label: s.kind === 'brand-cards' ? 'Manage cards' : 'Manage services' };
+              const target = s.builtIn ? MANAGE_BUILT_IN[s.kind] : { label: s.kind === 'brand-cards' ? 'Manage cards' : s.kind === 'banner-carousel' ? 'Manage banners' : 'Manage services' };
               return (
                 <li key={s.id} className={`bg-white rounded-2xl border border-slate-200/80 p-3 flex items-center gap-3 ${s.isActive ? '' : 'opacity-60'}`}>
                   <span className="w-7 text-center text-xs font-black text-slate-400">{i + 1}</span>

@@ -1,5 +1,6 @@
 import { HomeSection, BUILT_IN_SECTIONS } from './homeSection.model.js';
 import { HomeTile } from './homeTile.model.js';
+import { Banner } from './banner.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 
 // Kind -> the tile placement its content lives under.
@@ -53,10 +54,24 @@ export async function listPublicSections() {
 /** Every section for the console, with how much content each holds. */
 export async function listAdminSections() {
   await ensureBuiltInSections();
-  const [rows, counts] = await Promise.all([
+  const [rows, counts, bannerCounts] = await Promise.all([
     HomeSection.find().sort({ sortOrder: 1, createdAt: 1 }).lean(),
     HomeTile.aggregate([{ $group: { _id: { placement: '$placement', section: '$section', active: '$isActive' }, n: { $sum: 1 } } }]),
+    Banner.aggregate([{ $match: { app: 'customer' } }, { $group: { _id: { segment: '$segment', section: '$section', active: '$isActive' }, n: { $sum: 1 } } }]),
   ]);
+  // Banner-based sections: a custom carousel owns the banners that name it; the
+  // built-in warranty strip owns the 'warranty-offers' segment.
+  const bannerTally = (match) => {
+    let total = 0;
+    let active = 0;
+    for (const c of bannerCounts) {
+      if (match(c._id)) {
+        total += c.n;
+        if (c._id.active) active += c.n;
+      }
+    }
+    return { total, active };
+  };
   const tally = (placement, section) => {
     let total = 0;
     let active = 0;
@@ -71,11 +86,14 @@ export async function listAdminSections() {
   };
   return rows.map((s) => {
     const placement = PLACEMENT_OF[s.kind];
+    let tiles = placement ? tally(placement, s.builtIn ? null : s._id) : null;
+    if (s.kind === 'banner-carousel') tiles = bannerTally((id) => String(id.section) === String(s._id));
+    if (s.kind === 'warranty-offers') tiles = bannerTally((id) => id.segment === 'warranty-offers' && !id.section);
     return {
       ...view(s),
       defaultTitle: BUILT_IN_SECTIONS.find((b) => b.key === s.key)?.title || null,
-      headingShown: s.builtIn ? BUILT_IN_SECTIONS.find((b) => b.key === s.key)?.headingShown : true,
-      tiles: placement ? tally(placement, s.builtIn ? null : s._id) : null,
+      headingShown: s.builtIn ? BUILT_IN_SECTIONS.find((b) => b.key === s.key)?.headingShown : s.kind !== 'banner-carousel',
+      tiles,
     };
   });
 }
@@ -130,9 +148,9 @@ export async function reorderSections(ids) {
 export async function deleteSection(id) {
   const section = await findOr404(id);
   if (section.builtIn) throw new ApiError(409, 'Built-in sections cannot be deleted — hide the section instead');
-  const removed = await HomeTile.deleteMany({ section: section._id });
+  const [removedTiles, removedBanners] = await Promise.all([HomeTile.deleteMany({ section: section._id }), Banner.deleteMany({ section: section._id })]);
   await section.deleteOne();
-  return { deleted: true, tilesRemoved: removed.deletedCount || 0 };
+  return { deleted: true, tilesRemoved: (removedTiles.deletedCount || 0) + (removedBanners.deletedCount || 0) };
 }
 
 /** For tile validation: the section a tile is being added to. */

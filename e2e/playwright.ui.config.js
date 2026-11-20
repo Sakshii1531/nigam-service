@@ -24,6 +24,9 @@ export default defineConfig({
   reporter: [['list']],
   timeout: 45_000,
   fullyParallel: false,
+  // One worker: every spec shares one database, and the home-layout specs edit the
+  // single global home screen, so two files running at once see each other's sections.
+  workers: 1,
   use: { baseURL: `http://localhost:${UI_PORT}` },
   webServer: [
     {

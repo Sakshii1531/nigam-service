@@ -1,5 +1,6 @@
 import { listServiceGroups, serviceGroupId } from '../catalog/offeringSearch.service.js';
 import { Banner } from './banner.model.js';
+import { HomeSection } from './homeSection.model.js';
 import { Story } from './story.model.js';
 import { Video } from './video.model.js';
 import { Advertisement } from './advertisement.model.js';
@@ -19,12 +20,26 @@ import { ApiError } from '../../middleware/errorHandler.js';
 // admin-only `/admin` routes. Keep the two apart: widening the public reader
 // would leak unpublished content to the apps.
 
-export async function listBanners({ app } = {}) {
-  const query = { isActive: true };
+// Banners of a custom home section never appear in the main carousels, so the
+// default read (no section filter) leaves them out.
+function bannerScope({ app, section, sections } = {}) {
+  const query = {};
   if (app) query.app = app;
-  return Banner.find(query).sort({ sortOrder: 1 });
+  if (section) query.section = section;
+  else if (sections === 'only') query.section = { $ne: null };
+  else query.section = null;
+  return query;
+}
+
+export async function listBanners(filter = {}) {
+  return Banner.find({ ...bannerScope(filter), isActive: true }).sort({ sortOrder: 1, createdAt: 1 });
 }
 export async function createBanner(data) {
+  if (data.section) {
+    const owner = await HomeSection.findById(data.section).select('kind').lean();
+    if (!owner || owner.kind !== 'banner-carousel') throw new ApiError(400, 'That home section does not hold banners');
+    return Banner.create({ ...data, app: 'customer', segment: 'non-warranty' });
+  }
   return Banner.create(data);
 }
 export async function updateBanner(id, updates) {
@@ -131,10 +146,8 @@ export async function recordAdvertisementClick(id) {
 
 // ── Admin (console) readers — unfiltered by publish state ─────────────────────
 
-export async function listAllBanners({ app } = {}) {
-  const query = {};
-  if (app) query.app = app;
-  return Banner.find(query).sort({ sortOrder: 1 });
+export async function listAllBanners(filter = {}) {
+  return Banner.find(bannerScope(filter)).sort({ sortOrder: 1, createdAt: 1 });
 }
 
 export async function listAllStories({ status } = {}) {

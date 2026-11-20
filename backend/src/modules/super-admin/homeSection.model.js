@@ -9,6 +9,8 @@ import { watchCatalogueWrites } from '../catalog/catalogCache.js';
 //   brand-cards  a row of promo cards (like "Brands & Offers"), each its own tile
 //   service-row  a curated row of bookable catalogue services (like "Appliance
 //                repair & service"); price, Instant and rating stay live
+//   banner-carousel  a sliding strip of banner pictures (like the main banners);
+//                each banner may link somewhere. Owned through Banner.section.
 //
 // A custom section owns its tiles through HomeTile.section. The built-in
 // sections keep reading their tiles by placement (section: null), exactly as
@@ -25,8 +27,8 @@ export const BUILT_IN_SECTIONS = Object.freeze([
   { key: 'stories', kind: 'stories', title: 'Stories', headingShown: false },
 ]);
 
-export const SECTION_KINDS = Object.freeze([...BUILT_IN_SECTIONS.map((s) => s.kind), 'service-row']);
-export const CUSTOM_SECTION_KINDS = Object.freeze(['brand-cards', 'service-row']);
+export const SECTION_KINDS = Object.freeze([...BUILT_IN_SECTIONS.map((s) => s.kind), 'service-row', 'banner-carousel']);
+export const CUSTOM_SECTION_KINDS = Object.freeze(['brand-cards', 'service-row', 'banner-carousel']);
 
 const homeSectionSchema = new mongoose.Schema(
   {

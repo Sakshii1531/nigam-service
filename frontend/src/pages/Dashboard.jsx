@@ -52,6 +52,7 @@ import Stories from "../components/home/Stories";
 import { LoadingSection, Skeleton, SkeletonCardRow, SkeletonHeading } from "../components/common/Skeleton";
 import { openCardLink } from "../components/home/BrandOfferCard";
 import BrandCardsSection from "../components/home/BrandCardsSection";
+import BannerStrip from "../components/home/BannerStrip";
 import PlatformReviewCarousel from "../components/home/PlatformReviewCarousel";
 import CustomerAdvertisements from "../components/home/CustomerAdvertisements";
 
@@ -711,6 +712,7 @@ const Dashboard = ({ defaultType }) => {
   const bannerRef = useRef(null);
   const [activeType, setActiveType] = useState(defaultType || "non-warranty"); // 'non-warranty' or 'in-warranty'
   const [cmsBanners, setCmsBanners] = useState(null);
+  const [sectionBanners, setSectionBanners] = useState([]);
   const [cmsTiles, setCmsTiles] = useState(null);
   const [serviceCategories, setServiceCategories] = useState(null); // null = still loading
 
@@ -751,13 +753,11 @@ const Dashboard = ({ defaultType }) => {
 
   function fromCms(segment, fallback) {
     if (!cmsBanners) return fallback;
-    const rows = cmsBanners.filter((b) =>
-      segment === "warranty"
-        ? b.segment === "warranty"
-        : b.segment !== "warranty",
+    const rows = cmsBanners.filter(
+      (b) => (b.segment || "non-warranty") === segment,
     );
     return rows.length
-      ? rows.map((b) => ({ id: b.id, image: b.imageUrl }))
+      ? rows.map((b) => ({ id: b.id, image: b.imageUrl, link: b.link }))
       : fallback;
   }
 
@@ -816,8 +816,15 @@ const Dashboard = ({ defaultType }) => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await apiRequest("/cms/banners?app=customer");
-        if (!cancelled) setCmsBanners(data || []);
+        const [data, sectioned] = await Promise.all([
+          apiRequest("/cms/banners?app=customer"),
+          // Banners of the banner sections an admin added to the home layout.
+          apiRequest("/cms/banners?app=customer&sections=only").catch(() => []),
+        ]);
+        if (!cancelled) {
+          setCmsBanners(data || []);
+          setSectionBanners(sectioned || []);
+        }
       } catch {
         // Offline or unreachable — fall back to the bundled artwork rather than
         // rendering an empty carousel.
@@ -831,6 +838,7 @@ const Dashboard = ({ defaultType }) => {
 
   const regularBanners = fromCms("non-warranty", FALLBACK_REGULAR);
   const warrantyBannersList = fromCms("warranty", FALLBACK_WARRANTY);
+  const warrantyOfferBanners = fromCms("warranty-offers", FALLBACK_WARRANTY);
 
   // "Most Booked Services" and "Appliance repair & service" (docs/master-catalogue
   // Phase 22): every card is a bookable catalogue service with its live price,
@@ -1111,13 +1119,11 @@ const Dashboard = ({ defaultType }) => {
             </h2>
           </div>
           <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 -mx-1 px-1 sm:-mx-2 sm:px-2 snap-x snap-mandatory scroll-smooth no-scrollbar md:mx-auto md:px-0 md:pb-0 md:max-w-355 md:w-full relative">
-            {[
-              { id: 1, image: warrantyBanner1 },
-              { id: 2, image: warrantyBanner2 },
-            ].map((banner) => (
+            {warrantyOfferBanners.map((banner) => (
               <div
                 key={banner.id}
-                className="bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow">
+                onClick={banner.link ? () => openCardLink(banner.link, navigate) : undefined}
+                className={`bg-white rounded-2xl shadow-sm border border-border-color overflow-hidden min-w-[85vw] max-w-full sm:min-w-85 md:min-w-full md:w-full shrink-0 snap-center hover:shadow-md transition-shadow ${banner.link ? "cursor-pointer" : ""}`}>
                 <div className="relative h-32 sm:h-36 md:h-auto md:aspect-[3.8/1] w-full">
                   <img
                     src={banner.image}
@@ -1131,6 +1137,16 @@ const Dashboard = ({ defaultType }) => {
         </div>
 
           </>
+        );
+      case "banner-carousel":
+        return (
+          <BannerStrip
+            title={section.title}
+            navigate={navigate}
+            banners={sectionBanners
+              .filter((b) => String(b.section) === String(section.id))
+              .map((b) => ({ id: b.id, image: b.imageUrl, link: b.link }))}
+          />
         );
       case "brand-cards":
         return <BrandCardsSection title={section.title} loading={tilesLoading} cards={brandCardsFor(section.builtIn ? null : section.id)} navigate={navigate} />;
