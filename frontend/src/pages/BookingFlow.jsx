@@ -51,6 +51,7 @@ import {
   formatRupees,
 } from "../lib/catalogueApi";
 import ItemIcon from "../components/common/ItemIcon";
+import CouponPanel from "../components/booking/CouponPanel";
 import { Skeleton } from '../components/common/Skeleton';
 import { INDIAN_STATES, getCitiesForState } from '../utils/indiaGeoData';
 
@@ -1901,6 +1902,26 @@ const BookingFlow = () => {
                     })}
                   </div>
                 </div>
+
+                {/* Coupons — the admin's offers, usable ones first, others with the reason */}
+                <CouponPanel
+                  signedIn={signedIn}
+                  singleLine={singleLine}
+                  orderValue={shownQuote?.totals?.base || 0}
+                  categoryKey={shownQuote?.lines?.[0]?.category?.key || category}
+                  appliedCode={couponCode && shownQuote?.couponCode ? shownQuote.couponCode : ''}
+                  appliedDiscount={shownQuote?.couponCode ? shownQuote.totals.discount : 0}
+                  message={couponMessage}
+                  onApply={(code) => {
+                    setCouponMessage('');
+                    setCouponCode(code);
+                  }}
+                  onRemove={() => {
+                    setCouponCode('');
+                    setCouponInput('');
+                    setCouponMessage('');
+                  }}
+                />
               </div>
             )}
 

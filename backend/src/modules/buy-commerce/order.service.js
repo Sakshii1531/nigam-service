@@ -98,8 +98,8 @@ export async function createOrder(userId, { items, useCart, address, couponCode,
   let coupon = null;
   let couponDiscount = 0;
   if (couponCode) {
-    coupon = await resolveCoupon(couponCode, 'product');
-    couponDiscount = round2(Math.min(coupon.discount, remaining));
+    coupon = await resolveCoupon(couponCode, 'product', { userId, orderValue: subtotal });
+    couponDiscount = round2(Math.min(coupon.appliedDiscount, remaining));
     remaining = round2(remaining - couponDiscount);
   }
 
