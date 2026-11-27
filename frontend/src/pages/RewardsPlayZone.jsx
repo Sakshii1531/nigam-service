@@ -162,186 +162,106 @@ function LevelRing({ level, percent }) {
   );
 }
 
+const TASK_LOOK = {
+  book_service: { icon: CalendarCheck, targetPath: '/services', tone: 'from-sky-400 to-blue-600' },
+  write_review: { icon: Star, targetPath: '/bookings', tone: 'from-amber-300 to-orange-500' },
+  refer_friend: { icon: Users, targetPath: '/refer-earn', tone: 'from-fuchsia-400 to-violet-600' },
+};
+
 const RewardsPlayZone = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const reduceMotion = useReducedMotion();
 
-  const [coins, setCoins] = useState(0);
-  const [level, setLevel] = useState(1);
-  const [xp, setXp] = useState(0);
-  const [loadingCoins, setLoadingCoins] = useState(true);
+  // Everything here comes from the Rewards Program the super admin sets
+  // (GET /wallet/rewards): levels, daily spins, tasks and the wheel.
+  const [rewards, setRewards] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
-  const [spinsLeft, setSpinsLeft] = useState(3);
   const [lastResult, setLastResult] = useState(null);
   const [showWin, setShowWin] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
-  const [loadingTasks, setLoadingTasks] = useState(true);
-  const [wheelSegments, setWheelSegments] = useState([]);
-  const [wheelError, setWheelError] = useState('');
-  const [hasLoaded, setHasLoaded] = useState(false);
   const [claimingId, setClaimingId] = useState(null);
+  const [publicWheel, setPublicWheel] = useState(null);
 
-  // Which one-time rewards are already claimed is recorded in the wallet ledger,
-  // not this browser — the previous localStorage list could be cleared to claim
-  // the same reward (and real coins) again.
-  const [claimedIds, setClaimedIds] = useState([]);
-  useEffect(() => {
-    if (!user) return;
-    apiRequest('/wallet/claims', { auth: true })
-      .then((res) => setClaimedIds(res || []))
-      .catch((err) => console.warn('[rewards] Could not load claimed rewards:', err.message));
-  }, [user]);
+  const apply = (data) => {
+    if (!data) return;
+    setRewards(data);
+    updateUser({ walletCoins: data.coins, level: data.level?.number, xp: data.xp, spinsLeft: data.spinsLeft });
+  };
 
-  const [tasks, setTasks] = useState([
-    { id: 'book_service', icon: CalendarCheck, task: 'Book a Service', hint: 'Get any appliance serviced', reward: 50, done: false, targetPath: '/booking', tone: 'from-sky-400 to-blue-600' },
-    { id: 'write_review', icon: Star, task: 'Write a Review', hint: 'Rate a completed service', reward: 20, done: false, targetPath: '/partner-warranty/rate-service', tone: 'from-amber-300 to-orange-500' },
-    { id: 'refer_friend', icon: Users, task: 'Refer a Friend', hint: 'Invite someone to Nigam Care', reward: 100, done: false, targetPath: '/refer-earn', tone: 'from-fuchsia-400 to-violet-600' },
-  ]);
-
-  const fetchTasksData = async () => {
-    if (!user) return;
+  const load = async () => {
+    if (!user) {
+      // Signed out: still show the wheel.
+      apiRequest('/wallet/spin-wheel/config').then(setPublicWheel).catch(() => setPublicWheel({ segments: [] }));
+      setLoading(false);
+      return;
+    }
     try {
-      const bookingsRes = await apiRequest('/bookings', { auth: true });
-      const bookingsList = Array.isArray(bookingsRes) ? bookingsRes : (bookingsRes || []);
-      const isBookingDone = bookingsList.length > 0;
-
-      const reviewsRes = await apiRequest('/reviews/user/reviews', { auth: true });
-      const reviewsList = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes || []);
-      const isReviewDone = reviewsList.length > 0;
-
-      const userData = await apiRequest('/auth/me', { auth: true });
-      const isReferralDone = (userData?.referralsCount || 0) > 0;
-
-      if (userData) {
-        const updates = {};
-        if (typeof userData.walletCoins === 'number') {
-          setCoins(userData.walletCoins);
-          updates.walletCoins = userData.walletCoins;
-        }
-        if (typeof userData.level === 'number') {
-          setLevel(userData.level);
-          updates.level = userData.level;
-        }
-        if (typeof userData.xp === 'number') {
-          setXp(userData.xp);
-          updates.xp = userData.xp;
-        }
-        if (Object.keys(updates).length > 0) updateUser(updates);
-      }
-
-      const done = { book_service: isBookingDone, write_review: isReviewDone, refer_friend: isReferralDone };
-      setTasks((prev) => prev.map((t) => ({ ...t, done: done[t.id] })));
+      apply(await apiRequest('/wallet/rewards', { auth: true }));
     } catch (err) {
-      console.warn('Error loading real tasks progress:', err);
+      setToastMsg(err.message || 'Could not load your rewards.');
     } finally {
-      setLoadingTasks(false);
-    }
-  };
-
-  const fetchWalletCoins = async () => {
-    try {
-      const walletData = await apiRequest('/wallet', { auth: true });
-      if (walletData) {
-        const updates = {};
-        if (typeof walletData.coins === 'number') {
-          setCoins(walletData.coins);
-          updates.walletCoins = walletData.coins;
-        }
-        if (typeof walletData.level === 'number') {
-          setLevel(walletData.level);
-          updates.level = walletData.level;
-        }
-        if (typeof walletData.xp === 'number') {
-          setXp(walletData.xp);
-          updates.xp = walletData.xp;
-        }
-        if (typeof walletData.spins === 'number') {
-          setSpinsLeft(walletData.spins);
-          updates.spinsLeft = walletData.spins;
-        }
-        if (Object.keys(updates).length > 0) updateUser(updates);
-      }
-    } catch (err) {
-      console.warn('Error fetching wallet coins:', err);
-    } finally {
-      setLoadingCoins(false);
-    }
-  };
-
-  const fetchWheelConfig = async () => {
-    try {
-      const config = await apiRequest('/wallet/spin-wheel/config');
-      if (config && Array.isArray(config.segments) && config.segments.length >= 2) {
-        setWheelSegments(
-          config.segments.map((s, index) => {
-            const preset = PRESET_COLORS[index % PRESET_COLORS.length];
-            return {
-              label: s.label?.toUpperCase() || 'REWARD',
-              winningType: s.winningType || 'none',
-              value: s.value || 0,
-              probability: s.probability || 0,
-              ...preset,
-            };
-          }),
-        );
-        setWheelError('');
-      } else {
-        // No fallback wheel: the segments carry real coin values, and a
-        // hardcoded set would let a customer win prizes the platform never
-        // configured. Spinning stays disabled until an admin publishes one.
-        setWheelSegments([]);
-        setWheelError('The spin wheel is not configured yet. Please check back soon.');
-      }
-    } catch (err) {
-      console.warn('Error fetching spin wheel config:', err);
-      setWheelSegments([]);
-      setWheelError(err.message || 'Could not load the spin wheel.');
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchWheelConfig();
-  }, []);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  useEffect(() => {
-    if (user) {
-      if (!hasLoaded) {
-        setHasLoaded(true);
-        fetchWalletCoins();
-        fetchTasksData();
-      }
-    } else {
-      setHasLoaded(false);
-      setLoadingCoins(false);
-      setLoadingTasks(false);
-    }
-  }, [user, hasLoaded]);
+  const coins = rewards?.coins ?? 0;
+  const xp = rewards?.xp ?? 0;
+  const levelInfo = rewards?.level || { number: 1, name: '', xpRequired: 0, dailySpins: 0, next: null };
+  const level = levelInfo.number;
+  const spinsLeft = rewards?.spinsLeft ?? 0;
+  const loadingCoins = loading;
+  const loadingTasks = loading;
+  const wheel = rewards?.wheel || publicWheel || { segments: [] };
+  const wheelSegments = useMemo(
+    () =>
+      (wheel.segments || []).map((s, index) => {
+        const preset = PRESET_COLORS[index % PRESET_COLORS.length];
+        return {
+          label: s.label?.toUpperCase() || 'REWARD',
+          winningType: s.prizeType || 'none',
+          value: s.value || 0,
+          ...preset,
+          ...(s.color ? { from: s.color, to: s.color, text: '#FFFFFF' } : {}),
+        };
+      }),
+    [wheel.segments],
+  );
+  const wheelError = loading
+    ? ''
+    : rewards && !rewards.isActive
+      ? 'Rewards are paused right now. Please check back soon.'
+      : wheelSegments.length < 2
+        ? 'The spin wheel is not available right now. Please check back soon.'
+        : !user
+          ? 'Log in to spin the wheel.'
+          : '';
+  const tasks = (rewards?.tasks || []).map((t) => ({ ...t, id: t.key, task: t.title, reward: t.coins, ...TASK_LOOK[t.key] }));
 
   const triggerToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const canSpin = !spinning && spinsLeft > 0 && wheelSegments.length > 0;
+  const canSpin = Boolean(user) && !spinning && spinsLeft > 0 && wheelSegments.length > 0 && rewards?.isActive !== false;
 
   const handleSpin = async () => {
     if (!canSpin) return;
-
     try {
       setSpinning(true);
       setShowConfetti(false);
       setShowWin(false);
       const spinData = await apiRequest('/wallet/spin-wheel/spin', { method: 'POST', auth: true });
-
-      let winIndex = typeof spinData?.winIndex === 'number' ? spinData.winIndex : 0;
-      winIndex %= wheelSegments.length;
-      const wonSegment = wheelSegments[winIndex];
-
-      if (typeof spinData?.spinsLeft === 'number') setSpinsLeft(spinData.spinsLeft);
-      else setSpinsLeft((prev) => Math.max(prev - 1, 0));
+      const winIndex = (spinData?.winIndex ?? 0) % wheelSegments.length;
+      const wonSegment = { ...wheelSegments[winIndex], xpEarned: spinData.xpEarned, leveledUp: spinData.leveledUp, levelName: spinData.level?.name };
 
       const segAngle = 360 / wheelSegments.length;
       const targetOffset = winIndex * segAngle + segAngle / 2;
@@ -355,68 +275,29 @@ const RewardsPlayZone = () => {
       setTimeout(() => {
         setSpinning(false);
         setLastResult(wonSegment);
-        const won = wonSegment.winningType !== 'none';
         setShowWin(true);
-        if (won) setShowConfetti(true);
-
-        if (spinData && typeof spinData.coins === 'number') {
-          setCoins(spinData.coins);
-          setLevel(spinData.level);
-          setXp(spinData.xp);
-          updateUser({ walletCoins: spinData.coins, level: spinData.level, xp: spinData.xp, spinsLeft: spinData.spinsLeft });
-        }
+        if (wonSegment.winningType !== 'none' || spinData.leveledUp) setShowConfetti(true);
+        setRewards((r) => (r ? { ...r, coins: spinData.coins, xp: spinData.xp, level: spinData.level, spinsLeft: spinData.spinsLeft } : r));
+        updateUser({ walletCoins: spinData.coins, level: spinData.level?.number, xp: spinData.xp, spinsLeft: spinData.spinsLeft });
       }, reduceMotion ? 300 : SPIN_MS + 100);
     } catch (err) {
       setSpinning(false);
-      console.warn('Error during spin:', err);
       triggerToast(err.message || 'Spin failed. Please try again.');
+      load();
     }
   };
 
   const handleClaimReward = async (task) => {
-    if (!task.done || claimedIds.includes(task.id) || claimingId) return;
+    if (!task.done || task.claimed || claimingId) return;
     setClaimingId(task.id);
     try {
-      const update = await apiRequest('/wallet/credit', {
-        method: 'POST',
-        auth: true,
-        body: {
-          amount: task.reward,
-          xp: task.reward,
-          reason: task.id === 'refer_friend' ? 'referral' : 'earned',
-          claimKey: task.id,
-        },
-      });
-
-      setClaimedIds((prev) => [...prev, task.id]);
-
-      if (update) {
-        const updates = {};
-        if (typeof update.coins === 'number') {
-          setCoins(update.coins);
-          updates.walletCoins = update.coins;
-        }
-        if (typeof update.level === 'number') {
-          setLevel(update.level);
-          updates.level = update.level;
-        }
-        if (typeof update.xp === 'number') {
-          setXp(update.xp);
-          updates.xp = update.xp;
-        }
-        if (Object.keys(updates).length > 0) updateUser(updates);
-      } else {
-        await fetchWalletCoins();
-      }
-
+      apply(await apiRequest(`/wallet/tasks/${task.id}/claim`, { method: 'POST', auth: true }));
       setShowConfetti(false);
       requestAnimationFrame(() => setShowConfetti(true));
-      triggerToast(`+${task.reward} coins added to your wallet`);
+      triggerToast(`+${task.coins} coins${task.xp ? ` and ${task.xp} XP` : ''} added`);
     } catch (err) {
-      // 409 means the server already has this claim — reflect that rather than
-      // leaving the button live.
-      if (err.status === 409) setClaimedIds((prev) => [...prev, task.id]);
       triggerToast(err.message || 'Could not claim that reward.');
+      load();
     } finally {
       setClaimingId(null);
     }
@@ -428,9 +309,12 @@ const RewardsPlayZone = () => {
     return () => clearTimeout(t);
   }, [showConfetti]);
 
-  const currentXpProgress = xp % 1000;
-  const progressPercentage = Math.min((currentXpProgress / 1000) * 100, 100);
-  const missionsDone = tasks.filter((t) => t.done && claimedIds.includes(t.id)).length;
+  const levelStart = levelInfo.xpRequired || 0;
+  const levelEnd = levelInfo.next?.xpRequired ?? null;
+  const currentXpProgress = Math.max(0, xp - levelStart);
+  const levelSpan = levelEnd !== null ? Math.max(1, levelEnd - levelStart) : 1;
+  const progressPercentage = levelEnd === null ? 100 : Math.min((currentXpProgress / levelSpan) * 100, 100);
+  const missionsDone = tasks.filter((t) => t.claimed).length;
 
   // SVG wheel geometry
   const SVG_SIZE = 300;
@@ -515,10 +399,30 @@ const RewardsPlayZone = () => {
             <LevelRing level={level} percent={progressPercentage} />
           </div>
           <div className="relative mt-4 flex items-center justify-between text-[11px] font-bold text-indigo-100/90">
-            <span className="flex items-center gap-1"><Flame className="h-3.5 w-3.5 text-orange-300" /> {currentXpProgress.toLocaleString()} / 1,000 XP</span>
-            <span>{(1000 - currentXpProgress).toLocaleString()} XP to Level {level + 1}</span>
+            <span className="flex items-center gap-1"><Flame className="h-3.5 w-3.5 text-orange-300" /> {levelInfo.name ? `${levelInfo.name} · ` : ''}{xp.toLocaleString()} XP</span>
+            <span>{levelInfo.next ? `${(levelEnd - xp).toLocaleString()} XP to ${levelInfo.next.name}` : 'Top level reached'}</span>
           </div>
         </motion.section>
+
+        {/* Levels: what each one unlocks (set in Super Admin → Rewards Program) */}
+        {rewards?.levels?.length > 1 && (
+          <section aria-label="Levels" className="-mx-4 px-4 overflow-x-auto no-scrollbar">
+            <ol className="flex gap-2.5 w-max">
+              {rewards.levels.map((l, i) => {
+                const current = i + 1 === level;
+                const reached = i + 1 <= level;
+                return (
+                  <li key={l.name} className={`w-36 shrink-0 rounded-2xl p-3 border ${current ? 'bg-amber-400/15 border-amber-300/50' : reached ? 'bg-white/[.06] border-white/15' : 'bg-white/[.03] border-white/10 opacity-70'}`}>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-amber-300">Level {i + 1}{current ? ' · You' : ''}</p>
+                    <p className="text-sm font-black text-white truncate">{l.name}</p>
+                    <p className="text-[10px] font-semibold text-indigo-200/70">{l.xpRequired.toLocaleString()} XP · {l.dailySpins} spin{l.dailySpins === 1 ? '' : 's'}/day</p>
+                    {l.perks && <p className="mt-1 text-[10px] text-indigo-100/70 line-clamp-2">{l.perks}</p>}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
 
         {/* Spin & Win stage */}
         <motion.section
@@ -540,7 +444,7 @@ const RewardsPlayZone = () => {
             <Trophy className="h-3.5 w-3.5 text-amber-300" /> Spin &amp; Win
           </div>
           <h2 className="relative mt-2 text-xl font-black text-white text-center">Try your luck today</h2>
-          <p className="relative text-xs text-indigo-200/70 font-semibold text-center">Every spin earns XP. Land on a prize to win coins.</p>
+          <p className="relative text-xs text-indigo-200/70 font-semibold text-center">{levelInfo.name ? `As a ${levelInfo.name} member you get ${levelInfo.dailySpins} free spin${levelInfo.dailySpins === 1 ? '' : 's'} every day.` : 'Every spin earns XP. Land on a prize to win coins.'}</p>
 
           {/* Wheel */}
           <div className={`relative mt-6 ${spinning ? 'rpz-fast' : ''}`}>
@@ -664,7 +568,7 @@ const RewardsPlayZone = () => {
 
           {/* Spins left */}
           <div className="relative mt-6 flex items-center gap-2" aria-label={`${spinsLeft} free spins left today`}>
-            {Array.from({ length: Math.max(3, spinsLeft) }).map((_, i) => (
+            {Array.from({ length: Math.min(8, Math.max(levelInfo.dailySpins || 1, spinsLeft)) }).map((_, i) => (
               <motion.span
                 key={i}
                 initial={false}
@@ -696,6 +600,8 @@ const RewardsPlayZone = () => {
           >
             {spinning ? (
               <><RefreshCw className="h-4 w-4 animate-spin" /> Spinning…</>
+            ) : !user ? (
+              <><Lock className="h-4 w-4" /> Log in to spin</>
             ) : spinsLeft === 0 ? (
               <><Lock className="h-4 w-4" /> Come back tomorrow</>
             ) : (
@@ -726,7 +632,7 @@ const RewardsPlayZone = () => {
             <motion.div
               className="h-full rounded-full bg-linear-to-r from-amber-300 to-orange-500"
               initial={{ width: 0 }}
-              animate={{ width: `${(missionsDone / tasks.length) * 100}%` }}
+              animate={{ width: `${tasks.length ? (missionsDone / tasks.length) * 100 : 0}%` }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
             />
           </div>
@@ -736,7 +642,7 @@ const RewardsPlayZone = () => {
           ) : (
             <ul className="flex flex-col gap-3">
               {tasks.map((task, i) => {
-                const isClaimed = claimedIds.includes(task.id);
+                const isClaimed = task.claimed;
                 const isCompleted = task.done;
                 return (
                   <motion.li
@@ -755,7 +661,7 @@ const RewardsPlayZone = () => {
                       <p className="text-sm font-black text-white leading-tight">{task.task}</p>
                       <p className="text-[11px] font-semibold text-indigo-200/60 truncate">{task.hint}</p>
                       <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-black text-amber-300">
-                        <Coins className="w-3 h-3" /> +{task.reward} coins
+                        <Coins className="w-3 h-3" /> +{task.coins} coins{task.xp ? ` · +${task.xp} XP` : ''}
                       </span>
                     </div>
                     <div className="shrink-0">
@@ -826,7 +732,9 @@ const RewardsPlayZone = () => {
               <p className="relative mt-5 text-[11px] font-black uppercase tracking-[0.2em] text-amber-300">{resultWon ? 'You won' : 'Nice try'}</p>
               <p className="relative mt-1 text-2xl font-black text-white">{resultWon ? lastResult.label : 'Better luck next spin'}</p>
               <p className="relative mt-2 text-xs font-semibold text-indigo-100/80">
-                {lastResult.winningType === 'spin' ? 'An extra spin has been added, plus 20 XP.' : resultWon ? 'Added to your wallet, plus 20 XP.' : 'You still earned 20 XP for playing.'}
+                {lastResult.winningType === 'spin' ? 'An extra spin has been added' : resultWon ? 'Added to your wallet' : 'No prize this time'}
+                {lastResult.xpEarned ? `, plus ${lastResult.xpEarned} XP.` : '.'}
+                {lastResult.leveledUp ? ` You reached ${lastResult.levelName}!` : ''}
               </p>
               <button
                 type="button"

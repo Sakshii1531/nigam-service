@@ -1,19 +1,20 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { ok } from '../../utils/respond.js';
 import * as walletService from './wallet.service.js';
+import * as rewardsService from '../rewards-loyalty/rewards.service.js';
+import { getRewardsProgram } from '../rewards-loyalty/rewardsProgram.model.js';
 import { listLedgerQuerySchema } from './wallet.validation.js';
 
 export const walletRouter = Router();
 
-import { SpinWheelConfig } from '../rewards-loyalty/spinWheelConfig.model.js';
-import { WalletLedger } from './walletLedger.model.js';
-
+// The wheel's segments (labels and prizes, never the odds), for drawing it
+// before sign-in. Empty when the programme or the wheel is switched off.
 walletRouter.get('/spin-wheel/config', async (req, res, next) => {
   try {
-    const config = await SpinWheelConfig.findOne();
-    ok(res, config || { segments: [], isActive: true });
+    ok(res, rewardsService.publicWheel(await getRewardsProgram()));
   } catch (err) {
     next(err);
   }
@@ -21,20 +22,21 @@ walletRouter.get('/spin-wheel/config', async (req, res, next) => {
 
 walletRouter.use(requireAuth);
 
-import { User } from '../auth/user.model.js';
-
+// Coins, XP, level and today's spins — the booking and payment screens read
+// `coins` from here; the Play Zone reads the rest.
 walletRouter.get('/', async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ error: { message: 'User not found' } });
-    }
-    ok(res, { 
-      coins: user.walletCoins || 0,
-      level: user.level || 1,
-      xp: user.xp || 0,
-      spins: user.spinsLeft ?? 3
-    });
+    const r = await rewardsService.getCustomerRewards(req.user.id);
+    ok(res, { coins: r.coins, xp: r.xp, level: r.level.number, levelInfo: r.level, spins: r.spinsLeft });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Everything the Rewards Play Zone shows: level and levels, tasks, wheel.
+walletRouter.get('/rewards', async (req, res, next) => {
+  try {
+    ok(res, await rewardsService.getCustomerRewards(req.user.id));
   } catch (err) {
     next(err);
   }
@@ -49,120 +51,30 @@ walletRouter.get('/ledger', validate(listLedgerQuerySchema, 'query'), async (req
   }
 });
 
-walletRouter.post('/credit', async (req, res, next) => {
-  try {
-    const { amount, reason, xp, claimKey } = req.body;
-    const allowedReasons = ['earned', 'redeemed', 'referral', 'scratch_card', 'spin_wheel', 'refund'];
-    const mappedReason = allowedReasons.includes(reason) ? reason : 'earned';
-
-    await walletService.creditCoins(req.user.id, amount || 0, { 
-      reason: mappedReason,
-      xpToAdd: xp || 0,
-      claimKey: claimKey || null,
-    });
-    const user = await User.findById(req.user.id);
-    ok(res, { 
-      coins: user.walletCoins || 0,
-      level: user.level || 1,
-      xp: user.xp || 0
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
 walletRouter.post('/spin-wheel/spin', async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ error: { message: 'User not found' } });
-    }
-
-    if ((user.spinsLeft ?? 3) <= 0) {
-      return res.status(400).json({ error: { message: 'No spins left for today' } });
-    }
-
-    const config = await SpinWheelConfig.findOne();
-    if (!config || !Array.isArray(config.segments) || config.segments.length === 0) {
-      return res.status(400).json({ error: { message: 'Spin wheel is not configured' } });
-    }
-
-    // Pick winning segment based on probability weights
-    const totalProb = config.segments.reduce((sum, s) => sum + (s.probability || 0), 0);
-    const r = Math.random() * Math.max(totalProb, 100);
-    let cumulative = 0;
-    let winIndex = -1;
-
-    for (let i = 0; i < config.segments.length; i++) {
-      cumulative += config.segments[i].probability || 0;
-      if (r <= cumulative) {
-        winIndex = i;
-        break;
-      }
-    }
-
-    if (winIndex === -1) {
-      winIndex = config.segments.findIndex(s => s.winningType === 'none');
-      if (winIndex === -1) winIndex = config.segments.length - 1;
-    }
-
-    const wonSegment = config.segments[winIndex];
-
-    // Decrement spinsLeft
-    user.spinsLeft = Math.max((user.spinsLeft ?? 3) - 1, 0);
-
-    // Apply winnings
-    let xpToAdd = 20; // 20 XP default participation reward
-    let coinsToAdd = 0;
-
-    if (wonSegment.winningType === 'spin') {
-      user.spinsLeft += (wonSegment.value || 1);
-    } else if (wonSegment.winningType === 'coins' || wonSegment.winningType === 'money') {
-      coinsToAdd = wonSegment.value || 0;
-      xpToAdd = coinsToAdd > 0 ? coinsToAdd : 20;
-    }
-
-    user.walletCoins = (user.walletCoins || 0) + coinsToAdd;
-    user.xp = (user.xp || 0) + xpToAdd;
-
-    // Recalculate level
-    const calculatedLevel = Math.floor((user.xp || 0) / 1000) + 1;
-    if (calculatedLevel > (user.level || 1)) {
-      user.level = calculatedLevel;
-    }
-
-    await user.save();
-
-    // Create ledger entry if coins/money won
-    if (coinsToAdd > 0) {
-      await WalletLedger.create({
-        user: user._id,
-        delta: coinsToAdd,
-        reason: 'spin_wheel',
-        balanceAfter: user.walletCoins
-      });
-    }
-
-    ok(res, {
-      winIndex,
-      wonSegment: {
-        label: wonSegment.label,
-        winningType: wonSegment.winningType,
-        value: wonSegment.value
-      },
-      spinsLeft: user.spinsLeft,
-      coins: user.walletCoins,
-      xp: user.xp,
-      level: user.level
-    });
-
+    ok(res, await rewardsService.spin(req.user.id));
   } catch (err) {
     next(err);
   }
 });
 
-// Which one-time rewards this user has already claimed — the client used to keep
-// this list in localStorage, so clearing it re-enabled every claim.
+// A one-time task's reward. The server checks the task is really done and
+// pays the amount the Rewards Program sets. (There used to be a POST /credit
+// here that credited whatever amount the app sent.)
+walletRouter.post(
+  '/tasks/:key/claim',
+  validate(z.object({ key: z.enum(['book_service', 'write_review', 'refer_friend']) }), 'params'),
+  async (req, res, next) => {
+    try {
+      ok(res, await rewardsService.claimTask(req.user.id, req.params.key));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Which one-time rewards this user has already claimed.
 walletRouter.get('/claims', async (req, res, next) => {
   try {
     ok(res, await walletService.listClaimKeys(req.user.id));

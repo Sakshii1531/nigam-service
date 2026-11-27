@@ -14,6 +14,7 @@ import { Job } from '../service-provider/job.model.js';
 import { PartOrder } from '../service-provider/partOrder.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
 import { extraWorkView } from '../service-provider/extraWork.js';
+import { getRewardsProgram, badgeFor } from '../rewards-loyalty/rewardsProgram.model.js';
 
 // How long a booking keeps looking for a service provider before giving up.
 import { SEARCH_WINDOW_MS, PAYMENT_WINDOW_MS } from '../shared/dispatchPolicy.js';
@@ -549,7 +550,7 @@ async function findOwnedOr404(userId, id) {
   let booking = null;
   if (mongoose.Types.ObjectId.isValid(id)) {
     booking = await Booking.findById(id)
-      .populate('serviceProvider', 'name phone rating avatar photo')
+      .populate('serviceProvider', 'name phone rating avatar photo completedJobsCount')
       .populate({
         path: 'serviceRequest',
         select: 'humanId status timeline tracking warranty brand category description job completionOtp',
@@ -557,7 +558,7 @@ async function findOwnedOr404(userId, id) {
       });
     if (!booking) {
       booking = await Booking.findOne({ serviceRequest: id })
-        .populate('serviceProvider', 'name phone rating avatar photo')
+        .populate('serviceProvider', 'name phone rating avatar photo completedJobsCount')
         .populate({
           path: 'serviceRequest',
           select: 'humanId status timeline tracking warranty brand category description job completionOtp',
@@ -567,7 +568,7 @@ async function findOwnedOr404(userId, id) {
   }
   if (!booking) {
     booking = await Booking.findOne({ humanId: id })
-      .populate('serviceProvider', 'name phone rating avatar photo')
+      .populate('serviceProvider', 'name phone rating avatar photo completedJobsCount')
       .populate({
         path: 'serviceRequest',
         select: 'humanId status timeline tracking warranty brand category description job completionOtp',
@@ -577,7 +578,7 @@ async function findOwnedOr404(userId, id) {
       const sr = await ServiceRequest.findOne({ humanId: id }).select('_id');
       if (sr) {
         booking = await Booking.findOne({ serviceRequest: sr._id })
-          .populate('serviceProvider', 'name phone rating avatar photo')
+          .populate('serviceProvider', 'name phone rating avatar photo completedJobsCount')
           .populate({
             path: 'serviceRequest',
             select: 'humanId status timeline tracking warranty brand category description job completionOtp',
@@ -595,6 +596,10 @@ export async function getBooking(userId, id) {
   const booking = await findOwnedOr404(userId, id);
   const job = booking.serviceRequest ? await Job.findOne({ serviceRequest: booking.serviceRequest._id || booking.serviceRequest }) : null;
   const json = booking.toJSON();
+  if (json.serviceProvider && typeof json.serviceProvider === 'object') {
+    const program = await getRewardsProgram();
+    json.serviceProvider.badge = badgeFor(booking.serviceProvider.completedJobsCount || 0, program.partnerBadges);
+  }
   if (job) {
     // Other appliances serviced on this visit, and spare-part prices waiting
     // for the customer's answer (see respondToExtraPart).
@@ -830,7 +835,7 @@ export async function listBookings(userId, { status, page, limit, sort } = {}) {
   const { skip, limit: lim, page: pg, sort: sortObj } = parsePagination({ page, limit, sort });
   const [items, total] = await Promise.all([
     Booking.find(query)
-      .populate('serviceProvider', 'name phone rating avatar photo')
+      .populate('serviceProvider', 'name phone rating avatar photo completedJobsCount')
       .populate({
         path: 'serviceRequest',
         select: 'humanId status timeline tracking warranty category description brand instantStatus',

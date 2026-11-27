@@ -28,6 +28,12 @@ const userSchema = new mongoose.Schema(
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     spinsLeft: { type: Number, default: 3 },
+    // Daily spin allowance (Rewards Program): the day (IST, YYYY-MM-DD) the
+    // counters below belong to; they start again from zero on a new day.
+    spinDay: { type: String, default: null },
+    spinsUsedToday: { type: Number, default: 0 },
+    // Extra spins won on the wheel today.
+    bonusSpins: { type: Number, default: 0 },
     referralCode: { type: String, unique: true, sparse: true },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     membershipTier: { type: String, enum: ['Silver', 'Gold', 'Plus Gold', 'Diamond', 'Platinum'], default: null },

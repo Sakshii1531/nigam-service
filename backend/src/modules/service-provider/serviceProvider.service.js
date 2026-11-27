@@ -1,4 +1,5 @@
 import { ServiceProvider } from './serviceProvider.model.js';
+import { getRewardsProgram, badgeFor } from '../rewards-loyalty/rewardsProgram.model.js';
 import { User } from '../auth/user.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { autoAssignPendingRequests } from '../service-requests/serviceRequest.service.js';
@@ -51,7 +52,14 @@ export async function setAvailability(serviceProviderId, availability, { locatio
 export async function getProfile(serviceProviderId) {
   const serviceProvider = await ServiceProvider.findById(serviceProviderId).select('+payoutMethods.accountNo');
   if (!serviceProvider) throw new ApiError(404, 'Service Provider not found');
-  return { ...serviceProvider.toJSON(), providerAccess: await eligibilityFor(serviceProvider) };
+  const program = await getRewardsProgram();
+  return {
+    ...serviceProvider.toJSON(),
+    providerAccess: await eligibilityFor(serviceProvider),
+    // The partner's badge from their completed jobs (Rewards Program → Partner badges).
+    badge: badgeFor(serviceProvider.completedJobsCount || 0, program.partnerBadges),
+    badges: [...(program.partnerBadges || [])].sort((a, b) => a.minJobs - b.minJobs).map(({ name, minJobs, color }) => ({ name, minJobs, color })),
+  };
 }
 
 const EDITABLE_FIELDS = ['name', 'phone', 'email', 'address', 'avatarUrl'];

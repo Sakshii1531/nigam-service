@@ -36,6 +36,8 @@ import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnin
 import { initialJobPayout, withAddOnPayout, computeJobBilling } from '../shared/servicePartnerPayout.js';
 import { computeCharges } from '../shared/pricingEngine.js';
 import { extraWorkView } from './extraWork.js';
+import { awardForSpend } from '../rewards-loyalty/rewards.service.js';
+import { getRewardsProgram, badgeFor } from '../rewards-loyalty/rewardsProgram.model.js';
 import { loadBookableOfferings } from '../catalog/offeringBrowse.service.js';
 import { buildQuote } from '../catalog/quote.service.js';
 import { toRupees } from '../catalog/money.js';
@@ -1544,14 +1546,28 @@ async function finalizeJobCompletion(job, payment) {
   job.activeStep = 'completed';
   await job.save();
 
-  await ServiceProvider.findByIdAndUpdate(serviceProviderId, {
+  const providerAfter = await ServiceProvider.findByIdAndUpdate(serviceProviderId, {
     $inc: {
       activeJobsCount: -1,
       completedJobsCount: 1,
       // Cash the partner took from the customer is the company's money in their hand.
       ...(payment?.method === 'Cash' && payment.amount > 0 ? { cashCollected: payment.amount } : {}),
     },
-  });
+  }, { new: true });
+
+  // Partner badges (Rewards Program): tell the partner when this job moved them up.
+  try {
+    const { badges, before, after } = await (async () => {
+      const program = await getRewardsProgram();
+      const count = providerAfter?.completedJobsCount || 0;
+      return { badges: program.partnerBadges, before: badgeFor(count - 1, program.partnerBadges), after: badgeFor(count, program.partnerBadges) };
+    })();
+    if (badges && after.number > before.number && providerAfter?.user) {
+      await emitNotification('partner.badge_earned', { user: providerAfter.user, badge: after.name, jobs: after.completedJobs, next: after.next }).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[rewards] Could not check the partner badge:', err.message);
+  }
 
   // confirmRepairComplete() already drove the SR to 'Repair Completed'; collecting
   // payment is what hands it off to the customer for final sign-off. 'Closed' itself
@@ -1616,6 +1632,13 @@ async function finalizeJobCompletion(job, payment) {
     }
   } catch (err) {
     console.error('[job.service] Failed to emit completion socket events:', err.message);
+  }
+
+  // Rewards Program: coins and XP for what the customer paid on this visit,
+  // credited once per booking. A covered (Rs.0) job earns nothing.
+  if (!serviceRequest.warrantyClaim && serviceRequest.user) {
+    await awardForSpend(serviceRequest.user, job.billingEstimate?.total || 0, { key: `spend:${serviceRequest.booking || job._id}` })
+      .catch((err) => console.warn('[rewards] Could not credit coins for the visit:', err.message));
   }
 
   // Warranty jobs cost the customer nothing and their claim announces the

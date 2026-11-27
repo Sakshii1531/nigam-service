@@ -2,6 +2,15 @@ import { User } from '../auth/user.model.js';
 import { WalletLedger } from './walletLedger.model.js';
 import { ApiError } from '../../middleware/errorHandler.js';
 import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import { getRewardsProgram, levelFor } from '../rewards-loyalty/rewardsProgram.model.js';
+
+/** Stores the level matching the user's XP under the current level settings. */
+export async function syncLevel(user) {
+  const program = await getRewardsProgram();
+  const { number } = levelFor(user.xp || 0, program.levels);
+  if (number !== (user.level || 1)) await User.updateOne({ _id: user._id }, { level: number });
+  return number;
+}
 
 /**
  * Debits `amount` coins from a user's wallet. Atomic at the single-document
@@ -42,12 +51,8 @@ export async function creditCoins(userId, amount, { reason = 'earned', payment =
   );
   if (!user) throw new ApiError(404, 'User not found');
 
-  // Compute new level based on updated xp
-  const calculatedLevel = Math.floor((user.xp || 0) / 1000) + 1;
-  if (calculatedLevel > (user.level || 1)) {
-    user.level = calculatedLevel;
-    await user.save();
-  }
+  // The level follows the Rewards Program's configured levels.
+  if (xpToAdd > 0) await syncLevel(user);
 
   return WalletLedger.create({ 
     user: userId, 

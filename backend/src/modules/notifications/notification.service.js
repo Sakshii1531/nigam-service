@@ -137,6 +137,14 @@ const EVENT_TEMPLATES = {
     smsBody: `Nigam Care: your technician needs ${p.partName || 'a spare part'} (Rs.${p.amount ?? 0} incl. GST) to repair your ${p.appliance || 'appliance'}. Approve or decline it in the Nigam Care app.`,
     whatsappBody: `*Spare Part Approval Needed*\n\nTo repair your *${p.appliance || 'appliance'}*, the technician needs *${p.partName || 'a spare part'}* costing *Rs.${p.amount ?? 0}* (incl. GST).\n\nOpen the Nigam Care app to approve or decline.`,
   }),
+  // To the PARTNER: a completed job moved them up to a new badge.
+  'partner.badge_earned': (p) => ({
+    recipient: p.user,
+    type: 'provider',
+    title: `New badge: ${p.badge}`,
+    message: `Congratulations! With ${p.jobs} completed jobs you are now a ${p.badge} partner.${p.next ? ` ${p.next.jobsToGo} more to reach ${p.next.name}.` : ''}`,
+    cta: { label: 'View profile', route: '/service-provider/profile' },
+  }),
   // To the PARTNER: the customer's answer on an extra-appliance part.
   'job.extra_part_answered': (p) => ({
     recipient: p.user,

@@ -36,4 +36,4 @@ export default defineConfig([
       globals: { ...globals.serviceworker, firebase: 'readonly' },
     },
   },
-])
+]);

@@ -11,7 +11,9 @@ import {
   idParamSchema,
   createReferralCampaignSchema,
   updateReferralCampaignSchema,
+  updateRewardsProgramSchema,
 } from './loyaltyConfig.validation.js';
+import * as rewardsService from '../rewards-loyalty/rewards.service.js';
 
 export const loyaltyConfigRouter = Router();
 loyaltyConfigRouter.use(requireAuth, requireRole(ROLES.SUPER_ADMIN));
@@ -46,6 +48,22 @@ loyaltyConfigRouter.delete('/milestones/:id', validate(idParamSchema, 'params'),
   try {
     await loyaltyConfigService.deleteMilestone(req.params.id);
     ok(res, { deleted: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// The Rewards Program: earning, levels, tasks and the spin wheel in one.
+loyaltyConfigRouter.get('/program', async (req, res, next) => {
+  try {
+    ok(res, await rewardsService.getProgramForAdmin());
+  } catch (err) {
+    next(err);
+  }
+});
+loyaltyConfigRouter.put('/program', validate(updateRewardsProgramSchema), async (req, res, next) => {
+  try {
+    ok(res, await rewardsService.updateProgram(req.body));
   } catch (err) {
     next(err);
   }

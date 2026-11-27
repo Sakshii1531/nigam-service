@@ -639,10 +639,18 @@ const BookingDetails = () => {
                   </p>
                   <div className="flex items-center gap-1 mt-1 text-xs font-bold text-amber-600">
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    {/* Real rating, completed jobs and the partner's badge (Rewards Program). */}
                     <span>
-                      {booking.serviceProvider.rating || "4.9"} • 100+ Jobs
-                      Completed
+                      {booking.serviceProvider.rating > 0 ? Number(booking.serviceProvider.rating).toFixed(1) : "New"} •{" "}
+                      {booking.serviceProvider.completedJobsCount || 0} jobs completed
                     </span>
+                    {booking.serviceProvider.badge?.name && (
+                      <span
+                        className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black text-white"
+                        style={{ background: booking.serviceProvider.badge.color || "#0D47A1" }}>
+                        {booking.serviceProvider.badge.name}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

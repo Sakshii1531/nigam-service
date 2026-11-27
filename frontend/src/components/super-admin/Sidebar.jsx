@@ -227,8 +227,7 @@ const Sidebar = () => {
     { type: "header", label: "MARKETING & REWARDS" },
     { type: "link", label: "Push Notifications", path: "/super-admin/notifications", icon: <Bell size={18} /> },
     { type: "link", label: "Advertisements", path: "/super-admin/advertisements", icon: <Megaphone size={18} /> },
-    { type: "link", label: "Rewards Program", path: "/super-admin/loyalty-program?tab=rewards", icon: <Coins size={18} /> },
-    { type: "link", label: "Spin Wheel Config", path: "/super-admin/loyalty-program?tab=spinwheel", icon: <RefreshCw size={18} /> },
+    { type: "link", label: "Rewards Program & Spin Wheel", path: "/super-admin/loyalty-program?tab=rewards", icon: <Coins size={18} /> },
     { type: "link", label: "Referrals Program", path: "/super-admin/loyalty-program?tab=referrals", icon: <Users size={18} /> },
     { type: "link", label: "Coupon Codes", path: "/super-admin/loyalty-program?tab=coupons", icon: <Ticket size={18} /> },
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PartnerBadgeCard from '../../components/service-provider/PartnerBadgeCard';
 import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList, Star, ChevronRight,
@@ -356,6 +357,9 @@ const ProfilePage = () => {
               </button>
             </div>
           </div>
+
+          {/* Badge from completed jobs (Super Admin → Rewards Program) */}
+          <PartnerBadgeCard />
 
           {/* 3. PERFORMANCE STATS STRIP */}
           <div className="grid grid-cols-2 gap-3">
