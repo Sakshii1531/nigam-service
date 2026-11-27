@@ -1,5 +1,5 @@
 import { emitEligibleOffers } from '../provider-onboarding/offerDispatch.js';
-import { assertJobEligible } from '../provider-onboarding/eligibility.service.js';
+import { assertJobEligible, eligibilityFor } from '../provider-onboarding/eligibility.service.js';
 import { runInTransaction } from '../../utils/transaction.js';
 import { flushAudit } from '../partner-warranty/claimTimeline.js';
 import { ServiceRequest } from './serviceRequest.model.js';
@@ -235,6 +235,69 @@ export async function suggestServiceProviders(id) {
     tier: serviceProvider.tier,
     ...(authorized === undefined ? {} : { authorizedForBrand: authorized }),
   }));
+}
+
+const ELIGIBILITY_TEXT = {
+  ACCOUNT_RESTRICTED: 'Login account is blocked or suspended',
+  FINAL_APPROVAL_REQUIRED: 'Onboarding not approved yet',
+  APPROVED_CATEGORIES_REQUIRED: 'No approved service categories',
+  DOCUMENT_REVIEW_REQUIRED: 'Aadhaar / background check not verified',
+  PAID_KIT_RECEIPT_REQUIRED: 'Kit not paid or kit receipt not verified',
+  PROFILE_MISSING: 'Partner profile missing',
+};
+
+/**
+ * Why each partner can or can't take this request — shown on the assignment
+ * console, so an empty shortlist explains itself (no partner in the city,
+ * not approved for the category, onboarding incomplete …) instead of looking
+ * like assignment is broken. Also returns when the search auto-cancels.
+ */
+export async function assignmentCheck(id) {
+  const serviceRequest = await findOr404(id);
+  const booking = serviceRequest.booking ? await Booking.findById(serviceRequest.booking).select('address searchExpiresAt status').lean() : null;
+  const city = serviceRequest.zone || booking?.address?.city || null;
+  const area = {
+    city,
+    state: booking?.address?.state,
+    pincode: serviceRequest.pincode || booking?.address?.pincode,
+    latitude: serviceRequest.customerLocation?.latitude ?? booking?.address?.latitude,
+    longitude: serviceRequest.customerLocation?.longitude ?? booking?.address?.longitude,
+  };
+  const deadline = serviceRequest.isAccepted || !['New', 'Assigned', 'Pending'].includes(serviceRequest.status)
+    ? null
+    : booking?.searchExpiresAt || (serviceRequest.createdAt ? new Date(new Date(serviceRequest.createdAt).getTime() + SEARCH_WINDOW_MS) : null);
+
+  const providers = await ServiceProvider.find({ status: { $in: ['Active', 'Pending', 'Inactive', 'Suspended'] } }).populate('city').lean();
+  const partners = await Promise.all(providers.map(async (provider) => {
+    const reasons = [];
+    if (provider.status !== 'Active') reasons.push(`Account is ${provider.status}`);
+    else {
+      const eligibility = await eligibilityFor(provider, { category: serviceRequest.category });
+      for (const code of eligibility.reasons) {
+        reasons.push(code === 'CATEGORY_NOT_APPROVED' ? `Not approved for ${serviceRequest.category}` : ELIGIBILITY_TEXT[code] || code);
+      }
+    }
+    if (city && !inWarrantyServiceArea(provider, area)) reasons.push(`Does not serve ${city}`);
+    if ((serviceRequest.declinedBy || []).some((d) => String(d) === String(provider._id))) reasons.push('Already declined this request');
+    return {
+      id: String(provider._id),
+      name: provider.name,
+      city: provider.serviceCityName || provider.city?.name || null,
+      availability: provider.availability,
+      status: provider.status,
+      canAssign: reasons.length === 0,
+      reasons: [...new Set(reasons)],
+    };
+  }));
+  partners.sort((a, b) => Number(b.canAssign) - Number(a.canAssign) || a.reasons.length - b.reasons.length || a.name.localeCompare(b.name));
+  return {
+    category: serviceRequest.category,
+    city,
+    status: serviceRequest.status,
+    searchDeadline: deadline,
+    expired: searchHasExpired(serviceRequest, booking),
+    partners,
+  };
 }
 
 export const DISPATCH_RESPONSE_WINDOW_MS = 60000;

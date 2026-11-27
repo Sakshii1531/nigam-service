@@ -160,6 +160,21 @@ serviceRequestRouter.get(
   },
 );
 
+// Why each partner can or can't take this request, and when it auto-cancels.
+serviceRequestRouter.get(
+  '/:id/assignment-check',
+  requireRole(ROLES.SUPER_ADMIN, ROLES.ASM),
+  validate(idParamSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      await assertAsmOwnsRequest(req);
+      ok(res, await serviceRequestService.assignmentCheck(req.params.id));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 serviceRequestRouter.patch(
   '/:id/assign',
   requireRole(ROLES.SUPER_ADMIN, ROLES.ASM),

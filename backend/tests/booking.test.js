@@ -516,6 +516,28 @@ describe('manual assignment from the super-admin console', () => {
     expect(assignRes.body.data.timeline.map((t) => t.stepLabel)).toContain('Assigned');
   });
 
+  it('explains who can and cannot take a request, and when its search ends', async () => {
+    const adminToken = await seedSuperAdmin();
+    const { serviceProvider: ac } = await seedServiceProvider({ phone: '9300000035' });
+    const { serviceProvider: plumber } = await seedServiceProvider({ phone: '9300000036', specs: ['Plumber'] });
+    await ServiceProvider.updateOne({ _id: plumber._id }, { name: 'Plumbing Partner' });
+    const sr = await seedUnassignedRequest();
+
+    const res = await request(app)
+      .get(`/api/v1/service-requests/${sr.id}/assignment-check`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    const { partners, searchDeadline, category } = res.body.data;
+    expect(category).toBe('AC');
+    expect(new Date(searchDeadline).getTime()).toBeGreaterThan(Date.now());
+    expect(partners.find((p) => p.id === String(ac._id))).toMatchObject({ canAssign: true, reasons: [] });
+    const blocked = partners.find((p) => p.id === String(plumber._id));
+    expect(blocked.canAssign).toBe(false);
+    expect(blocked.reasons).toContain('Not approved for AC');
+
+    await request(app).get(`/api/v1/service-requests/${sr.id}/assignment-check`).expect(401);
+  });
+
   it('falls back to the weighted engine when no serviceProvider is named', async () => {
     const adminToken = await seedSuperAdmin();
     const { serviceProvider } = await seedServiceProvider({ phone: '9300000032' });

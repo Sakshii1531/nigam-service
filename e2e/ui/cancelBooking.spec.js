@@ -185,7 +185,7 @@ for (const providerView of ['dashboard', 'active-job']) {
     const adminPage = await adminContext.newPage();
     await signIn(adminPage, admin);
     await adminPage.goto('/super-admin/assignment');
-    await adminPage.getByRole('button', { name: /Active \/ In Progress/ }).click();
+    await adminPage.getByRole('tab', { name: /Partner confirmed/ }).click();
     await expect(adminPage.getByText(serviceRequest.humanId, { exact: true })).toBeVisible();
     // The customer uses the real cancellation modal in a separate session.
     const customerPage = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
@@ -233,7 +233,7 @@ test('assignment queue excludes completed and cancelled parents even when the se
   ];
   await page.route('**/api/v1/service-requests?*', route => route.fulfill({ json: { data: items, error: null, meta: {} } }));
   await page.goto('/super-admin/assignment');
-  await page.getByRole('button', { name: 'Active / In Progress (1)', exact: true }).click();
+  await page.getByRole('tab', { name: 'Partner confirmed (1)', exact: true }).click();
   await expect(page.getByText('SR-ACTIVE', { exact: true })).toBeVisible();
   await expect(page.getByText('SR-COMPLETED', { exact: true })).toHaveCount(0);
   await expect(page.getByText('SR-CANCELLED', { exact: true })).toHaveCount(0);

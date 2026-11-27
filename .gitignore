@@ -19,5 +19,3 @@ test-results/
 
 # Private local-development KYC documents
 backend/.private-kyc/
-config.bat
-node_modules
