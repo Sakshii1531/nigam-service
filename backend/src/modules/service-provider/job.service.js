@@ -34,6 +34,8 @@ import { ApiError } from '../../middleware/errorHandler.js';
 import { JOB_STEP_TRANSITIONS, SERVICE_REQUEST_TRANSITIONS } from '../../config/constants.js';
 import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnings.js';
 import { initialJobPayout, withAddOnPayout, computeJobBilling } from '../shared/servicePartnerPayout.js';
+import { computeCharges } from '../shared/pricingEngine.js';
+import { extraWorkView } from './extraWork.js';
 import { loadBookableOfferings } from '../catalog/offeringBrowse.service.js';
 import { buildQuote } from '../catalog/quote.service.js';
 import { toRupees } from '../catalog/money.js';
@@ -667,6 +669,8 @@ export async function getJobDetailContext(serviceProviderId, jobId) {
     addonServices,
     spareParts,
     requiredParts,
+    // Other appliances the customer asked to have serviced on this visit.
+    extraWork: extraWorkView(job, sr?.booking?.category || sr?.category),
     partOrders: partOrders.map((po) => ({
       id: po.id || po._id,
       name: po.partName,
@@ -1055,12 +1059,14 @@ export async function addJobAddOn(serviceProviderId, jobId, { offeringId, quanti
   const quote = await buildQuote({ lines: [{ offeringId, quantity }], location: { city: context.city } }, { coverageType: null });
   const [line] = quote.lines;
   const provider = await ServiceProvider.findById(serviceProviderId);
+  const offering = await ServiceOffering.findById(offeringId).populate('category', 'key name');
   if (provider.onboardingPolicyVersion === 1) {
-    const offering = await ServiceOffering.findById(offeringId).populate('category');
     await assertJobEligible(provider, { category: offering.category.key });
   }
 
   job.additionalServices.push({
+    categoryKey: offering?.category?.key || null,
+    categoryName: offering?.category?.name || null,
     offeringId,
     code: line.offering.code,
     name: line.offering.name,
@@ -1093,6 +1099,133 @@ export async function removeJobAddOn(serviceProviderId, jobId, addOnId) {
   job.estEarnings = job.payout.total;
   await job.save();
   return job;
+}
+
+// ─── Extra appliances on the same visit ──────────────────────────────────
+// The customer asks the partner, already on site, to service another
+// appliance too. The partner adds that appliance's service from the catalogue
+// (addJobAddOn with another category) and, if it needs a spare part, asks the
+// customer to approve the part's price first (requestExtraPart). The customer
+// answers in their app (booking.service respondToExtraPart). Approved parts and
+// the extra services join the one final bill, paid by cash or online.
+
+// Steps where the partner is at the customer's door and the bill is still open.
+const EXTRA_WORK_STEPS = new Set(['inspection', 'spareapproval', 'repaircomplete', 'revisit_arrived', 'revisit_complete']);
+
+function assertExtraWorkOpen(job) {
+  if (!EXTRA_WORK_STEPS.has(job.activeStep)) {
+    throw new ApiError(409, 'Extra appliances can be added only while you are at the customer and before the bill is made');
+  }
+}
+
+/** Appliance types the partner can add to this visit (every active category but the booked one). */
+export async function listExtraApplianceTypes(serviceProviderId, jobId) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  const { categoryKey } = await addOnContext(job);
+  const categories = await Category.find({ isActive: true }).select('key name').sort({ name: 1 }).lean();
+  return categories.filter((c) => c.key !== categoryKey).map((c) => ({ key: c.key, name: c.name }));
+}
+
+/** The spare parts catalogue for one appliance type, retail price before GST. */
+export async function listExtraPartCatalog(serviceProviderId, jobId, { category } = {}) {
+  await findOwnedJob(serviceProviderId, jobId);
+  if (!category) return [];
+  const parts = await SparePartCatalog.find({
+    isActive: { $ne: false },
+    $or: [{ category: { $regex: new RegExp(`^${escapeRegExp(category)}$`, 'i') } }, { compatibleCategories: category }],
+  }).sort({ name: 1 }).limit(200);
+  return parts.map((p) => ({ id: p.id, name: p.name, code: p.code || null, price: Math.round(p.retailPrice), stock: p.stock }));
+}
+
+async function notifyCustomerOfJob(job, event, payload) {
+  try {
+    const sr = await ServiceRequest.findById(job.serviceRequest?._id || job.serviceRequest).select('user booking');
+    const io = getIO();
+    if (!io || !sr) return sr;
+    const body = { bookingId: sr.booking ? String(sr.booking) : null, serviceRequestId: String(sr._id), ...payload };
+    if (sr.user) io.to(`user:${sr.user}`).emit(event, body);
+    if (sr.booking) io.to(`booking:${sr.booking}`).emit(event, body);
+    return sr;
+  } catch {
+    return null;
+  }
+}
+
+export async function requestExtraPart(serviceProviderId, jobId, { categoryKey, partCatalogId, name, unitPrice, quantity = 1 }) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  assertExtraWorkOpen(job);
+  const { categoryKey: mainKey } = await addOnContext(job);
+  if (categoryKey === mainKey) {
+    throw new ApiError(400, 'Parts for the booked appliance go through the normal spare-parts step');
+  }
+  const category = await Category.findOne({ key: categoryKey }).select('key name').lean();
+  if (!category) throw new ApiError(400, 'Unknown appliance type');
+  if (!job.additionalServices.some((a) => a.checked !== false && a.categoryKey === categoryKey)) {
+    throw new ApiError(409, `Add the ${category.name} service first, then its spare parts`);
+  }
+
+  // A catalogue part is priced by the catalogue, never by the app.
+  let part = { name: String(name || '').trim(), unitPrice: Number(unitPrice), sku: undefined, partCatalogId: undefined };
+  if (partCatalogId) {
+    const doc = await SparePartCatalog.findById(partCatalogId);
+    if (!doc || doc.isActive === false) throw new ApiError(404, 'Spare part not found');
+    part = { name: doc.name, unitPrice: Math.round(doc.retailPrice), sku: doc.code || undefined, partCatalogId: doc._id };
+  }
+  if (!part.name) throw new ApiError(400, 'Enter the spare part name');
+  if (!(part.unitPrice > 0)) throw new ApiError(400, 'Enter the spare part price');
+  const qty = Math.max(1, Math.min(20, Math.floor(Number(quantity) || 1)));
+  const charges = computeCharges({ partsCost: part.unitPrice * qty });
+
+  job.extraParts.push({
+    categoryKey: category.key,
+    categoryName: category.name,
+    ...part,
+    quantity: qty,
+    gstPercent: charges.gstPercent,
+    gstAmount: charges.gstAmount,
+    totalAmount: charges.total,
+    status: 'Pending',
+    requestedAt: new Date(),
+  });
+  await job.save();
+  const added = job.extraParts[job.extraParts.length - 1];
+
+  const sr = await notifyCustomerOfJob(job, 'booking:updated', { extraPartPending: true });
+  if (sr?.user) {
+    await emitNotification('job.extra_part_approval', {
+      user: sr.user,
+      appliance: category.name,
+      partName: qty > 1 ? `${part.name} x ${qty}` : part.name,
+      amount: charges.total,
+      bookingId: sr.booking ? String(sr.booking) : null,
+    }).catch(() => {});
+  }
+  return { job, part: added };
+}
+
+/** The extra appliances on this job, for the partner's screen to refresh while a part awaits the customer. */
+export async function getExtraWork(serviceProviderId, jobId) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  const { categoryKey } = await addOnContext(job);
+  return { ...extraWorkView(job, categoryKey), open: EXTRA_WORK_STEPS.has(job.activeStep) };
+}
+
+export async function removeExtraPart(serviceProviderId, jobId, partId) {
+  const job = await findOwnedJob(serviceProviderId, jobId);
+  assertExtraWorkOpen(job);
+  const part = job.extraParts.id(partId);
+  if (!part) throw new ApiError(404, 'Spare part not found on this job');
+  part.deleteOne();
+  await job.save();
+  await notifyCustomerOfJob(job, 'booking:updated', { extraPartRemoved: true });
+  return job;
+}
+
+function assertNoPendingExtraParts(job) {
+  const pending = (job.extraParts || []).filter((p) => p.status === 'Pending');
+  if (pending.length) {
+    throw new ApiError(409, `Waiting for the customer to approve ${pending.map((p) => p.name).join(', ')}. Ask them to answer in their app, or remove the part.`);
+  }
 }
 
 /**
@@ -1341,6 +1474,7 @@ export async function generateBilling(serviceProviderId, jobId) {
   // Upcoming forever and the service provider was never paid for the return visit.
   const billingStep = job.activeStep === 'revisit_complete' ? 'revisit_billing' : 'billing';
   ensureTransition(job, billingStep);
+  assertNoPendingExtraParts(job);
 
   const serviceRequest = await ServiceRequest.findById(job.serviceRequest).populate('booking');
   job.billingEstimate = computeJobBilling(job, serviceRequest?.booking);
@@ -1532,6 +1666,7 @@ export async function collectPayment(serviceProviderId, jobId, { paymentMethod =
     return { job, payment, razorpay: null };
   }
 
+  assertNoPendingExtraParts(job);
   if (expectedOtp) { job.completion ||= {}; job.completion.otpVerifiedAt = new Date(); }
 
   // Bill if it wasn't generated yet — same rules as generateBilling.
@@ -1604,11 +1739,15 @@ export async function verifyJobPayment(serviceProviderId, jobId, { razorpayPayme
     throw new ApiError(400, `Job is not awaiting payment (current step: "${job.activeStep}")`);
   }
 
-  const pendingPayment = await Payment.findOne({ targetType: 'job', targetId: job._id, status: 'Pending' });
-  if (!pendingPayment) throw new ApiError(400, 'No pending payment found for this job');
+  // A partner who reopened online payment has more than one pending order;
+  // the signature names the one actually paid, newest tried first.
+  const pendingPayments = await Payment.find({ targetType: 'job', targetId: job._id, status: 'Pending' }).sort({ createdAt: -1 });
+  if (!pendingPayments.length) throw new ApiError(400, 'No pending payment found for this job');
 
-  const valid = verifyRazorpaySignature({ orderId: pendingPayment.gatewayRef, paymentId: razorpayPaymentId, signature: razorpaySignature });
-  if (!valid) throw new ApiError(400, 'Payment signature verification failed');
+  const pendingPayment = pendingPayments.find((p) =>
+    verifyRazorpaySignature({ orderId: p.gatewayRef, paymentId: razorpayPaymentId, signature: razorpaySignature }),
+  );
+  if (!pendingPayment) throw new ApiError(400, 'Payment signature verification failed');
 
   const result = await settleJobPayment(pendingPayment, razorpayPaymentId);
   return { ...result, razorpay: null };

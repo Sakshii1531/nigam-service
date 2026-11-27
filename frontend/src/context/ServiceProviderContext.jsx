@@ -1726,6 +1726,8 @@ export const ServiceProviderProvider = ({ children }) => {
         earningsLoading,
         acceptInstantJob,
         appSettings,
+        // Reload the job list (and so activeJob) after an on-screen change.
+        refreshJobs: fetchRealJobs,
       }}>
       {children}
       {user?.role === "service_provider" && cancellationAlert && (

@@ -39,6 +39,7 @@ import electricianImg from "../assets/categories/electrician_fixed.png";
 import plumberImg from "../assets/categories/plumber_fixed.png";
 import cleaningImg from "../assets/categories/cleaning.png";
 import { SkeletonScreen } from '../components/common/Skeleton';
+import ExtraWorkCard from '../components/booking/ExtraWorkCard';
 
 const SOCKET_URL = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4000"
@@ -841,6 +842,9 @@ const BookingDetails = () => {
         </div>
 
         <BusinessInvoiceCard booking={booking} />
+
+        {/* Other appliances serviced on this visit, part approvals, itemised bill. */}
+        <ExtraWorkCard booking={booking} onChanged={() => loadBooking(true)} />
 
         {/* Bottom Actions Area */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">

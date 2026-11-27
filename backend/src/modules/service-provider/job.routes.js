@@ -22,6 +22,8 @@ import {
   addOnOfferingsQuerySchema,
   addJobAddOnSchema,
   jobAddOnParamSchema,
+  requestExtraPartSchema,
+  extraPartParamSchema,
 } from './job.validation.js';
 
 export const jobRouter = Router();
@@ -171,6 +173,49 @@ jobRouter.post(
 jobRouter.delete('/:id/addons/:addOnId', validate(jobAddOnParamSchema, 'params'), async (req, res, next) => {
   try {
     ok(res, await jobService.removeJobAddOn(req.serviceProvider.id, req.params.id, req.params.addOnId));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Extra appliances the customer adds on the same visit ────────────────
+// Their services go through /addons (with an offering from another category);
+// their spare parts are sent to the customer for price approval here.
+jobRouter.get('/:id/extra-appliance-types', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.listExtraApplianceTypes(req.serviceProvider.id, req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+jobRouter.get('/:id/extra-part-catalog', validate(jobIdParamSchema, 'params'), validate(addOnOfferingsQuerySchema, 'query'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.listExtraPartCatalog(req.serviceProvider.id, req.params.id, req.query));
+  } catch (err) {
+    next(err);
+  }
+});
+
+jobRouter.get('/:id/extra-work', validate(jobIdParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.getExtraWork(req.serviceProvider.id, req.params.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+jobRouter.post('/:id/extra-parts', validate(jobIdParamSchema, 'params'), validate(requestExtraPartSchema), async (req, res, next) => {
+  try {
+    ok(res, await jobService.requestExtraPart(req.serviceProvider.id, req.params.id, req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+jobRouter.delete('/:id/extra-parts/:partId', validate(extraPartParamSchema, 'params'), async (req, res, next) => {
+  try {
+    ok(res, await jobService.removeExtraPart(req.serviceProvider.id, req.params.id, req.params.partId));
   } catch (err) {
     next(err);
   }

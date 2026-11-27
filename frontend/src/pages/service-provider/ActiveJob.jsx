@@ -2,6 +2,8 @@ import { renderInvoiceDocument, invoiceText } from '../../../../backend/src/modu
 import WarrantyParts from './job-flows/WarrantyParts';
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import JobSummaryCard from "../../components/service-provider/JobSummaryCard";
+import ExtraAppliances from "../../components/service-provider/ExtraAppliances";
+import { payWithRazorpay } from "../../lib/razorpayCheckout";
 import { useNavigate } from "react-router-dom";
 import { apiRequest, resolveMediaUrl } from "../../lib/apiClient";
 import { convertToWebP } from "../../lib/imageUtils";
@@ -231,6 +233,7 @@ const ActiveJob = () => {
     completionUploadBusy,
     setCompletionUploadBusy,
     jobsLoading,
+    refreshJobs,
   } = useTech();
 
   const stepBusy = jobStepBusy || completionUploadBusy;
@@ -467,6 +470,17 @@ const ActiveJob = () => {
   // replaces what used to be five separate hardcoded mock sections (warranty
   // status, "Standard Checks", service history, add-services list, add-parts list).
   const [jobContext, setJobContext] = useState(null);
+  const [onlinePaying, setOnlinePaying] = useState(false);
+  // After the partner changes the extra appliances: refetch the server-built
+  // summary (amount to collect) and the job itself (its bill).
+  const activeJobIdForContext = activeJob?.id;
+  const refreshJobContext = useCallback(() => {
+    if (!activeJobIdForContext) return;
+    apiRequest(`/service-provider/jobs/${activeJobIdForContext}/context`, { auth: true })
+      .then(setJobContext)
+      .catch(() => {});
+    refreshJobs?.();
+  }, [activeJobIdForContext, refreshJobs]);
   // Partner-warranty (B2B2C) job: the job context adds the customer's
   // documents once the job is this partner's (docs/partner-warranty Phase 15).
   const partnerWarranty = activeJob?.warranty || jobContext?.warranty
@@ -493,8 +507,12 @@ const ActiveJob = () => {
   // category's Master Catalogue offerings (jobContext.addonServices, pre-GST
   // unit price + the partner's payout). Keyed on jobContext so the 4s job poll
   // doesn't clobber an in-progress tap.
-  const seedAddOns = useCallback((jobAddOns, catalogueAddOns) => {
-    const added = (jobAddOns || []).filter((s) => s.checked !== false);
+  const seedAddOns = useCallback((jobAddOns, catalogueAddOns, mainKey) => {
+    // Work for another appliance the customer added is listed in its own
+    // panel (ExtraAppliances), not as the booked appliance's extra service.
+    const added = (jobAddOns || []).filter(
+      (s) => s.checked !== false && !(mainKey && s.categoryKey && s.categoryKey !== mainKey),
+    );
     const addedOfferings = new Set(added.map((s) => String(s.offeringId || "")));
     return [
       ...added.map((s, idx) => ({
@@ -521,7 +539,7 @@ const ActiveJob = () => {
     ];
   }, []);
   useEffect(() => {
-    setAdditionalServices(seedAddOns(activeJob?.additionalServices, jobContext?.addonServices));
+    setAdditionalServices(seedAddOns(activeJob?.additionalServices, jobContext?.addonServices, jobContext?.extraWork?.mainKey));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeJob?.id, jobContext, seedAddOns]);
 
@@ -558,13 +576,13 @@ const ActiveJob = () => {
     Promise.all(calls)
       .then((results) => {
         const job = results[results.length - 1];
-        setAdditionalServices(seedAddOns(job?.additionalServices, jobContext?.addonServices));
+        setAdditionalServices(seedAddOns(job?.additionalServices, jobContext?.addonServices, jobContext?.extraWork?.mainKey));
         // Refresh the server-built summary (payout, amount to collect).
         return apiRequest(`/service-provider/jobs/${activeJob.id}/context`, { auth: true }).then(setJobContext);
       })
       .catch((err) => {
         alert(err.message || "Could not update the extra work on this job.");
-        setAdditionalServices(seedAddOns(activeJob?.additionalServices, jobContext?.addonServices));
+        setAdditionalServices(seedAddOns(activeJob?.additionalServices, jobContext?.addonServices, jobContext?.extraWork?.mainKey));
       });
   };
 
@@ -3092,6 +3110,11 @@ const ActiveJob = () => {
                             );
                           })()}
 
+                        {/* Another appliance the customer wants serviced on this visit. */}
+                        {activeTab === "Overview" && activeJob?.id && (
+                          <ExtraAppliances jobId={activeJob.id} onChanged={refreshJobContext} />
+                        )}
+
                         {/* Tab 2 Content: Diagnosis (AI Diagnosis & Parts Screens 6/7/8) */}
                         {activeTab === "Diagnosis" && (
                           <div className="flex flex-col gap-4">
@@ -3825,6 +3848,10 @@ const ActiveJob = () => {
                         Verify all checklist items are ticked off.
                       </span>
                     </div>
+
+                    {activeJob?.id && (
+                      <ExtraAppliances jobId={activeJob.id} onChanged={refreshJobContext} />
+                    )}
 
                     <button
                       onClick={() => advanceStep()}
@@ -6041,7 +6068,7 @@ const ActiveJob = () => {
                 )}
 
                 {/* Step: BILLING (Step 6 / Screen 12: Billing & Estimate) */}
-                {activeStep === "billing" && (
+                {(activeStep === "billing" || activeStep === "awaitingpayment") && (
                   <div className="bg-white rounded-3xl p-3.5 border border-slate-200 shadow-sm flex flex-col gap-4">
                     <div className="border-b border-slate-200 pb-3">
                       <span className="inline-block text-[10px] font-normal text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full uppercase tracking-wider border border-amber-200">
@@ -6056,6 +6083,34 @@ const ActiveJob = () => {
                       </p>
                     </div>
 
+                    {/* The server's bill, itemised per appliance (booked one first,
+                        then any other appliance the customer added on the visit). */}
+                    {activeJob?.billingEstimate?.lines?.length ? (
+                      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 text-xs" aria-label="Bill by appliance">
+                        {[...new Set(activeJob.billingEstimate.lines.map((l) => l.group))].map((group) => (
+                          <div key={group} className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{group}</span>
+                            {activeJob.billingEstimate.lines
+                              .filter((l) => l.group === group)
+                              .map((l, i) => (
+                                <div key={`${group}-${i}`} className="flex justify-between gap-2">
+                                  <span className="text-slate-600">{l.kind === "part" ? `Spare part: ${l.label}` : l.label}</span>
+                                  <span className="text-[#052355] shrink-0">
+                                    {l.covered ? "₹0 (Covered)" : `₹${Number(l.amount || 0).toLocaleString("en-IN")}`}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        ))}
+                        {activeJob.billingEstimate.alreadyPaid > 0 && (
+                          <div className="flex justify-between text-slate-500">
+                            <span>Already paid</span>
+                            <span>-₹{Number(activeJob.billingEstimate.alreadyPaid).toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        <p className="text-[10px] text-slate-400">Prices include GST.</p>
+                      </div>
+                    ) : (
                     <div className="flex flex-col gap-3.5 border-b border-slate-200 pb-4 text-xs font-normal text-slate-600">
                       <div className="flex justify-between">
                         <span className="text-slate-600">Service Charge</span>
@@ -6082,6 +6137,7 @@ const ActiveJob = () => {
                         </span>
                       </div>
                     </div>
+                    )}
 
                     {/* Payable vs Earnings */}
                     <div className="flex flex-col gap-2">
@@ -6111,7 +6167,8 @@ const ActiveJob = () => {
                             activeJob && activeJob.price > 0
                               ? activeJob.price
                               : 0;
-                          const totalAmount = billPreview.total;
+                          const totalAmount =
+                            activeJob?.billingEstimate?.total ?? billPreview.total;
 
                           const printWindow = window.open("", "_blank");
                           if (!printWindow) return;
@@ -6133,6 +6190,18 @@ const ActiveJob = () => {
                                 </tr>
                               </thead>
                               <tbody>
+                                ${activeJob?.billingEstimate?.lines?.length
+                                  ? activeJob.billingEstimate.lines
+                                      .map(
+                                        (l) =>
+                                          "<tr><td>" +
+                                          invoiceText(`${l.group} - ${l.kind === "part" ? "Spare part: " : ""}${l.label}`) +
+                                          "</td><td>" +
+                                          (l.covered ? "Covered" : "₹" + Number(l.amount || 0).toLocaleString("en-IN")) +
+                                          "</td></tr>",
+                                      )
+                                      .join("")
+                                  : `
                                 <tr>
                                   <td>Base Service Charge</td>
                                   <td>₹${baseServicePrice}</td>
@@ -6159,6 +6228,7 @@ const ActiveJob = () => {
                                       "</td></tr>",
                                   )
                                   .join("")}
+                                `}
                               </tbody>
                             </table>
                             <div class="total">Grand Total: ₹${totalAmount.toLocaleString("en-IN")}</div>
@@ -6285,6 +6355,52 @@ const ActiveJob = () => {
                             ? "Close Warranty Job"
                             : "Collect Payment (Complete Job)"}
                     </button>
+                    {finalAmountCollected > 0 && (
+                      <p className="text-[11px] text-slate-500 -mt-2 text-center">
+                        The button above records ₹{finalAmountCollected.toLocaleString("en-IN")} received in cash.
+                      </p>
+                    )}
+
+                    {/* Online: the customer pays the same bill by UPI / card / net
+                        banking through Razorpay on this phone; the job closes
+                        only after the server verifies the payment. */}
+                    {finalAmountCollected > 0 && (
+                      <button
+                        type="button"
+                        disabled={stepBusy || onlinePaying}
+                        onClick={async () => {
+                          const enteredOtp = billingOtp.join("");
+                          if (enteredOtp.length < 4) {
+                            alert("Please enter the complete 4-digit OTP shown in the customer's app.");
+                            return;
+                          }
+                          setOnlinePaying(true);
+                          try {
+                            const res = await collectPayment("Online", { otp: enteredOtp });
+                            if (!res?.ok) return;
+                            if (res.razorpay) {
+                              await payWithRazorpay({
+                                razorpay: res.razorpay,
+                                verifyPath: `/service-provider/jobs/${activeJob.id}/verify-payment`,
+                                name: "Nigam Care",
+                                description: `Service bill${activeJob?.customerName ? ` - ${activeJob.customerName}` : ""}`,
+                                prefill: { name: activeJob?.customerName, contact: activeJob?.phone },
+                              });
+                            }
+                            setActiveStep("completed");
+                            refreshJobs?.();
+                          } catch (err) {
+                            alert(`${err.message || "The online payment did not complete."} You can try again, or take cash.`);
+                            setActiveStep("billing");
+                            refreshJobs?.();
+                          } finally {
+                            setOnlinePaying(false);
+                          }
+                        }}
+                        className="w-full bg-[#0D47A1] hover:bg-[#0A3F91] disabled:opacity-60 text-white font-medium py-4 rounded-2xl text-sm transition-all shadow-md">
+                        {onlinePaying ? "Waiting for payment…" : `Customer pays online (UPI / Card) - ₹${finalAmountCollected.toLocaleString("en-IN")}`}
+                      </button>
+                    )}
                   </div>
                 )}
               </>

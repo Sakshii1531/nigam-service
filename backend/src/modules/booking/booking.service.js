@@ -13,6 +13,7 @@ import { estimateServiceProviderEarnings } from '../shared/serviceProviderEarnin
 import { Job } from '../service-provider/job.model.js';
 import { PartOrder } from '../service-provider/partOrder.model.js';
 import { ServiceProvider } from '../service-provider/serviceProvider.model.js';
+import { extraWorkView } from '../service-provider/extraWork.js';
 
 // How long a booking keeps looking for a service provider before giving up.
 import { SEARCH_WINDOW_MS, PAYMENT_WINDOW_MS } from '../shared/dispatchPolicy.js';
@@ -591,7 +592,63 @@ async function findOwnedOr404(userId, id) {
 }
 
 export async function getBooking(userId, id) {
-  return findOwnedOr404(userId, id);
+  const booking = await findOwnedOr404(userId, id);
+  const job = booking.serviceRequest ? await Job.findOne({ serviceRequest: booking.serviceRequest._id || booking.serviceRequest }) : null;
+  const json = booking.toJSON();
+  if (job) {
+    // Other appliances serviced on this visit, and spare-part prices waiting
+    // for the customer's answer (see respondToExtraPart).
+    json.extraWork = extraWorkView(job, booking.category);
+    // Once the partner made the bill: the full bill, itemised per appliance.
+    const bill = job.billingEstimate;
+    if (bill?.lines?.length) {
+      json.finalBill = {
+        lines: bill.lines.map(({ group, kind, label, amount, covered }) => ({ group, kind, label, amount, covered })),
+        total: bill.total,
+        alreadyPaid: bill.alreadyPaid,
+        amountToCollect: bill.amountToCollect,
+      };
+    }
+  }
+  return json;
+}
+
+/**
+ * The customer's answer on a spare part for an extra appliance (one they
+ * asked the partner to service on the same visit). Approve = the partner fits
+ * it and it joins the bill; decline = it is never fitted or billed. Either way
+ * the rest of the visit carries on — unlike respondToPartRequest, a declined
+ * extra part does not cancel the booking.
+ */
+export async function respondToExtraPart(userId, bookingId, partId, { approve }) {
+  const booking = await findOwnedOr404(userId, bookingId);
+  const job = booking.serviceRequest ? await Job.findOne({ serviceRequest: booking.serviceRequest._id || booking.serviceRequest }) : null;
+  const part = job?.extraParts?.id(partId);
+  if (!part) throw new ApiError(404, 'This spare part request was not found.');
+  if (part.status !== 'Pending') throw new ApiError(409, `You already ${part.status === 'Approved' ? 'approved' : 'declined'} this spare part.`);
+  part.status = approve ? 'Approved' : 'Declined';
+  part.respondedAt = new Date();
+  await job.save();
+
+  const payload = { jobId: String(job._id), bookingId: String(booking._id), extraPartId: String(part._id), extraPartStatus: part.status };
+  try {
+    const io = getIO();
+    io.to(`service-provider:${job.serviceProvider}`).emit('job:updated', payload);
+    io.to(`user:${userId}`).emit('booking:updated', payload);
+  } catch (_err) {
+    // Non-critical socket emission failure
+  }
+  const provider = await ServiceProvider.findById(job.serviceProvider).select('user');
+  if (provider?.user) {
+    await emitNotification('job.extra_part_answered', {
+      user: provider.user,
+      approved: Boolean(approve),
+      partName: part.name,
+      amount: part.totalAmount,
+      appliance: part.categoryName || part.categoryKey,
+    }).catch(() => {});
+  }
+  return getBooking(userId, bookingId);
 }
 
 /**

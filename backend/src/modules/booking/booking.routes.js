@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { addCustomerInvoiceRoutes } from './customerInvoice.routes.js';
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
@@ -69,6 +70,21 @@ bookingRouter.post(
   async (req, res, next) => {
     try {
       ok(res, await bookingService.respondToPartRequest(req.user.id, req.params.id, req.body));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// The customer approves or declines the price of a spare part for an extra
+// appliance the partner is servicing on this visit.
+bookingRouter.post(
+  '/:id/extra-parts/:partId/respond',
+  validate(z.object({ id: z.string().min(1), partId: z.string().regex(/^[a-f0-9]{24}$/i) }), 'params'),
+  validate(z.object({ approve: z.boolean() }).strict()),
+  async (req, res, next) => {
+    try {
+      ok(res, await bookingService.respondToExtraPart(req.user.id, req.params.id, req.params.partId, req.body));
     } catch (err) {
       next(err);
     }

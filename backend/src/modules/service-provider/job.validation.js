@@ -67,3 +67,18 @@ export const verifyJobPaymentSchema = z.object({
 });
 
 export const completionReportSchema = z.object({ notes: z.string().trim().max(2000).optional(), workDone: z.string().trim().max(2000).optional(), photos: z.array(z.string().max(1000)).max(10).optional() }).strict();
+
+// A spare part for an extra appliance: a catalogue part (priced by the
+// catalogue) or one the partner names and prices by hand.
+export const requestExtraPartSchema = z
+  .object({
+    categoryKey: z.string().trim().min(1).max(80),
+    partCatalogId: objectId.optional(),
+    name: z.string().trim().max(120).optional(),
+    unitPrice: z.coerce.number().positive().max(500000).optional(),
+    quantity: z.coerce.number().int().min(1).max(20).default(1),
+  })
+  .strict()
+  .refine((b) => b.partCatalogId || (b.name && b.unitPrice), { message: 'Pick a part from the list, or enter its name and price' });
+
+export const extraPartParamSchema = z.object({ id: z.string().min(1), partId: objectId });

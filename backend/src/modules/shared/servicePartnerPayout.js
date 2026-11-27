@@ -51,17 +51,56 @@ export function withAddOnPayout(payout, addOns = []) {
  * included); spare parts (paid jobs only) get GST added here. Whatever the
  * customer already paid (verified advance, coins) is subtracted from what
  * the partner collects.
+ *
+ * Extra appliances (serviced on the same visit at the customer's request):
+ * their services are add-ons tagged with another categoryKey, and their spare
+ * parts live in job.extraParts. Those parts are charged even when the booked
+ * appliance is under warranty, and only once the customer approved them.
+ * `lines` itemises the whole bill per appliance for the bill screens.
  */
 export function computeJobBilling(job, booking) {
   const bookedPaise = job.isD2C ? paise(booking?.commercial?.finalAmount ?? booking?.totalPrice ?? job.price) : 0;
   const addOns = (job.additionalServices || []).filter((a) => a.checked !== false);
   const addOnsPaise = addOns.reduce((sum, a) => sum + paise(a.finalAmount ?? a.price), 0);
 
-  const partsCost = job.isD2C ? (job.spareParts || []).filter((p) => p.checked).reduce((sum, p) => sum + (p.price || 0), 0) : 0;
+  const mainParts = (job.spareParts || []).filter((p) => p.checked);
+  const partsCost = job.isD2C ? mainParts.reduce((sum, p) => sum + (p.price || 0), 0) : 0;
   const parts = computeCharges({ partsCost });
   const partsPaise = paise(parts.total);
 
-  const totalPaise = bookedPaise + addOnsPaise + partsPaise;
+  const approvedExtraParts = (job.extraParts || []).filter((p) => p.status === 'Approved');
+  const extraPartsPaise = approvedExtraParts.reduce((sum, p) => sum + paise(p.totalAmount), 0);
+
+  const mainKey = booking?.category || job.serviceRequest?.category || null;
+  const mainGroup = booking?.commercial?.productType?.name || mainKey || 'Booked appliance';
+  const isMain = (a) => !a.categoryKey || a.categoryKey === mainKey;
+  const lines = [
+    {
+      group: mainGroup,
+      kind: 'service',
+      label: booking?.commercial?.offeringName || booking?.service?.name || 'Booked service',
+      amount: rupees(bookedPaise),
+      covered: !job.isD2C,
+    },
+    ...addOns.filter(isMain).map((a) => ({ group: mainGroup, kind: 'service', label: a.name, amount: a.finalAmount ?? a.price ?? 0, covered: false })),
+    ...mainParts.map((p) => ({
+      group: mainGroup,
+      kind: 'part',
+      label: p.name,
+      amount: job.isD2C ? computeCharges({ partsCost: p.price || 0 }).total : 0,
+      covered: !job.isD2C,
+    })),
+    ...addOns.filter((a) => !isMain(a)).map((a) => ({ group: a.categoryName || a.categoryKey, kind: 'service', label: a.name, amount: a.finalAmount ?? a.price ?? 0, covered: false })),
+    ...approvedExtraParts.map((p) => ({
+      group: p.categoryName || p.categoryKey,
+      kind: 'part',
+      label: p.quantity > 1 ? `${p.name} x ${p.quantity}` : p.name,
+      amount: p.totalAmount,
+      covered: false,
+    })),
+  ];
+
+  const totalPaise = bookedPaise + addOnsPaise + partsPaise + extraPartsPaise;
   const advancePaise = booking?.advancePaid ? paise(booking.advanceAmount) : 0;
   const coinsPaise = paise(booking?.commercial?.coinsApplied);
   const alreadyPaidPaise = Math.min(totalPaise, advancePaise + coinsPaise);
@@ -72,6 +111,8 @@ export function computeJobBilling(job, booking) {
     serviceCharge: rupees(bookedPaise),
     additionalServicesTotal: rupees(addOnsPaise),
     sparePartsTotal: rupees(partsPaise),
+    extraPartsTotal: rupees(extraPartsPaise),
+    lines,
     gstPercent: parts.gstPercent,
     total: rupees(totalPaise),
     alreadyPaid: rupees(alreadyPaidPaise),

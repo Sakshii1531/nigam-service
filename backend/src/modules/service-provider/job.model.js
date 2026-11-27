@@ -98,6 +98,18 @@ const billingEstimateSchema = new mongoose.Schema(
     alreadyPaid: { type: Number, default: 0 },
     amountToCollect: { type: Number, default: 0 },
     serviceProviderEarnings: { type: Number, default: 0 },
+    // Approved parts for extra appliances, GST included.
+    extraPartsTotal: { type: Number, default: 0 },
+    // The same bill itemised by appliance, for the bill screens.
+    lines: {
+      type: [
+        new mongoose.Schema(
+          { group: String, kind: String, label: String, amount: Number, covered: Boolean },
+          { _id: false },
+        ),
+      ],
+      default: undefined,
+    },
   },
   { _id: false },
 );
@@ -133,8 +145,37 @@ const addOnSchema = new mongoose.Schema(
     price: Number,
     spPayout: { type: Number, default: 0 },
     checked: { type: Boolean, default: true },
+    // Which appliance the work is for. Empty = the booked appliance; another
+    // category = an extra appliance the customer asked to have serviced too.
+    categoryKey: String,
+    categoryName: String,
   },
   { timestamps: { createdAt: true, updatedAt: false } },
+);
+
+// A spare part for an extra appliance (one the customer added on site). It is
+// always chargeable, even when the booked appliance is under warranty, so the
+// customer approves its price in their app before the partner fits it. A
+// Pending part blocks billing; a Declined one is never billed.
+const extraPartSchema = new mongoose.Schema(
+  {
+    categoryKey: { type: String, required: true },
+    categoryName: String,
+    name: { type: String, required: true },
+    sku: String,
+    partCatalogId: { type: mongoose.Schema.Types.ObjectId, ref: 'SparePartCatalog' },
+    quantity: { type: Number, default: 1 },
+    // Per unit, before GST.
+    unitPrice: { type: Number, required: true },
+    gstPercent: Number,
+    gstAmount: Number,
+    // What the customer pays for this line, GST included.
+    totalAmount: Number,
+    status: { type: String, enum: ['Pending', 'Approved', 'Declined'], default: 'Pending' },
+    requestedAt: Date,
+    respondedAt: Date,
+  },
+  { _id: true },
 );
 
 const jobSchema = new mongoose.Schema(
@@ -184,6 +225,7 @@ const jobSchema = new mongoose.Schema(
     completion: { uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, notes: String, workDone: String, photos: [String], at: Date, otpVerifiedAt: Date },
     diagnosis: diagnosisSchema,
     additionalServices: [addOnSchema],
+    extraParts: [extraPartSchema],
     spareParts: [{ ...lineItemSchema.obj, sku: String, source: { type: String, enum: ['recommended_ai', 'manual'] } }],
     proofs: proofsSchema,
     revisit: revisitSchema,

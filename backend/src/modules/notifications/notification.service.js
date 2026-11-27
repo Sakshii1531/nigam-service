@@ -126,6 +126,27 @@ const EVENT_TEMPLATES = {
     smsBody: `Your technician has requested a spare part (${p.partName || 'Spare Part'}) worth ₹${p.amount ?? 0}. Approve it in the Nigam Care app to continue.`,
     whatsappBody: `*Spare Part Approval Needed*\n\nYour technician has requested *${p.partName || 'Spare Part'}* worth *₹${p.amount ?? 0}* for your *${p.category || 'service'}*.\n\nOpen the Nigam Care app to approve or decline this cost before it's ordered.`,
   }),
+  // A spare part for an extra appliance the customer added on the visit: the
+  // partner fits it only after the customer approves the price.
+  'job.extra_part_approval': (p) => ({
+    recipient: p.user,
+    type: 'assigned',
+    title: 'Approve spare part price',
+    message: `To repair your ${p.appliance || 'appliance'}, the technician needs ${p.partName || 'a spare part'} costing Rs.${p.amount ?? 0} (incl. GST). Approve it in the app and the repair goes ahead; decline and it won't be fitted.`,
+    cta: p.bookingId ? { label: 'Review & Approve', route: `/bookings/${p.bookingId}` } : undefined,
+    smsBody: `Nigam Care: your technician needs ${p.partName || 'a spare part'} (Rs.${p.amount ?? 0} incl. GST) to repair your ${p.appliance || 'appliance'}. Approve or decline it in the Nigam Care app.`,
+    whatsappBody: `*Spare Part Approval Needed*\n\nTo repair your *${p.appliance || 'appliance'}*, the technician needs *${p.partName || 'a spare part'}* costing *Rs.${p.amount ?? 0}* (incl. GST).\n\nOpen the Nigam Care app to approve or decline.`,
+  }),
+  // To the PARTNER: the customer's answer on an extra-appliance part.
+  'job.extra_part_answered': (p) => ({
+    recipient: p.user,
+    type: 'provider',
+    title: p.approved ? 'Customer approved the spare part' : 'Customer declined the spare part',
+    message: p.approved
+      ? `The customer approved ${p.partName || 'the spare part'} (Rs.${p.amount ?? 0}) for their ${p.appliance || 'appliance'}. Go ahead with the repair.`
+      : `The customer declined ${p.partName || 'the spare part'} for their ${p.appliance || 'appliance'}. Do not fit it; it is not on the bill.`,
+    cta: { label: 'Open Job', route: '/service-provider/active-job' },
+  }),
   // Sent to the SERVICE PROVIDER (not the customer) — the customer declined
   // the part's cost, so the job that was parked at 'completed_pending'
   // waiting on their sign-off is now cancelled outright.
