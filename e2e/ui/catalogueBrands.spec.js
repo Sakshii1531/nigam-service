@@ -67,7 +67,7 @@ test('an admin adds a catalogue brand for AC and the customer can pick it on an 
     await page.getByRole('button', { name: /Continue — Select Service/i }).click();
     await page.getByRole('button', { name: /Repair/i }).first().click();
     await page.getByRole('button', { name: /Continue — Schedule Visit/i }).click();
-    await expect(page.getByText('Select Brand *')).toBeVisible();
+    await expect(page.getByText('Select Brand', { exact: false }).first()).toBeVisible();
     await page.locator('select').first().selectOption(brandName);
     await expect(page.locator('select').first()).toHaveValue(brandName);
   } finally {

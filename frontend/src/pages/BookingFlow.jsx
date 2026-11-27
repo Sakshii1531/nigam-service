@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
-  MapPin,
   User,
   Phone,
   CalendarDays,
@@ -16,13 +15,8 @@ import {
   ArrowRight,
   Zap,
   CheckCircle2,
-  Home,
-  Briefcase,
-  Navigation,
   X,
   CalendarCheck,
-  Crosshair,
-  ExternalLink,
   Info,
   Tag,
   Coins,
@@ -52,6 +46,7 @@ import {
 } from "../lib/catalogueApi";
 import ItemIcon from "../components/common/ItemIcon";
 import CouponPanel from "../components/booking/CouponPanel";
+import AddressSection from "../components/booking/AddressSection";
 import { Skeleton } from '../components/common/Skeleton';
 import { INDIAN_STATES, getCitiesForState } from '../utils/indiaGeoData';
 
@@ -1939,333 +1934,14 @@ const BookingFlow = () => {
                     </span>
                   </div>
 
-                  {/* Saved Addresses Picker */}
-                  {user?.addresses && user.addresses.length > 0 && (
-                    <div className="mb-3">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-                        Select From Saved Addresses
-                      </span>
-                      <div className="flex flex-col gap-2">
-                        {user.addresses.map((addr) => {
-                          const addrId = addr._id || addr.id || addr.house;
-                          const isSelected =
-                            selectedAddrId === addrId ||
-                            (address.house === addr.house &&
-                              (address.city || "").toLowerCase() ===
-                                (addr.city || "").toLowerCase());
-                          return (
-                            <button
-                              key={addrId}
-                              type="button"
-                              onClick={() => {
-                                setSelectedAddrId(addrId);
-                                setAddress({
-                                  house: addr.house || "",
-                                  area:
-                                    addr.landmark ||
-                                    addr.area ||
-                                    addr.city ||
-                                    "",
-                                  city: addr.city || "",
-                                  state: addr.state || "",
-                                  pincode:
-                                    addr.pincode ||
-                                    addr.house?.match(/\b\d{6}\b/)?.[0] ||
-                                    "",
-                                  latitude: addr.latitude || null,
-                                  longitude: addr.longitude || null,
-                                });
-                              }}
-                              className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                                isSelected
-                                  ? "bg-blue-50/80 border-brand-blue ring-1 ring-brand-blue shadow-2xs"
-                                  : "bg-slate-50/70 border-slate-200 hover:bg-slate-100/80"
-                              }`}>
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <div
-                                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                                    isSelected
-                                      ? "bg-brand-blue text-white"
-                                      : "bg-white text-slate-600 border border-slate-200"
-                                  }`}>
-                                  {addr.type === "Work" ? (
-                                    <Briefcase size={13} />
-                                  ) : (
-                                    <Home size={13} />
-                                  )}
-                                </div>
-                                <div className="truncate">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-bold text-slate-800">
-                                      {addr.type || "Address"}
-                                    </span>
-                                    {addr.isDefault && (
-                                      <span className="text-[9px] font-bold text-brand-blue bg-blue-100 px-1.5 py-0.2 rounded">
-                                        Default
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-slate-500 truncate">
-                                    {addr.house ? `${addr.house}, ` : ""}
-                                    {addr.city}
-                                  </p>
-                                </div>
-                              </div>
-                              {isSelected && (
-                                <CheckCircle2
-                                  size={16}
-                                  className="text-brand-blue shrink-0"
-                                />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="relative my-3">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-slate-100" />
-                        </div>
-                        <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
-                          <span className="bg-white px-2">
-                            Or Edit Address Details Below
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-3">
-                    {/* ── Interactive Location Pin Card (Redesigned) ── */}
-                    <div
-                      className={`rounded-2xl p-3.5 sm:p-4 border transition-all ${
-                        address.latitude && address.longitude
-                          ? "bg-linear-to-br from-emerald-50/60 via-blue-50/30 to-white border-emerald-200/90 shadow-2xs"
-                          : "bg-linear-to-br from-blue-50/80 via-slate-50/40 to-white border-blue-200/90 shadow-2xs"
-                      }`}>
-                      {/* Top Header Row */}
-                      <div className="flex items-start justify-between gap-2.5 mb-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-xs transition-colors ${
-                              address.latitude && address.longitude
-                                ? "bg-emerald-600 text-white"
-                                : "bg-brand-blue text-white"
-                            }`}>
-                            {address.latitude && address.longitude ? (
-                              <CheckCircle2 className="w-5 h-5" />
-                            ) : (
-                              <MapPin className="w-5 h-5" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="text-[13px] sm:text-[14px] font-black text-slate-900 leading-tight">
-                                Pin Doorstep Location
-                              </h4>
-                              {address.latitude && address.longitude ? (
-                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  Pinned
-                                </span>
-                              ) : (
-                                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 text-brand-blue border border-blue-200">
-                                  Recommended
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium leading-normal mt-0.5">
-                              {address.latitude && address.longitude
-                                ? "Exact doorstep GPS coordinates saved for delivery partner."
-                                : "Allows partner to navigate directly to your door with Google Maps."}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Pinned Info or Action Buttons */}
-                      {address.latitude && address.longitude ? (
-                        <div className="flex flex-col gap-2.5 mt-1">
-                          <div className="bg-white/90 border border-emerald-200/90 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-700">
-                                  GPS Coordinates
-                                </p>
-                                <p className="text-[10px] sm:text-[11px] font-mono font-black text-slate-800 truncate">
-                                  {Number(address.latitude).toFixed(4)},{" "}
-                                  {Number(address.longitude).toFixed(4)}
-                                </p>
-                              </div>
-                            </div>
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${address.latitude},${address.longitude}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] sm:text-[11px] font-black text-brand-blue hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 transition-colors">
-                              <span>View Pin</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowMapPicker(true)}
-                              className="flex-1 py-2 px-3 bg-brand-blue hover:bg-[#083679] text-white text-[11px] sm:text-[12px] font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                              <Navigation className="w-3.5 h-3.5" />
-                              Change Pin Location
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setAddress((prev) => ({
-                                  ...prev,
-                                  latitude: null,
-                                  longitude: null,
-                                }))
-                              }
-                              className="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[11px] font-bold transition-colors cursor-pointer"
-                              title="Remove pin">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-2 mt-1">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowMapPicker(true)}
-                              className="w-full py-2.5 px-3 bg-brand-blue hover:bg-[#083679] text-white text-[11px] sm:text-[12px] font-black rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]">
-                              <Navigation className="w-3.5 h-3.5" />
-                              Select on Map
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (navigator?.geolocation) {
-                                  navigator.geolocation.getCurrentPosition(
-                                    (pos) => {
-                                      setAddress((prev) => ({
-                                        ...prev,
-                                        latitude: pos.coords.latitude,
-                                        longitude: pos.coords.longitude,
-                                      }));
-                                    },
-                                    () => {
-                                      setShowMapPicker(true);
-                                    },
-                                    { enableHighAccuracy: true, timeout: 8000 },
-                                  );
-                                } else {
-                                  setShowMapPicker(true);
-                                }
-                              }}
-                              className="w-full py-2.5 px-3 bg-white hover:bg-blue-50/80 text-brand-blue border border-blue-200 hover:border-brand-blue text-[11px] sm:text-[12px] font-black rounded-xl shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                              <Crosshair className="w-3.5 h-3.5" />
-                              Current GPS
-                            </button>
-                          </div>
-                          <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-blue-500 shrink-0" aria-hidden="true" />
-                            <span>
-                              Tap <strong>Select on Map</strong> or{" "}
-                              <strong>Current GPS</strong> to pin exact door
-                              coordinates.
-                            </span>
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* House / Flat */}
-                    <div className="relative">
-                      <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <input
-                        type="text"
-                        value={address.house}
-                        onChange={(e) =>
-                          setAddress((p) => ({ ...p, house: e.target.value }))
-                        }
-                        placeholder="House / Flat / Building No. *"
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
-                      />
-                    </div>
-                    {/* Area / Landmark */}
-                    <div className="relative">
-                      <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <input
-                        type="text"
-                        value={address.area}
-                        onChange={(e) =>
-                          setAddress((p) => ({ ...p, area: e.target.value }))
-                        }
-                        placeholder="Area / Landmark / Street"
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      {/* City */}
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={address.city}
-                          onChange={(e) =>
-                            setAddress((p) => ({
-                              ...p,
-                              city: e.target.value,
-                              state: stateForCity(e.target.value) || p.state,
-                            }))
-                          }
-                          placeholder="City *"
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all"
-                        />
-                      </div>
-                      {/* Pincode */}
-                      <div className="w-32">
-                        <input
-                          type="text"
-                          value={address.pincode}
-                          onChange={(e) =>
-                            setAddress((p) => ({
-                              ...p,
-                              pincode: e.target.value
-                                .replace(/\D/g, "")
-                                .slice(0, 6),
-                            }))
-                          }
-                          placeholder="Pincode"
-                          maxLength={6}
-                          className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-bold text-slate-900 placeholder-slate-400 focus:bg-white focus:border-brand-blue outline-none transition-all ${
-                            address.pincode && address.pincode.length < 6
-                              ? "border-rose-400 bg-rose-50/20"
-                              : "border-slate-200"
-                          }`}
-                        />
-                      </div>
-                    </div>
-                    {address.pincode && address.pincode.length < 6 && (
-                      <p className="text-[10px] text-rose-500 font-bold -mt-1 ml-1">
-                        Pincode must be exactly 6 digits
-                      </p>
-                    )}
-                    {/* State — drives GST (CGST/SGST vs IGST) and which partners serve the address */}
-                    <select
-                      aria-label="State"
-                      value={address.state || ""}
-                      onChange={(e) =>
-                        setAddress((p) => ({ ...p, state: e.target.value }))
-                      }
-                      className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-[12px] font-bold outline-none focus:bg-white focus:border-brand-blue transition-all ${
-                        address.state ? "text-slate-900 border-slate-200" : "text-slate-400 border-slate-200"
-                      }`}>
-                      <option value="">State *</option>
-                      {INDIAN_STATES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <AddressSection
+                    address={address}
+                    setAddress={setAddress}
+                    selectedAddrId={selectedAddrId}
+                    setSelectedAddrId={setSelectedAddrId}
+                    onOpenMap={() => setShowMapPicker(true)}
+                    stateForCity={stateForCity}
+                  />
                 </div>
 
                 {/* Full Name + Mobile */}
