@@ -2,7 +2,12 @@ import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { getStoredTokens } from '../lib/apiClient';
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:4000';
+// A relative API base (production uses "/api/v1") leaves an empty origin, which
+// socket.io resolves to this same site. Only a missing setting falls back to
+// the local dev backend; `||` here used to send live admins to localhost:4000.
+const SOCKET_URL = import.meta.env.VITE_API_BASE_URL !== undefined
+  ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/v1\/?$/, '')
+  : 'http://localhost:4000';
 
 // Refresh status filters and counts while an admin is watching a queue.
 export function useServiceRequestUpdates(refresh) {
